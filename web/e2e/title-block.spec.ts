@@ -64,6 +64,11 @@ async function measure(el: Locator): Promise<Measured> {
 
 async function expectTitleBlock(block: Locator, titlePx: number, fullFormPx: number) {
   await expect(block).toBeVisible();
+  // Measure with the real web font, not a fallback that is swapped out later.
+  await block.page().evaluate(() => document.fonts.ready.then(() => undefined));
+  expect(await block.page().evaluate(() => document.fonts.check('16px "Inter Variable"'))).toBe(
+    true,
+  );
   const title = block.getByRole('heading', { level: 1, name: 'TRIM' });
   const fullForm = block.getByText(FULL_FORM, { exact: true });
   await expect(title).toBeVisible();

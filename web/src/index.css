@@ -59,6 +59,7 @@
     background: var(--color-bg);
     color: var(--color-text);
     font-family:
+      'Inter Variable',
       Inter,
       ui-sans-serif,
       system-ui,

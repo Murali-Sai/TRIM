@@ -423,7 +423,7 @@ Example, with 300 kcal, 40 P, 25 C, 8 F left: chicken breast 120 g (198 kcal, 37
 | Account | Profile, units, password, sessions, download my data, delete | Same, two columns | Delete confirms with password and typed "DELETE" |
 
 ### Today screen design and time-based logging
-The layout follows the reference screenshot's structure (target strip on top, time-ordered timeline below). All visual assets are our own: original food-category icons, our own typeface (Inter or a similar open-licence font **[?]**), palette and wording. No icons, artwork or copy are taken from MacroFactor or any other app.
+The layout follows the reference screenshot's structure (target strip on top, time-ordered timeline below). All visual assets are our own: original food-category icons, our own typeface (Inter, SIL Open Font License 1.1, self-hosted from the `@fontsource-variable/inter` package **[V]**), palette and wording. No icons, artwork or copy are taken from MacroFactor or any other app.
 
 **Header.** "Today" title (shows the date when browsing other days); buttons for the date picker, display options and an overflow menu. Swipe left or right on the header to change day.
 

@@ -10,9 +10,9 @@ export function AppShell() {
     <div className="min-h-dvh lg:flex">
       <aside
         aria-label="Main"
-        className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-60 lg:shrink-0 lg:flex-col lg:gap-6 lg:border-r lg:border-border lg:bg-surface lg:px-4 lg:py-6"
+        className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-64 lg:shrink-0 lg:flex-col lg:gap-6 lg:border-r lg:border-border lg:bg-surface lg:px-4 lg:py-6"
       >
-        <TitleBlock variant="sidebar" className="px-3" />
+        <TitleBlock variant="sidebar" className="px-1" />
         <NavLink
           to="/log"
           className="tap flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-contrast"
