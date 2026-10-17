@@ -1,3 +1,88 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Theme tokens. Light by default, dark from the OS unless the user picked a theme. */
+:root {
+  color-scheme: light;
+  --color-bg: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #eeeeeb;
+  --color-border: #dcdcd7;
+  --color-text: #1b1b19;
+  --color-text-secondary: #5a5a55;
+  --color-accent: #0072b2;
+  --color-accent-contrast: #ffffff;
+
+  /* Nutrient colors (Okabe-Ito), the same everywhere. */
+  --color-kcal: #56b4e9;
+  --color-protein: #d55e00;
+  --color-fat: #e69f00;
+  --color-carbs: #009e73;
+
+  --tabbar-height: 64px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --color-bg: #121211;
+    --color-surface: #1c1c1a;
+    --color-surface-2: #262624;
+    --color-border: #393936;
+    --color-text: #f1f1ee;
+    --color-text-secondary: #b1b1aa;
+    --color-accent: #56b4e9;
+    --color-accent-contrast: #0b0b0a;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #121211;
+  --color-surface: #1c1c1a;
+  --color-surface-2: #262624;
+  --color-border: #393936;
+  --color-text: #f1f1ee;
+  --color-text-secondary: #b1b1aa;
+  --color-accent: #56b4e9;
+  --color-accent-contrast: #0b0b0a;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family:
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* 16 px stops iOS Safari from zooming when a field gets focus. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  /* Touch screens get 44 px minimum targets. */
+  @media (pointer: coarse) {
+    .tap {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+}

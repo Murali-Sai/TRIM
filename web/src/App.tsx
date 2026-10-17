@@ -1,15 +1,27 @@
-import { useQuery } from '@tanstack/react-query';
-import { fetchHealth } from './api/health';
+import { Route, Routes } from 'react-router';
+import { AppShell } from './components/AppShell';
+import { AccountPage } from './pages/AccountPage';
+import { Placeholder } from './pages/Placeholder';
 
 export function App() {
-  const health = useQuery({ queryKey: ['health'], queryFn: fetchHealth });
-
   return (
-    <main className="mx-auto max-w-md p-4">
-      <h1 className="text-2xl font-bold">TRIM</h1>
-      <p className="text-sm">
-        API: {health.isPending ? 'checking' : health.isError ? 'unreachable' : health.data.status}
-      </p>
-    </main>
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route index element={<Placeholder title="Today" note="Your day will show here." />} />
+        <Route
+          path="log"
+          element={<Placeholder title="Log food" note="Food search comes next." />}
+        />
+        <Route
+          path="body"
+          element={<Placeholder title="Body" note="Weight and measurements will show here." />}
+        />
+        <Route
+          path="charts"
+          element={<Placeholder title="Progress" note="Your charts will show here." />}
+        />
+        <Route path="account" element={<AccountPage />} />
+      </Route>
+    </Routes>
   );
 }
