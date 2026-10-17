@@ -55,6 +55,8 @@ export interface Me {
   email_verified: boolean;
   verify_deadline: string | null;
   verify_required: boolean;
+  /** The next sign-up step: body stats (2), targets (3), or done. */
+  setup: 'body_stats' | 'targets' | 'done';
 }
 
 export const ME_KEY = ['me'] as const;

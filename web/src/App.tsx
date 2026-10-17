@@ -6,6 +6,7 @@ import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { Placeholder } from './pages/Placeholder';
 import { ResetPage } from './pages/ResetPage';
+import { SetupPage } from './pages/setup/SetupPage';
 import { SignupPage } from './pages/SignupPage';
 import { VerifyPage } from './pages/VerifyPage';
 
@@ -28,6 +29,7 @@ export function App() {
         />
         <Route path="account" element={<AccountPage />} />
       </Route>
+      <Route path="setup" element={<SetupPage />} />
       <Route path="welcome" element={<LandingPage />} />
       <Route path="signup" element={<SignupPage />} />
       <Route path="verify" element={<VerifyPage />} />

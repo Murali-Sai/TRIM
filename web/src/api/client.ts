@@ -50,9 +50,17 @@ export async function getJson<T>(path: string): Promise<T> {
   return parse<T>(await fetch(`/api${path}`, { credentials: 'same-origin' }));
 }
 
-export async function postJson<T>(path: string, body?: unknown): Promise<T> {
+export function postJson<T>(path: string, body?: unknown): Promise<T> {
+  return sendJson<T>('POST', path, body);
+}
+
+export function patchJson<T>(path: string, body?: unknown): Promise<T> {
+  return sendJson<T>('PATCH', path, body);
+}
+
+async function sendJson<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`/api${path}`, {
-    method: 'POST',
+    method,
     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await csrfToken() },
     credentials: 'same-origin',
     body: body === undefined ? null : JSON.stringify(body),

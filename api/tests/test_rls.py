@@ -1,10 +1,11 @@
-"""Task 1.3: users, user_profiles, sessions, auth_tokens and audit_log are isolated per user by
-Postgres row-level security, checked directly in the database."""
+"""Every user-owned table (RLS_TABLES) is isolated per user by Postgres row-level security,
+checked directly in the database. Started in task 1.3; each new table adds a seeded row here."""
 
 import hashlib
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import Engine, text
@@ -12,7 +13,16 @@ from sqlalchemy.exc import DBAPIError
 
 from app.db import anonymous_session, user_session
 from app.ids import uuid7
-from app.models import RLS_TABLES, AuditLog, AuthToken, SessionRow, User, UserProfile
+from app.models import (
+    RLS_TABLES,
+    AuditLog,
+    AuthToken,
+    SessionRow,
+    Target,
+    User,
+    UserProfile,
+    WeightEntry,
+)
 
 
 @dataclass(frozen=True)
@@ -48,6 +58,16 @@ def seed_user(label: str) -> Seeded:
                     expires_at=datetime.now(UTC) + timedelta(hours=1),
                 ),
                 AuditLog(user_id=user_id, event="signup"),
+                WeightEntry(user_id=user_id, measured_at=datetime.now(UTC), kg=Decimal("80")),
+                Target(
+                    user_id=user_id,
+                    effective_from=date(2026, 10, 17),
+                    kcal=2300,
+                    protein_g=150,
+                    carbs_g=280,
+                    fat_g=65,
+                    source="custom",
+                ),
             ]
         )
     return Seeded(user_id, email, session_hash, verify_hash)

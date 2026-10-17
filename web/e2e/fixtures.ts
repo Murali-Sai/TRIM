@@ -22,6 +22,7 @@ export const ME = {
   email_verified: true,
   verify_deadline: null as string | null,
   verify_required: false,
+  setup: 'done' as 'body_stats' | 'targets' | 'done',
 };
 
 export type MeState = typeof ME | null;

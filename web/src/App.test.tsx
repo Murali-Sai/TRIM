@@ -14,6 +14,7 @@ const ME: Me = {
   email_verified: true,
   verify_deadline: null,
   verify_required: false,
+  setup: 'done',
 };
 
 function stubMe(me: Me | null) {

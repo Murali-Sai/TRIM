@@ -30,6 +30,8 @@ export function AppShell() {
   }
   if (!me.data) return <Navigate to="/welcome" replace />;
   const user = me.data;
+  // Body stats and targets come first; the app needs targets to be useful.
+  if (!user.verify_required && user.setup !== 'done') return <Navigate to="/setup" replace />;
 
   return (
     <div className="min-h-dvh lg:flex">
