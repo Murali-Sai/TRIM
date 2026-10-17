@@ -1,7 +1,7 @@
 from fastapi import APIRouter, FastAPI
 
 from app.config import get_settings
-from app.routers import auth, me, password, setup
+from app.routers import account, auth, me, password, setup
 from app.security.csrf import install_csrf
 from app.services.registry import Services, build_services
 
@@ -17,6 +17,7 @@ def health() -> dict[str, str]:
 api.include_router(auth.router)
 api.include_router(password.router)
 api.include_router(me.router)
+api.include_router(account.router)
 api.include_router(setup.router)
 
 

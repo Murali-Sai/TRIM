@@ -69,7 +69,7 @@ test('marks the current section as active', async () => {
 test('theme choice applies and persists', async () => {
   stubMe(ME);
   renderAt('/account');
-  const select = await screen.findByLabelText('Appearance');
+  const select = await screen.findByLabelText('Theme');
   fireEvent.change(select, { target: { value: 'dark' } });
   expect(document.documentElement.dataset.theme).toBe('dark');
   expect(localStorage.getItem('trim.theme')).toBe('dark');

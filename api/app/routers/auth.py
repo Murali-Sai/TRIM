@@ -4,7 +4,6 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from typing import Annotated, Literal
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import AfterValidator, BaseModel, EmailStr, Field, StringConstraints
@@ -32,6 +31,7 @@ from app.security.sessions import CurrentUserDep, end_session, start_session
 from app.security.tokens import hash_ip, hash_token, new_token
 from app.services.email import EmailSendError
 from app.services.registry import Services
+from app.validators import valid_timezone
 
 log = logging.getLogger(__name__)
 
@@ -43,14 +43,6 @@ RESEND_COOLDOWN = timedelta(minutes=1)
 LOGIN_FAILED = "Email or password is incorrect."
 LOGIN_LOCKED = "Too many attempts. Try again in 15 minutes."
 TOO_MANY_SIGNUPS = "Too many sign-ups from this network. Try again later."
-
-
-def _valid_timezone(tz: str) -> str:
-    try:
-        ZoneInfo(tz)
-    except (ZoneInfoNotFoundError, ValueError):
-        raise ValueError("Unknown timezone") from None
-    return tz
 
 
 def _pepper(settings: Settings) -> str:
@@ -98,7 +90,7 @@ class SignupIn(BaseModel):
     display_name: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)
     ]
-    timezone: Annotated[str, AfterValidator(_valid_timezone)]
+    timezone: Annotated[str, AfterValidator(valid_timezone)]
     unit_system: Literal["metric", "imperial"]
     turnstile_token: Annotated[str, Field(max_length=2048)]
 

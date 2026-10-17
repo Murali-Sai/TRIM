@@ -70,9 +70,7 @@ test.describe('phone behaviour', () => {
 
   test('form fields use 16 px text', async ({ page }) => {
     await page.goto('/account');
-    const size = await page
-      .getByLabel('Appearance')
-      .evaluate((el) => getComputedStyle(el).fontSize);
+    const size = await page.getByLabel('Theme').evaluate((el) => getComputedStyle(el).fontSize);
     expect(size).toBe('16px');
   });
 });
@@ -80,7 +78,7 @@ test.describe('phone behaviour', () => {
 test('manual dark theme overrides a light device setting', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/account');
-  await page.getByLabel('Appearance').selectOption('dark');
+  await page.getByLabel('Theme').selectOption('dark');
   await page.reload();
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(bg).toBe('rgb(18, 18, 17)');

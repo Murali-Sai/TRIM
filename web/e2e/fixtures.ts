@@ -42,6 +42,30 @@ export async function stubExternal(page: Page, me: MeState | (() => MeState) = M
       ? route.fulfill({ json: current })
       : route.fulfill({ status: 401, json: { detail: 'Not signed in' } });
   });
+  await page.route('**/api/me/sessions', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 'session-this',
+          created_at: '2026-10-17T12:00:00Z',
+          last_seen_at: '2026-10-17T12:00:00Z',
+          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/141.0.0.0 Safari/537.36',
+          persistent: true,
+          current: true,
+        },
+      ],
+    }),
+  );
+  await page.route('**/api/me/profile', (route) =>
+    route.fulfill({
+      json: {
+        display_name: ME.display_name,
+        timezone: ME.timezone,
+        unit_system: 'imperial',
+        theme: 'system',
+      },
+    }),
+  );
   await page.route('https://challenges.cloudflare.com/**', (route) =>
     route.fulfill({ contentType: 'text/javascript', body: TURNSTILE_STUB }),
   );
