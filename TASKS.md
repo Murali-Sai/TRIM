@@ -14,7 +14,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 - [x] **1.6c TDEE and macro rules module (tests first)** (built before 1.6b, which needs it) (a9d2c84), same test vectors in TypeScript and Python. AC: all SPEC examples, BMI boundaries 24.9/25.0/29.9/30.0, 0.7 g/lb and 25%-fat rules above BMI 30, calorie floor, imperial conversion, carbs clamp at 0, input ranges.
 - [x] **1.7 Account page**: profile, units, timezone, change password, session list, delete account. AC: deleted user cannot log in; their rows are gone. "Download my data" joins this page in 5.1. (d87444f)
 - [~] **1.8 Same-origin proxy (Pages Function to Cloud Run)**. AC: session cookie works in iPhone Safari and desktop Safari. Proxy, shared-secret guard and tests done; waiting on the Cloudflare, Cloud Run and domain setup and the Safari check in docs/DEPLOY.md.
-- [ ] **1.9 Isolation test harness** that runs against every endpoint. AC: fails the build if any endpoint lets user B touch user A's data.
+- [x] **1.9 Isolation test harness** that runs against every endpoint. AC: fails the build if any endpoint lets user B touch user A's data. (9cd9026)
 
 ## Milestone 2: Weight logging and trend chart
 - [ ] **2.1 Trend math (tests first)**: EWMA, gap alpha, outliers, min points, weekly slope. AC: SPEC page 3 examples match to 0.01.
