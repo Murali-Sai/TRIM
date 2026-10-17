@@ -1,0 +1,15 @@
+# Local development database. Credentials here are for local use only.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: trim
+      POSTGRES_PASSWORD: trim
+      POSTGRES_DB: trim
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - trim-db:/var/lib/postgresql/data
+
+volumes:
+  trim-db:

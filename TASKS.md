@@ -3,7 +3,7 @@
 Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when its acceptance criteria (AC) pass.
 
 ## Milestone 1: Accounts and responsive shell
-- [ ] **1.1 Scaffold**: `web/` (Vite, React, TS, Tailwind, TanStack Query), `api/` (FastAPI, SQLAlchemy, Alembic), CI running lint, typecheck and tests. AC: CI green on empty suites.
+- [x] **1.1 Scaffold**: `web/` (Vite, React, TS, Tailwind, TanStack Query), `api/` (FastAPI, SQLAlchemy, Alembic), CI running lint, typecheck and tests. AC: CI green on empty suites.
 - [ ] **1.2 Responsive app shell**: bottom tabs under 1024 px, sidebar at 1024 px and up, dark mode, safe-area CSS, 16 px inputs. AC: screenshots at 375, 768, 1280, 1920 show no horizontal scroll.
 - [ ] **1.2b TRIM title block**: "TRIM" with "Track, Record, Inspect, Measure" under it on landing, auth pages, desktop sidebar, phone header and emails; page titles and manifest names. AC: visible and unwrapped at 360, 768, 1280 and 1920 px in light and dark mode; contrast passes AA.
 - [ ] **1.3 users, user_profiles, sessions, auth_tokens, audit_log tables + RLS**. AC: RLS test with wrong `app.user_id` returns zero rows.
