@@ -1,0 +1,146 @@
+{
+  "about": "Shared test vectors for the TDEE and macro rules (SPEC page 3). Both web/src/lib/tdee.ts and api/app/tdee.py must pass every case. Rounded values are what users see and what is stored; raw values are checked to 0.01.",
+  "calculate": [
+    {
+      "name": "SPEC worked example: male 30, 80 kg, 180 cm, moderate (maintain)",
+      "input": { "sex": "male", "age": 30, "weight_kg": 80, "height_cm": 180, "activity": "moderate" },
+      "expect": {
+        "bmr": 1780, "tdee": 2759, "weekly_tdee": 19313, "bmi": 24.7,
+        "suggested_plan": "maintain", "plan": "maintain", "rule_set": "standard",
+        "deficit_kcal": 0, "target_kcal": 2759, "floor_applied": false,
+        "protein_g": 141, "fat_g": 53, "carbs_g": 430, "carbs_clamped": false,
+        "raw": { "bmr": 1780, "tdee": 2759, "weight_lb": 176.37, "protein_g": 141.1, "fat_g": 52.91, "carbs_g": 429.6 }
+      }
+    },
+    {
+      "name": "SPEC: same inputs for a female",
+      "input": { "sex": "female", "age": 30, "weight_kg": 80, "height_cm": 180, "activity": "moderate" },
+      "expect": { "bmr": 1614, "tdee": 2502, "plan": "maintain", "rule_set": "standard" }
+    },
+    {
+      "name": "SPEC worked example: male 35, 95 kg, 188 cm, moderate (lose, 650)",
+      "input": { "sex": "male", "age": 35, "weight_kg": 95, "height_cm": 188, "activity": "moderate" },
+      "expect": {
+        "bmr": 1955, "tdee": 3030, "bmi": 26.9,
+        "suggested_plan": "lose", "plan": "lose", "rule_set": "standard",
+        "deficit_kcal": 650, "target_kcal": 2380, "floor_applied": false,
+        "protein_g": 168, "fat_g": 63, "carbs_g": 286, "carbs_clamped": false,
+        "pace_kg_per_week": 0.59,
+        "raw": { "tdee": 3030.25, "weight_lb": 209.44, "target_kcal": 2380.25 }
+      }
+    },
+    {
+      "name": "SPEC worked example: female 45, 110 kg, 163 cm, sedentary (lose, high BMI rules)",
+      "input": { "sex": "female", "age": 45, "weight_kg": 110, "height_cm": 163, "activity": "sedentary" },
+      "expect": {
+        "bmr": 1733, "tdee": 2079, "bmi": 41.4,
+        "suggested_plan": "lose", "plan": "lose", "rule_set": "high_bmi",
+        "deficit_kcal": 650, "target_kcal": 1429, "floor_applied": false,
+        "protein_g": 170, "fat_g": 40, "carbs_g": 98, "carbs_clamped": false,
+        "raw": { "bmr": 1732.75, "weight_lb": 242.51 }
+      }
+    },
+    {
+      "name": "deficit chip 600",
+      "input": { "sex": "male", "age": 35, "weight_kg": 95, "height_cm": 188, "activity": "moderate", "deficit_kcal": 600 },
+      "expect": { "plan": "lose", "deficit_kcal": 600, "target_kcal": 2430 }
+    },
+    {
+      "name": "deficit chip 700",
+      "input": { "sex": "male", "age": 35, "weight_kg": 95, "height_cm": 188, "activity": "moderate", "deficit_kcal": 700 },
+      "expect": { "plan": "lose", "deficit_kcal": 700, "target_kcal": 2330, "pace_kg_per_week": 0.64 }
+    },
+    {
+      "name": "choosing Maintain over a suggested Lose",
+      "input": { "sex": "male", "age": 35, "weight_kg": 95, "height_cm": 188, "activity": "moderate", "plan": "maintain" },
+      "expect": { "suggested_plan": "lose", "plan": "maintain", "deficit_kcal": 0, "target_kcal": 3030, "protein_g": 168, "fat_g": 63, "pace_kg_per_week": 0 }
+    },
+    {
+      "name": "BMI 24.9 boundary: maintain",
+      "input": { "sex": "male", "age": 40, "weight_kg": 99.6, "height_cm": 200, "activity": "sedentary" },
+      "expect": { "bmi": 24.9, "bmr": 2051, "tdee": 2461, "suggested_plan": "maintain", "rule_set": "standard", "target_kcal": 2461 }
+    },
+    {
+      "name": "BMI 25.0 boundary: lose, standard rules",
+      "input": { "sex": "male", "age": 40, "weight_kg": 100, "height_cm": 200, "activity": "sedentary" },
+      "expect": { "bmi": 25.0, "bmr": 2055, "tdee": 2466, "suggested_plan": "lose", "rule_set": "standard", "target_kcal": 1816 }
+    },
+    {
+      "name": "BMI 29.9 boundary: lose, standard rules",
+      "input": { "sex": "male", "age": 40, "weight_kg": 119.6, "height_cm": 200, "activity": "sedentary" },
+      "expect": { "bmi": 29.9, "tdee": 2701, "suggested_plan": "lose", "rule_set": "standard", "target_kcal": 2051 }
+    },
+    {
+      "name": "BMI 30.0 boundary: lose, 0.7 g/lb protein and 25% fat",
+      "input": { "sex": "male", "age": 40, "weight_kg": 120, "height_cm": 200, "activity": "sedentary" },
+      "expect": {
+        "bmi": 30.0, "tdee": 2706, "suggested_plan": "lose", "rule_set": "high_bmi", "target_kcal": 2056,
+        "protein_g": 185, "fat_g": 57, "carbs_g": 200
+      }
+    },
+    {
+      "name": "high-BMI rules still apply when the user picks Maintain",
+      "input": { "sex": "male", "age": 40, "weight_kg": 120, "height_cm": 200, "activity": "sedentary", "plan": "maintain" },
+      "expect": { "rule_set": "high_bmi", "target_kcal": 2706, "protein_g": 185, "fat_g": 75 }
+    },
+    {
+      "name": "female calorie floor 1,200",
+      "input": { "sex": "female", "age": 80, "weight_kg": 60, "height_cm": 150, "activity": "sedentary" },
+      "expect": {
+        "bmr": 977, "tdee": 1172, "bmi": 26.7, "plan": "lose", "rule_set": "standard",
+        "target_kcal": 1200, "floor_applied": true, "protein_g": 106, "fat_g": 40, "carbs_g": 105,
+        "raw": { "bmr": 976.5 }
+      }
+    },
+    {
+      "name": "male calorie floor 1,500",
+      "input": { "sex": "male", "age": 85, "weight_kg": 70, "height_cm": 160, "activity": "sedentary" },
+      "expect": { "bmr": 1280, "tdee": 1536, "bmi": 27.3, "plan": "lose", "target_kcal": 1500, "floor_applied": true }
+    },
+    {
+      "name": "activity: light",
+      "input": { "sex": "male", "age": 30, "weight_kg": 80, "height_cm": 180, "activity": "light" },
+      "expect": { "tdee": 2448 }
+    },
+    {
+      "name": "activity: heavy",
+      "input": { "sex": "male", "age": 30, "weight_kg": 80, "height_cm": 180, "activity": "heavy" },
+      "expect": { "tdee": 3071 }
+    },
+    {
+      "name": "activity: athlete",
+      "input": { "sex": "male", "age": 30, "weight_kg": 80, "height_cm": 180, "activity": "athlete" },
+      "expect": { "tdee": 3382 }
+    }
+  ],
+  "macros": [
+    {
+      "name": "custom low target: protein and fat use it all, carbs clamp at 0",
+      "input": { "target_kcal": 800, "weight_kg": 100, "rule_set": "standard" },
+      "expect": { "protein_g": 176, "fat_g": 66, "carbs_g": 0, "carbs_clamped": true }
+    },
+    {
+      "name": "SPEC rounding note: rounded grams re-add to 2,761 for a 2,759 target",
+      "input": { "target_kcal": 2759, "weight_kg": 80, "rule_set": "standard" },
+      "expect": { "protein_g": 141, "fat_g": 53, "carbs_g": 430, "carbs_clamped": false, "kcal_from_rounded": 2761 }
+    }
+  ],
+  "units": [
+    { "name": "176.4 lb to kg", "lb": 176.4, "expect_kg": 80.01 },
+    { "name": "1 lb is exactly 0.45359237 kg", "lb": 1, "expect_kg": 0.45 },
+    { "name": "5 ft 11 in to cm", "ft": 5, "in": 11, "expect_cm": 180.34 },
+    { "name": "6 ft 2 in to cm", "ft": 6, "in": 2, "expect_cm": 187.96 }
+  ],
+  "validation": [
+    { "name": "lowest valid inputs", "input": { "age": 18, "weight_kg": 30, "height_cm": 120 }, "errors": [] },
+    { "name": "highest valid inputs", "input": { "age": 100, "weight_kg": 300, "height_cm": 230 }, "errors": [] },
+    { "name": "age 17", "input": { "age": 17, "weight_kg": 80, "height_cm": 180 }, "errors": ["age"] },
+    { "name": "age 101", "input": { "age": 101, "weight_kg": 80, "height_cm": 180 }, "errors": ["age"] },
+    { "name": "age not whole", "input": { "age": 30.5, "weight_kg": 80, "height_cm": 180 }, "errors": ["age"] },
+    { "name": "weight 29.9 kg", "input": { "age": 30, "weight_kg": 29.9, "height_cm": 180 }, "errors": ["weight_kg"] },
+    { "name": "weight 300.1 kg", "input": { "age": 30, "weight_kg": 300.1, "height_cm": 180 }, "errors": ["weight_kg"] },
+    { "name": "height 119 cm", "input": { "age": 30, "weight_kg": 80, "height_cm": 119 }, "errors": ["height_cm"] },
+    { "name": "height 231 cm", "input": { "age": 30, "weight_kg": 80, "height_cm": 231 }, "errors": ["height_cm"] },
+    { "name": "everything out of range", "input": { "age": 5, "weight_kg": 5, "height_cm": 50 }, "errors": ["age", "weight_kg", "height_cm"] }
+  ]
+}

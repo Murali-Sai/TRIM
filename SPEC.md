@@ -353,7 +353,9 @@ Example, with 300 kcal, 40 P, 25 C, 8 F left: chicken breast 120 g (198 kcal, 37
 - Female, 45, 110 kg, 163 cm, sedentary. BMI 41.4, so Lose with the "a lot to lose" rules. BMR 1,733, TDEE 2,079, target 1,429 (above the 1,200 floor). Weight 242.5 lb: protein 170 g (0.7 x 242.5), fat 40 g (0.25 x 1,429 / 9), carbs 98 g.
 - Male, 30, 80 kg, 180 cm, moderate (earlier example). BMI 24.7, so Maintain: 2,759 kcal, 141 P, 53 F, 430 C.
 
-**Rounding.** Compute with unrounded values; round TDEE and grams to whole numbers only for display and storage. Rounded grams can re-add to a total 1 or 2 kcal off the target (above: 2,761 vs 2,759); expected.
+**Rule details (fixed in the shared test vectors, `shared/tdee_vectors.json`).** The BMI that picks the plan and rule set is the one shown, rounded half up to one decimal, so the screen and the suggestion always agree (24.95 shows 25.0 and suggests Lose). The high-BMI rule set follows BMI, not the plan: a user with BMI 30 or more who picks Maintain still gets 0.7 g/lb protein and 25% fat. The calorie floor applies to the Lose plan only; Maintain stays at TDEE. Pace uses the deficit actually applied after the floor.
+
+**Rounding.** Compute with unrounded values; round TDEE and grams to whole numbers only for display and storage, half up (1780 x 1.725 = 3070.5 gives 3071), identically in TypeScript and Python. Rounded grams can re-add to a total 1 or 2 kcal off the target (above: 2,761 vs 2,759); expected.
 
 **Edge cases.**
 - If protein and fat alone exceed the calorie target (possible only with a custom low target), carbs are set to 0 and the user sees: "Protein and fat already use your full calorie target. Lower them or raise calories."
