@@ -1,0 +1,22 @@
+from sqlalchemy import create_engine, inspect
+
+from tests.conftest import db_url, migrate, recreate_database
+
+MIGRATIONS_DB = "trim_test_migrations"
+
+
+def test_upgrade_downgrade_upgrade() -> None:
+    recreate_database(MIGRATIONS_DB)
+    url = db_url(MIGRATIONS_DB)
+    engine = create_engine(url)
+    try:
+        migrate(url)
+        assert {"users", "sessions", "auth_tokens", "audit_log", "user_profiles"} <= set(
+            inspect(engine).get_table_names()
+        )
+        migrate(url, "base", down=True)
+        assert set(inspect(engine).get_table_names()) == {"alembic_version"}
+        migrate(url)
+        assert "users" in inspect(engine).get_table_names()
+    finally:
+        engine.dispose()

@@ -9,7 +9,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="TRIM_", env_file=".env", extra="ignore")
 
     env: str = "dev"
-    database_url: str = "postgresql+psycopg://trim:trim@127.0.0.1:5432/trim"
+    # The API connects as a login role that is a member of trim_app: not the table owner and
+    # without BYPASSRLS, so row-level security always applies.
+    database_url: str = "postgresql+psycopg://trim_api:trim_api@127.0.0.1:5433/trim"
+    # Migrations run as the schema owner.
+    migration_database_url: str = "postgresql+psycopg://trim:trim@127.0.0.1:5433/trim"
 
 
 @lru_cache

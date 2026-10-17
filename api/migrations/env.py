@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from app import models  # noqa: F401  (registers tables on Base.metadata)
 from app.config import get_settings
 from app.db import Base
 
@@ -10,7 +11,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# Tests pass their own URL through config attributes; otherwise use the owner role from settings.
+url = config.attributes.get("url") or get_settings().migration_database_url
+config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
 target_metadata = Base.metadata
 
 

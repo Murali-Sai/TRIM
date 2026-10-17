@@ -7,9 +7,11 @@ services:
       POSTGRES_PASSWORD: trim
       POSTGRES_DB: trim
     ports:
-      - "127.0.0.1:5432:5432"
+      # 5433 on the host so it never clashes with a locally installed Postgres on 5432.
+      - "127.0.0.1:5433:5432"
     volumes:
       - trim-db:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
 
 volumes:
   trim-db:

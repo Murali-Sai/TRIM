@@ -1,5 +1,10 @@
-from sqlalchemy import MetaData, create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from functools import lru_cache
+
+from sqlalchemy import Engine, MetaData, create_engine, text
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import get_settings
 
@@ -17,5 +22,30 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
-engine = create_engine(get_settings().database_url, pool_pre_ping=True)
-SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+@lru_cache
+def get_engine() -> Engine:
+    return create_engine(get_settings().database_url, pool_pre_ping=True)
+
+
+@lru_cache
+def _session_factory() -> sessionmaker[Session]:
+    return sessionmaker(bind=get_engine(), expire_on_commit=False)
+
+
+@contextmanager
+def user_session(user_id: uuid.UUID) -> Iterator[Session]:
+    """A transaction scoped to one user: RLS policies see only rows whose user_id matches.
+
+    `user_id` must come from the authenticated session, never from the request.
+    The setting is transaction-local, so it cannot leak to the next pooled connection.
+    """
+    with _session_factory()() as session, session.begin():
+        session.execute(text("SELECT set_config('app.user_id', :uid, true)"), {"uid": str(user_id)})
+        yield session
+
+
+@contextmanager
+def anonymous_session() -> Iterator[Session]:
+    """A transaction with no user: user tables return nothing, only the auth_* lookups work."""
+    with _session_factory()() as session, session.begin():
+        yield session
