@@ -1,11 +1,36 @@
-import { NavLink, Outlet } from 'react-router';
+import { Navigate, NavLink, Outlet } from 'react-router';
+import { useMe } from '../api/auth';
+import { useLogout } from '../useLogout';
 import { PlusIcon } from './icons';
 import { NAV_ITEMS } from './nav';
 import { TitleBlock } from './TitleBlock';
+import { VerifyBanner, VerifyRequired } from './VerifyNotice';
 
 // Phone and tablet (under 1024 px): header, bottom tab bar and a floating "+".
 // Desktop (1024 px and up): left sidebar with an "Add food" button.
+// Signed-out visitors go to the landing page.
 export function AppShell() {
+  const me = useMe();
+  const logout = useLogout();
+
+  if (me.isPending) return <div className="min-h-dvh" aria-busy="true" />;
+  if (me.isError) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-4 text-center">
+        <p>TRIM can&apos;t be reached right now.</p>
+        <button
+          type="button"
+          onClick={() => void me.refetch()}
+          className="tap rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-contrast"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+  if (!me.data) return <Navigate to="/welcome" replace />;
+  const user = me.data;
+
   return (
     <div className="min-h-dvh lg:flex">
       <aside
@@ -52,7 +77,14 @@ export function AppShell() {
         </div>
 
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+5rem)] pt-4 lg:px-8 lg:pb-8 lg:pt-8">
-          <Outlet />
+          {user.verify_required ? (
+            <VerifyRequired me={user} onLogout={() => logout.mutate()} />
+          ) : (
+            <>
+              {user.email_verified ? null : <VerifyBanner me={user} />}
+              <Outlet />
+            </>
+          )}
         </main>
       </div>
 

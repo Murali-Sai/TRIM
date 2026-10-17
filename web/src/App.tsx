@@ -1,8 +1,8 @@
 import { Route, Routes } from 'react-router';
 import { AppShell } from './components/AppShell';
 import { AccountPage } from './pages/AccountPage';
-import { AuthPlaceholder } from './pages/AuthPlaceholder';
 import { LandingPage } from './pages/LandingPage';
+import { LoginPage } from './pages/LoginPage';
 import { Placeholder } from './pages/Placeholder';
 import { SignupPage } from './pages/SignupPage';
 import { VerifyPage } from './pages/VerifyPage';
@@ -29,7 +29,7 @@ export function App() {
       <Route path="welcome" element={<LandingPage />} />
       <Route path="signup" element={<SignupPage />} />
       <Route path="verify" element={<VerifyPage />} />
-      <Route path="login" element={<AuthPlaceholder title="Log in" />} />
+      <Route path="login" element={<LoginPage />} />
     </Routes>
   );
 }

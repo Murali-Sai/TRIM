@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from '../theme';
+import { useLogout } from '../useLogout';
 import { usePageTitle } from '../usePageTitle';
 
 const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
@@ -11,6 +12,7 @@ const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
 export function AccountPage() {
   usePageTitle('Account');
   const [theme, setTheme] = useState<ThemeChoice>(getThemeChoice);
+  const logout = useLogout();
 
   return (
     <section>
@@ -36,6 +38,14 @@ export function AccountPage() {
           ))}
         </select>
       </div>
+      <button
+        type="button"
+        onClick={() => logout.mutate()}
+        disabled={logout.isPending}
+        className="tap mt-6 rounded-lg border border-border bg-surface px-4 py-2.5 font-semibold disabled:opacity-60"
+      >
+        Log out
+      </button>
     </section>
   );
 }

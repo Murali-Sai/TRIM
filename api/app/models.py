@@ -6,14 +6,18 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    BigInteger,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
+    Identity,
     LargeBinary,
     Numeric,
     SmallInteger,
     Text,
+    false,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -110,6 +114,26 @@ class SessionRow(Timestamps, Base):
     )
     user_agent: Mapped[str | None] = mapped_column(Text)
     ip_hash: Mapped[bytes | None] = mapped_column(LargeBinary)
+    # "Keep me signed in": 30-day sliding cookie. Otherwise a browser-session cookie.
+    persistent: Mapped[bool] = mapped_column(Boolean, server_default=false())
+
+
+class RateEvent(Base):
+    """One counted event (failed login, sign-up) under a hashed key such as an account or IP.
+    Not user data: reachable only through the auth_rate_* functions, never by the app role."""
+
+    __tablename__ = "rate_events"
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    key_hash: Mapped[bytes] = mapped_column(LargeBinary, index=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class RateLock(Base):
+    __tablename__ = "rate_locks"
+
+    key_hash: Mapped[bytes] = mapped_column(LargeBinary, primary_key=True)
+    locked_until: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class AuthToken(Timestamps, Base):

@@ -1,58 +1,14 @@
 """Task 1.4: sign-up and email verification. AC: the verify link works once and expires
 after 1 hour."""
 
-from collections.abc import Iterator
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, text
 
-from app.main import create_app
 from tests.fakes import Fakes
-
-PASSWORD = "correct horse battery"
-
-
-@pytest.fixture
-def fakes() -> Fakes:
-    return Fakes()
-
-
-@pytest.fixture
-def client(owner_engine: Engine, fakes: Fakes) -> Iterator[TestClient]:
-    with TestClient(create_app(fakes.services())) as c:
-        yield c
-
-
-_counter = 0
-
-
-def new_email() -> str:
-    global _counter
-    _counter += 1
-    return f"person{_counter}@example.com"
-
-
-def signup_body(**overrides: Any) -> dict[str, Any]:
-    body: dict[str, Any] = {
-        "email": new_email(),
-        "password": PASSWORD,
-        "display_name": "Sam",
-        "timezone": "America/New_York",
-        "unit_system": "imperial",
-        "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
-    }
-    body.update(overrides)
-    return body
-
-
-def user_row(owner_engine: Engine, email: str) -> Any:
-    with owner_engine.connect() as conn:
-        return conn.execute(
-            text("SELECT * FROM users WHERE email = :e"), {"e": email.lower()}
-        ).first()
-
+from tests.helpers import PASSWORD, sign_up_and_get_token, signup_body, user_row
 
 # --- sign-up ------------------------------------------------------------------------------
 
@@ -169,12 +125,6 @@ def test_secrets_never_reach_logs(client: TestClient, fakes: Fakes, caplog: Any)
 
 
 # --- verification -------------------------------------------------------------------------
-
-
-def sign_up_and_get_token(client: TestClient, fakes: Fakes) -> tuple[str, str]:
-    body = signup_body()
-    assert client.post("/api/auth/signup", json=body).status_code == 202
-    return body["email"], fakes.outbox.sent[-1].link_token()
 
 
 def test_verify_link_works_once(client: TestClient, fakes: Fakes, owner_engine: Engine) -> None:

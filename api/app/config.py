@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     # Origin of the web app, used to build links in emails.
     app_base_url: str = "http://localhost:5173"
+    # Secure cookies with the __Host- prefix. Off only for local http development and tests.
+    cookie_secure: bool = False
     # Secret mixed into IP hashes so stored hashes cannot be reversed by brute force.
     ip_hash_pepper: SecretStr = SecretStr("dev-only-pepper")
 
@@ -41,6 +43,8 @@ class Settings(BaseSettings):
                 raise ValueError("TRIM_IP_HASH_PEPPER must be set in prod")
             if self.resend_api_key is None:
                 raise ValueError("TRIM_RESEND_API_KEY must be set in prod")
+            if not self.cookie_secure:
+                raise ValueError("TRIM_COOKIE_SECURE must be true in prod")
         return self
 
 

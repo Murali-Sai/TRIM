@@ -154,10 +154,10 @@ Rules: mobile-first CSS; `@media (pointer: coarse)` raises targets to 44 px; num
 **Decision: own auth in FastAPI**, kept small and tested.
 - **Sign up:** email, password (minimum 10 characters, checked against breached passwords via the Pwned Passwords range API: k-anonymity on the first 5 SHA-1 hex characters, no API key, no rate limit, `Add-Padding: true` sent **[V]**), display name, timezone (auto-detected), units. Then the body-stats step (see Sign-up flow, page 4). Cloudflare Turnstile on sign-up and reset forms: free plan, unlimited verifications, 20 widgets, tokens single use and valid 5 minutes, checked server-side at `/turnstile/v0/siteverify` **[V]**.
 - **Passwords:** Argon2id via `argon2-cffi` with the OWASP minimum m=19456 KiB (19 MiB), t=2, p=1 **[V]**; never logged or returned.
-- **Sessions:** random 256-bit token in an HttpOnly, Secure, SameSite=Lax cookie; only its SHA-256 hash is stored. 30-day sliding expiry with "Keep me signed in", otherwise a browser-session cookie. All sessions revoked on password change.
+- **Sessions:** random 256-bit token in an HttpOnly, Secure, SameSite=Lax cookie; only its SHA-256 hash is stored. 30-day sliding expiry with "Keep me signed in", otherwise a browser-session cookie that the server also ends after 24 hours without activity. In production the cookies use the `__Host-` prefix. All sessions revoked on password change.
 - **CSRF:** SameSite=Lax plus a required `X-CSRF-Token` header (double-submit) on all writes.
 - **Email:** verification and reset links (single-use, 1-hour expiry, hashed tokens) sent through Resend: free plan 3,000 emails per month, 100 per day, 1 domain **[V]**. Unverified users can log for 7 days, then must verify.
-- **Login protection:** 5 failed attempts per account and IP per 15 minutes, then a 15-minute lock; generic error messages so emails cannot be probed.
+- **Login protection:** 5 failed attempts per account and IP per 15 minutes, then a 15-minute lock; generic error messages so emails cannot be probed. The account and the IP are counted separately (either one reaching 5 locks), so one account guessed from many IPs and many accounts tried from one IP are both stopped. Unknown emails lock the same way. Counters live under keyed hashes, never plain emails or IPs. Sign-ups are limited to 10 per IP per hour.
 - **v1.1:** Sign in with Google (OAuth, linked by verified email).
 
 ### Per-user data isolation

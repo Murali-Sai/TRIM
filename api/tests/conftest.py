@@ -8,10 +8,14 @@ owner, and connects the app as trim_api, which is subject to RLS exactly as in p
 import os
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
+
+from tests.fakes import Fakes
 
 OWNER_URL = os.environ.get(
     "TRIM_TEST_OWNER_URL", "postgresql+psycopg://trim:trim@127.0.0.1:5433/postgres"
@@ -77,3 +81,32 @@ def app_engine(owner_engine: Engine) -> Engine:
     from app.db import get_engine
 
     return get_engine()
+
+
+class CsrfClient(TestClient):
+    """A browser-like client: echoes the CSRF cookie in the header on every write."""
+
+    def request(self, method: str, url: Any, **kwargs: Any) -> Any:
+        token = self.cookies.get("trim_csrf")
+        if token and method.upper() not in ("GET", "HEAD", "OPTIONS"):
+            headers = dict(kwargs.pop("headers", None) or {})
+            headers.setdefault("x-csrf-token", token)
+            kwargs["headers"] = headers
+        return super().request(method, url, **kwargs)
+
+
+@pytest.fixture
+def fakes() -> Fakes:
+    return Fakes()
+
+
+@pytest.fixture
+def client(owner_engine: Engine, fakes: Fakes) -> Iterator[CsrfClient]:
+    """App client on the test database with fakes; rate limits start empty for each test."""
+    with owner_engine.begin() as conn:
+        conn.execute(text("TRUNCATE rate_events, rate_locks"))
+    from app.main import create_app
+
+    with CsrfClient(create_app(fakes.services())) as c:
+        assert c.get("/api/auth/csrf").status_code == 204
+        yield c

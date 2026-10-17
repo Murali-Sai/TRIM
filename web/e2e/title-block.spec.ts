@@ -1,4 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test';
+import { stubExternal } from './fixtures';
 import { COLOR_SCHEMES } from './viewports';
 
 const FULL_FORM = 'Track, Record, Inspect, Measure';
@@ -12,7 +13,7 @@ const WIDTHS = [
 ];
 
 test.beforeEach(async ({ page }) => {
-  await page.route('**/api/health', (route) => route.fulfill({ json: { status: 'ok' } }));
+  await stubExternal(page);
 });
 
 interface Measured {

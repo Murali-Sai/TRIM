@@ -1,10 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import { stubExternal } from './fixtures';
 import { COLOR_SCHEMES, VIEWPORTS } from './viewports';
 
 const ROUTES = ['/', '/log', '/body', '/charts', '/account'];
 
 test.beforeEach(async ({ page }) => {
-  await page.route('**/api/health', (route) => route.fulfill({ json: { status: 'ok' } }));
+  await stubExternal(page);
 });
 
 async function expectNoHorizontalScroll(page: Page) {

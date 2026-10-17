@@ -20,3 +20,19 @@ def test_upgrade_downgrade_upgrade() -> None:
         assert "users" in inspect(engine).get_table_names()
     finally:
         engine.dispose()
+
+
+def test_models_match_migrations() -> None:
+    """Fails when a model changes without a migration (alembic check)."""
+    from alembic import command
+    from alembic.config import Config
+
+    from tests.conftest import API_DIR
+
+    recreate_database(MIGRATIONS_DB)
+    url = db_url(MIGRATIONS_DB)
+    migrate(url)
+    cfg = Config(str(API_DIR / "alembic.ini"))
+    cfg.set_main_option("script_location", str(API_DIR / "migrations"))
+    cfg.attributes["url"] = url
+    command.check(cfg)
