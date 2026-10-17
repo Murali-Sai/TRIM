@@ -11,3 +11,17 @@ def verify_email(display_name: str, link: str) -> RenderedEmail:
             "If you did not sign up for TRIM, you can ignore this email.",
         ],
     )
+
+
+def reset_email(display_name: str, link: str) -> RenderedEmail:
+    return render_email(
+        "Reset your TRIM password",
+        [
+            f"Hi {display_name},",
+            "Someone asked to reset the password for your TRIM account. "
+            "To choose a new one, open this link within 1 hour:",
+            link,
+            "Resetting signs you out on every device.",
+            "If you did not ask for this, ignore this email. Your password stays the same.",
+        ],
+    )

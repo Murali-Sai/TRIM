@@ -4,17 +4,8 @@ import { Link } from 'react-router';
 import { verifyEmail } from '../api/auth';
 import { ApiError } from '../api/client';
 import { AuthLayout } from '../components/AuthLayout';
+import { takeTokenFromHash } from '../urlToken';
 import { usePageTitle } from '../usePageTitle';
-
-/** Reads the token from the URL fragment (never sent to servers or in Referer) and clears it. */
-function takeTokenFromHash(): string | null {
-  const params = new URLSearchParams(window.location.hash.slice(1));
-  const token = params.get('token');
-  if (token) {
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
-  }
-  return token;
-}
 
 export function VerifyPage() {
   usePageTitle('Confirm email');

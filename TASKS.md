@@ -8,8 +8,8 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 - [x] **1.2b TRIM title block**: "TRIM" with "Track, Record, Inspect, Measure" under it on landing, auth pages, desktop sidebar, phone header and emails; page titles and manifest names. AC: visible and unwrapped at 360, 768, 1280 and 1920 px in light and dark mode; contrast passes AA. (d8d8851, 3177242)
 - [x] **1.3 users, user_profiles, sessions, auth_tokens, audit_log tables + RLS**. AC: RLS test with wrong `app.user_id` returns zero rows. (b2e9b96)
 - [x] **1.4 Sign up and email verification (Resend, Turnstile)**. AC: verify link works once and expires after 1 hour. Open sign-up. `/auth/resend-verify` needs a session, so it ships with 1.5. (542efec)
-- [x] **1.5 Login, logout, sessions, CSRF, lockout**. AC: 6th failed attempt in 15 min is locked; write without CSRF header returns 403. Includes `/auth/resend-verify`, `/me` and the 7-day verification grace.
-- [ ] **1.6 Forgot and reset password**. AC: reset revokes all sessions.
+- [x] **1.5 Login, logout, sessions, CSRF, lockout**. AC: 6th failed attempt in 15 min is locked; write without CSRF header returns 403. Includes `/auth/resend-verify`, `/me` and the 7-day verification grace. (fe674e1)
+- [x] **1.6 Forgot and reset password**. AC: reset revokes all sessions.
 - [ ] **1.6b Body-stats step and targets step in sign-up**: unit toggle, age, sex, weight, height, activity dropdown; result card with TDEE, weekly total, BMR and macro bars. Includes the Lose / Maintain plan choice with the suggested plan preselected by BMI, deficit chips and the pace estimate. AC: the three worked examples in SPEC page 3 show exactly those targets; first weight entry created.
 - [ ] **1.6c TDEE and macro rules module (tests first)**, same test vectors in TypeScript and Python. AC: all SPEC examples, BMI boundaries 24.9/25.0/29.9/30.0, 0.7 g/lb and 25%-fat rules above BMI 30, calorie floor, imperial conversion, carbs clamp at 0, input ranges.
 - [ ] **1.7 Account page**: profile, units, timezone, change password, session list, delete account. AC: deleted user cannot log in; their rows are gone.

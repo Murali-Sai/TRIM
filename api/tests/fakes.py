@@ -32,8 +32,8 @@ class SentEmail:
     email: RenderedEmail
 
     def link_token(self) -> str:
-        match = re.search(r"/verify#token=([A-Za-z0-9_-]+)", self.email.text)
-        assert match, "no verify link in email"
+        match = re.search(r"/(?:verify|reset)#token=([A-Za-z0-9_-]+)", self.email.text)
+        assert match, "no token link in email"
         return match.group(1)
 
 

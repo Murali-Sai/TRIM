@@ -55,14 +55,22 @@ export function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <Field
-          id="password"
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div>
+          <Field
+            id="password"
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Link
+            to="/forgot"
+            className="tap mt-1 inline-flex items-center text-sm text-accent underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <label className="tap flex items-center gap-3">
           <input
             type="checkbox"

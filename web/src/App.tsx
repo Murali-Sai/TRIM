@@ -1,9 +1,11 @@
 import { Route, Routes } from 'react-router';
 import { AppShell } from './components/AppShell';
 import { AccountPage } from './pages/AccountPage';
+import { ForgotPage } from './pages/ForgotPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { Placeholder } from './pages/Placeholder';
+import { ResetPage } from './pages/ResetPage';
 import { SignupPage } from './pages/SignupPage';
 import { VerifyPage } from './pages/VerifyPage';
 
@@ -30,6 +32,8 @@ export function App() {
       <Route path="signup" element={<SignupPage />} />
       <Route path="verify" element={<VerifyPage />} />
       <Route path="login" element={<LoginPage />} />
+      <Route path="forgot" element={<ForgotPage />} />
+      <Route path="reset" element={<ResetPage />} />
     </Routes>
   );
 }

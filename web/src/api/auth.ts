@@ -34,6 +34,14 @@ export function logout() {
   return postJson<null>('/auth/logout');
 }
 
+export function forgotPassword(body: { email: string; turnstile_token: string }) {
+  return postJson<{ status: 'check_email' }>('/auth/forgot', body);
+}
+
+export function resetPassword(body: { token: string; password: string }) {
+  return postJson<{ status: 'password_reset' }>('/auth/reset', body);
+}
+
 export function resendVerify() {
   return postJson<{ status: 'sent' | 'already_verified' }>('/auth/resend-verify');
 }
