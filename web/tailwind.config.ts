@@ -13,6 +13,7 @@ export default {
         'text-secondary': 'var(--color-text-secondary)',
         accent: 'var(--color-accent)',
         'accent-contrast': 'var(--color-accent-contrast)',
+        error: 'var(--color-error)',
         kcal: 'var(--color-kcal)',
         protein: 'var(--color-protein)',
         fat: 'var(--color-fat)',

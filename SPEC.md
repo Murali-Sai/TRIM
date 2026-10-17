@@ -152,8 +152,8 @@ Rules: mobile-first CSS; `@media (pointer: coarse)` raises targets to 44 px; num
 | Hosted (Clerk, Auth0) | Free tiers with limits **[?]** | Vendor holds identities | Lowest |
 
 **Decision: own auth in FastAPI**, kept small and tested.
-- **Sign up:** email, password (minimum 10 characters, checked against breached passwords via the HIBP range API **[?]**), display name, timezone (auto-detected), units. Then the body-stats step (see Sign-up flow, page 4). Cloudflare Turnstile on sign-up and reset forms **[?]**.
-- **Passwords:** Argon2id via `argon2-cffi` (OWASP-recommended parameters **[?]**); never logged or returned.
+- **Sign up:** email, password (minimum 10 characters, checked against breached passwords via the Pwned Passwords range API: k-anonymity on the first 5 SHA-1 hex characters, no API key, no rate limit, `Add-Padding: true` sent **[V]**), display name, timezone (auto-detected), units. Then the body-stats step (see Sign-up flow, page 4). Cloudflare Turnstile on sign-up and reset forms: free plan, unlimited verifications, 20 widgets, tokens single use and valid 5 minutes, checked server-side at `/turnstile/v0/siteverify` **[V]**.
+- **Passwords:** Argon2id via `argon2-cffi` with the OWASP minimum m=19456 KiB (19 MiB), t=2, p=1 **[V]**; never logged or returned.
 - **Sessions:** random 256-bit token in an HttpOnly, Secure, SameSite=Lax cookie; only its SHA-256 hash is stored. 30-day sliding expiry with "Keep me signed in", otherwise a browser-session cookie. All sessions revoked on password change.
 - **CSRF:** SameSite=Lax plus a required `X-CSRF-Token` header (double-submit) on all writes.
 - **Email:** verification and reset links (single-use, 1-hour expiry, hashed tokens) sent through Resend: free plan 3,000 emails per month, 100 per day, 1 domain **[V]**. Unverified users can log for 7 days, then must verify.
@@ -596,7 +596,7 @@ Privacy: no third-party trackers, and no user data sent to any AI provider. Secu
 | API | Cloud Run, us-central1, min instances 0 | 2M requests, 180,000 vCPU-s, 360,000 GiB-s per month; billing account required **[V]**; 1 to 3 s cold start |
 | Database | Neon Free | 0.5 GB and 100 CU-hours per project; suspends after 5 min idle **[V]** |
 | Email | Resend Free | 3,000 per month, 100 per day, 1 domain **[V]** |
-| Bot protection | Cloudflare Turnstile | Free **[?]** |
+| Bot protection | Cloudflare Turnstile | Free plan: unlimited verifications, 20 widgets **[V]** |
 | Push reminders | Web Push with VAPID keys | Free, no third-party service |
 | Scheduler | Google Cloud Scheduler, 1 hourly job (check-ins, streak evaluation, reminders) | Free tier covers a few jobs per billing account **[?]** |
 
@@ -639,4 +639,4 @@ GitHub Actions: on PR run lint, typecheck, unit, isolation, Playwright and Light
 7. Calorie floor of 1,500 kcal (male) and 1,200 kcal (female): keep, change, or remove?
 
 ### Sources (checked 16 and 17 Oct 2026)
-WebKit storage policy; NHANES dietary interview documentation (wwwn.cdc.gov, Individual Foods files); Open Food Facts API docs; FoodData Central API guide; neon.com/pricing; supabase.com/pricing; cloud.google.com/run/pricing; uPlot README benchmark; TanStack Charts comparison; Resend pricing as reported by wpmailsmtp.com, usecarly.com and automationatlas.io.
+OWASP Password Storage Cheat Sheet; haveibeenpwned.com/API/v3 (Pwned Passwords); developers.cloudflare.com/turnstile (server-side validation, testing, plans); resend.com/docs (send email); WebKit storage policy; NHANES dietary interview documentation (wwwn.cdc.gov, Individual Foods files); Open Food Facts API docs; FoodData Central API guide; neon.com/pricing; supabase.com/pricing; cloud.google.com/run/pricing; uPlot README benchmark; TanStack Charts comparison; Resend pricing as reported by wpmailsmtp.com, usecarly.com and automationatlas.io.

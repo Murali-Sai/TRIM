@@ -28,3 +28,6 @@ Thumbs.db
 
 # Local tooling
 .claude/
+
+# Dev email outbox (holds token links)
+.outbox/

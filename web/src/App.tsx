@@ -4,6 +4,8 @@ import { AccountPage } from './pages/AccountPage';
 import { AuthPlaceholder } from './pages/AuthPlaceholder';
 import { LandingPage } from './pages/LandingPage';
 import { Placeholder } from './pages/Placeholder';
+import { SignupPage } from './pages/SignupPage';
+import { VerifyPage } from './pages/VerifyPage';
 
 export function App() {
   return (
@@ -25,7 +27,8 @@ export function App() {
         <Route path="account" element={<AccountPage />} />
       </Route>
       <Route path="welcome" element={<LandingPage />} />
-      <Route path="signup" element={<AuthPlaceholder title="Sign up" />} />
+      <Route path="signup" element={<SignupPage />} />
+      <Route path="verify" element={<VerifyPage />} />
       <Route path="login" element={<AuthPlaceholder title="Log in" />} />
     </Routes>
   );

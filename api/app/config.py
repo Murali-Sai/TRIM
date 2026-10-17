@@ -1,6 +1,10 @@
 from functools import lru_cache
 
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Cloudflare's published test secret: always passes, and only accepts the dummy token.
+TURNSTILE_TEST_SECRET = "1x0000000000000000000000000000000AA"  # noqa: S105
 
 
 class Settings(BaseSettings):
@@ -14,6 +18,30 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://trim_api:trim_api@127.0.0.1:5433/trim"
     # Migrations run as the schema owner.
     migration_database_url: str = "postgresql+psycopg://trim:trim@127.0.0.1:5433/trim"
+
+    # Origin of the web app, used to build links in emails.
+    app_base_url: str = "http://localhost:5173"
+    # Secret mixed into IP hashes so stored hashes cannot be reversed by brute force.
+    ip_hash_pepper: SecretStr = SecretStr("dev-only-pepper")
+
+    turnstile_secret: SecretStr = SecretStr(TURNSTILE_TEST_SECRET)
+    breach_check_enabled: bool = True
+
+    # No Resend key means emails are written to outbox_dir instead of being sent.
+    resend_api_key: SecretStr | None = None
+    email_from: str = "TRIM <no-reply@localhost>"
+    outbox_dir: str = ".outbox"
+
+    @model_validator(mode="after")
+    def _no_dev_defaults_in_prod(self) -> "Settings":
+        if self.env == "prod":
+            if self.turnstile_secret.get_secret_value() == TURNSTILE_TEST_SECRET:
+                raise ValueError("TRIM_TURNSTILE_SECRET must be a real secret in prod")
+            if self.ip_hash_pepper.get_secret_value() == "dev-only-pepper":
+                raise ValueError("TRIM_IP_HASH_PEPPER must be set in prod")
+            if self.resend_api_key is None:
+                raise ValueError("TRIM_RESEND_API_KEY must be set in prod")
+        return self
 
 
 @lru_cache
