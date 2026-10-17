@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     app_base_url: str = "http://localhost:5173"
     # Secure cookies with the __Host- prefix. Off only for local http development and tests.
     cookie_secure: bool = False
+    # Shared with the Cloudflare Pages Function. When set, /api only answers the proxy.
+    proxy_secret: SecretStr | None = None
     # Secret mixed into IP hashes so stored hashes cannot be reversed by brute force.
     ip_hash_pepper: SecretStr = SecretStr("dev-only-pepper")
 
@@ -45,6 +47,8 @@ class Settings(BaseSettings):
                 raise ValueError("TRIM_RESEND_API_KEY must be set in prod")
             if not self.cookie_secure:
                 raise ValueError("TRIM_COOKIE_SECURE must be true in prod")
+            if self.proxy_secret is None or len(self.proxy_secret.get_secret_value()) < 32:
+                raise ValueError("TRIM_PROXY_SECRET must be set (32+ characters) in prod")
         return self
 
 

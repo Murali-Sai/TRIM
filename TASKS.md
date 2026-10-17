@@ -12,8 +12,8 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 - [x] **1.6 Forgot and reset password**. AC: reset revokes all sessions. (e5f5fb8)
 - [x] **1.6b Body-stats step and targets step in sign-up**: unit toggle, age, sex, weight, height, activity dropdown; result card with TDEE, weekly total, BMR and macro bars. Includes the Lose / Maintain plan choice with the suggested plan preselected by BMI, deficit chips and the pace estimate. AC: the three worked examples in SPEC page 3 show exactly those targets; first weight entry created. Created the `weight_entries` and `targets` tables early (with RLS), so 2.2 and 3.1 build on them. The result card's "Adjust" button arrives with the Targets editor in 3.3; the measurement presets step (step 4) with 4.1. (95740d1)
 - [x] **1.6c TDEE and macro rules module (tests first)** (built before 1.6b, which needs it) (a9d2c84), same test vectors in TypeScript and Python. AC: all SPEC examples, BMI boundaries 24.9/25.0/29.9/30.0, 0.7 g/lb and 25%-fat rules above BMI 30, calorie floor, imperial conversion, carbs clamp at 0, input ranges.
-- [x] **1.7 Account page**: profile, units, timezone, change password, session list, delete account. AC: deleted user cannot log in; their rows are gone. "Download my data" joins this page in 5.1.
-- [ ] **1.8 Same-origin proxy (Pages Function to Cloud Run)**. AC: session cookie works in iPhone Safari and desktop Safari.
+- [x] **1.7 Account page**: profile, units, timezone, change password, session list, delete account. AC: deleted user cannot log in; their rows are gone. "Download my data" joins this page in 5.1. (d87444f)
+- [~] **1.8 Same-origin proxy (Pages Function to Cloud Run)**. AC: session cookie works in iPhone Safari and desktop Safari. Proxy, shared-secret guard and tests done; waiting on the Cloudflare, Cloud Run and domain setup and the Safari check in docs/DEPLOY.md.
 - [ ] **1.9 Isolation test harness** that runs against every endpoint. AC: fails the build if any endpoint lets user B touch user A's data.
 
 ## Milestone 2: Weight logging and trend chart

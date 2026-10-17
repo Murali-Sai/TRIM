@@ -12,9 +12,16 @@ def get_services(request: Request) -> Services:
 
 
 def client_ip(request: Request) -> str | None:
-    # Behind the Pages Function proxy and Cloud Run, the first X-Forwarded-For hop is the client.
+    """The caller's IP, for rate limits and audit hashes.
+
+    X-Forwarded-For is trusted only when the request came through our proxy (it sets the first
+    hop from Cloudflare's CF-Connecting-IP; Cloud Run may append more) or in local development.
+    Anyone else could put any address there.
+    """
+    settings = get_settings()
+    trusted = getattr(request.state, "via_proxy", False) or settings.env == "dev"
     forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
+    if trusted and forwarded:
         return forwarded.split(",", 1)[0].strip() or None
     return request.client.host if request.client else None
 
