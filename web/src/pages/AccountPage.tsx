@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from '../theme';
+import { usePageTitle } from '../usePageTitle';
 
 const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
   { value: 'system', label: 'Match device' },
@@ -8,6 +9,7 @@ const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
 ];
 
 export function AccountPage() {
+  usePageTitle('Account');
   const [theme, setTheme] = useState<ThemeChoice>(getThemeChoice);
 
   return (

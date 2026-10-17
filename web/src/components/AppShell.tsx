@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router';
 import { PlusIcon } from './icons';
 import { NAV_ITEMS } from './nav';
+import { TitleBlock } from './TitleBlock';
 
 // Phone and tablet (under 1024 px): header, bottom tab bar and a floating "+".
 // Desktop (1024 px and up): left sidebar with an "Add food" button.
@@ -11,9 +12,7 @@ export function AppShell() {
         aria-label="Main"
         className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-60 lg:shrink-0 lg:flex-col lg:gap-6 lg:border-r lg:border-border lg:bg-surface lg:px-4 lg:py-6"
       >
-        <div className="px-3" data-testid="brand-sidebar">
-          <span className="text-2xl font-bold">TRIM</span>
-        </div>
+        <TitleBlock variant="sidebar" className="px-3" />
         <NavLink
           to="/log"
           className="tap flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-contrast"
@@ -46,14 +45,11 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header
-          className="sticky top-0 z-10 border-b border-border bg-surface pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-safe-top lg:hidden"
-          data-testid="brand-header"
-        >
+        <div className="sticky top-0 z-10 border-b border-border bg-surface pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-safe-top lg:hidden">
           <div className="flex h-14 items-center">
-            <span className="text-xl font-bold">TRIM</span>
+            <TitleBlock variant="header" />
           </div>
-        </header>
+        </div>
 
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+5rem)] pt-4 lg:px-8 lg:pb-8 lg:pt-8">
           <Outlet />
