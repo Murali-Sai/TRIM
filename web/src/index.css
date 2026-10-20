@@ -20,6 +20,8 @@
   --color-protein: #d55e00;
   --color-fat: #e69f00;
   --color-carbs: #009e73;
+  /* Weight and trend charts: Okabe-Ito blue, validated on both light and dark surfaces. */
+  --color-weight: #0072b2;
 
   --tabbar-height: 64px;
 }

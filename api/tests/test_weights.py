@@ -127,3 +127,17 @@ def test_deleting_every_weigh_in_does_not_reopen_setup(client: CsrfClient) -> No
     for w in client.get("/api/weights").json():
         client.delete(f"/api/weights/{w['id']}")
     assert client.get("/api/me").json()["setup"] == "done"
+
+
+def test_goal_weight_set_read_and_clear(user: CsrfClient) -> None:
+    assert user.get("/api/me/body-stats").json()["goal_weight_kg"] is None
+    res = user.put("/api/me/goal-weight", json={"goal_weight_kg": 165 * 0.45359237})
+    assert res.json() == {"goal_weight_kg": 74.84}
+    assert user.get("/api/me/body-stats").json()["goal_weight_kg"] == 74.84
+    assert user.put("/api/me/goal-weight", json={"goal_weight_kg": None}).status_code == 200
+    assert user.get("/api/me/body-stats").json()["goal_weight_kg"] is None
+
+
+@pytest.mark.parametrize("kg", [29.9, 300.1])
+def test_goal_weight_out_of_range(user: CsrfClient, kg: float) -> None:
+    assert user.put("/api/me/goal-weight", json={"goal_weight_kg": kg}).status_code == 422

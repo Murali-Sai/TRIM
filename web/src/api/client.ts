@@ -58,6 +58,10 @@ export function patchJson<T>(path: string, body?: unknown): Promise<T> {
   return sendJson<T>('PATCH', path, body);
 }
 
+export function putJson<T>(path: string, body?: unknown): Promise<T> {
+  return sendJson<T>('PUT', path, body);
+}
+
 export function deleteJson<T>(path: string, body?: unknown): Promise<T> {
   return sendJson<T>('DELETE', path, body);
 }

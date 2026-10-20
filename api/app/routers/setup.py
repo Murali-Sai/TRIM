@@ -57,13 +57,14 @@ class BodyStatsOut(BaseModel):
     activity_level: ActivityIn | None
     unit_system: Literal["metric", "imperial"]
     latest_weight_kg: float | None
+    goal_weight_kg: float | None
 
 
 def _profile(s: Session, user_id: Any) -> Any:
     return s.execute(
         text(
             "SELECT sex, age_years, age_recorded_on, height_cm, activity_level, unit_system, "
-            "timezone FROM user_profiles WHERE user_id = :u"
+            "timezone, goal_weight_kg FROM user_profiles WHERE user_id = :u"
         ),
         {"u": user_id},
     ).one()
@@ -99,7 +100,27 @@ def get_body_stats(user: ActiveUserDep, services: ServicesDep) -> BodyStatsOut:
         activity_level=p.activity_level,
         unit_system=p.unit_system,
         latest_weight_kg=float(latest) if latest is not None else None,
+        goal_weight_kg=float(p.goal_weight_kg) if p.goal_weight_kg is not None else None,
     )
+
+
+class GoalWeightIn(BaseModel):
+    goal_weight_kg: WeightKg | None  # null clears the goal
+
+
+@router.put("/me/goal-weight")
+def put_goal_weight(body: GoalWeightIn, user: ActiveUserDep) -> GoalWeightIn:
+    """Display only: the goal line on the weight chart and the goal-date projection."""
+    goal = round(body.goal_weight_kg, 2) if body.goal_weight_kg is not None else None
+    with user_session(user.user_id) as s:
+        s.execute(
+            text(
+                "UPDATE user_profiles SET goal_weight_kg = :g, updated_at = now() "
+                "WHERE user_id = :u"
+            ),
+            {"g": goal, "u": user.user_id},
+        )
+    return GoalWeightIn(goal_weight_kg=goal)
 
 
 def _save_body_stats(
@@ -163,6 +184,7 @@ def patch_body_stats(body: BodyStatsIn, user: ActiveUserDep, services: ServicesD
         activity_level=body.activity_level,
         unit_system=body.unit_system,
         latest_weight_kg=float(latest) if latest is not None else None,
+        goal_weight_kg=float(p.goal_weight_kg) if p.goal_weight_kg is not None else None,
     )
 
 
