@@ -75,3 +75,22 @@ export function PlusIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** A bowl: marks saved meals in lists and on the timeline. */
+export function MealIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3.5 11h17a8.5 8.5 0 0 1-17 0Z" />
+      <path d="M9 7.5c0-1.2 1-1.6 1-2.8M13.5 7.5c0-1.2 1-1.6 1-2.8" />
+      <path d="M8 21h8" />
+    </Icon>
+  );
+}
+
+export function ChevronIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </Icon>
+  );
+}

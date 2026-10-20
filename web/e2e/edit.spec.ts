@@ -315,7 +315,8 @@ for (const vp of VIEWPORTS) {
     test("copy yesterday's lunch block to today at a chosen time", async ({ page }) => {
       const calls = await open(page, '/?date=2026-10-16');
       await expect(page.getByRole('heading', { name: 'Fri 16 Oct' })).toBeVisible();
-      await page.getByRole('button', { name: 'Copy the 12:30 PM block' }).click();
+      await page.getByRole('button', { name: 'Options for the 12:30 PM block' }).click();
+      await page.getByRole('menuitem', { name: 'Copy to another day' }).click();
       const sheet = page.getByTestId('move-copy-sheet');
       await expect(sheet.getByLabel('Date')).toHaveValue('2026-10-17');
       await expect(sheet.getByLabel('Time')).toHaveValue('12:30');

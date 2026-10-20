@@ -120,6 +120,16 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
             text("SELECT id, deleted_at FROM weight_entries WHERE user_id = :u ORDER BY id"),
             {"u": a_id},
         ).all()
+        groups = conn.execute(
+            text("SELECT DISTINCT log_group_id FROM food_logs WHERE user_id = :u"), {"u": a_id}
+        ).scalars()
+        group_ids = [str(g) for g in groups]
+        meal_ids = [
+            str(m)
+            for m in conn.execute(
+                text("SELECT id FROM saved_meals WHERE user_id = :u"), {"u": a_id}
+            ).scalars()
+        ]
     ctx = Ctx(
         a_user_id=str(a_id),
         a_session_ids=session_ids,
@@ -128,6 +138,8 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
         a_deleted_weight_ids=[str(w.id) for w in weights if w.deleted_at is not None],
         a_food_ids=[row[0] for row in before["foods"]],
         a_log_ids=[row[0] for row in before["food_logs"]],
+        a_group_ids=group_ids,
+        a_meal_ids=meal_ids,
     )
     res = call(b, ep, ctx)
     name = f"{ep.method} {ep.path}"
@@ -139,7 +151,7 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
     secrets = [a_email, marker, str(a_id), *session_ids]
     secrets += [*ctx.a_weight_ids, *ctx.a_deleted_weight_ids]
     secrets += ctx.a_food_ids
-    secrets += ctx.a_log_ids
+    secrets += [*ctx.a_log_ids, *ctx.a_group_ids, *ctx.a_meal_ids]
     for secret in secrets:
         assert secret.lower() not in res.text.lower(), f"{name} showed A's data to B"
 
@@ -157,6 +169,8 @@ def check_needs_session(app: FastAPI, ep: Endpoint) -> None:
         a_deleted_weight_ids=some,
         a_food_ids=some,
         a_log_ids=some,
+        a_group_ids=some,
+        a_meal_ids=some,
     )
     res = call(anon, ep, ctx)
     assert res.status_code == 401, f"{ep.method} {ep.path} without a session: {res.status_code}"

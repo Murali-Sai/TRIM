@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import type { LogEntry } from '../../api/logs';
-import { PlusIcon } from '../../components/icons';
+import { MealIcon, PlusIcon } from '../../components/icons';
 import { amountLabel, sumNutrients } from '../../lib/dayTotals';
 import { macroLine } from '../../lib/foodAmount';
 import { foodCategory } from '../../lib/foodCategory';
@@ -20,6 +20,7 @@ export interface TimelineActions {
   /** Desktop drag: cards dropped onto another block move to its time. */
   onDrop: (ids: string[], block: TimeBlock<LogEntry>) => void;
   onCopyBlock: (block: TimeBlock<LogEntry>) => void;
+  onSaveBlock: (block: TimeBlock<LogEntry>) => void;
 }
 
 interface Props extends TimelineActions {
@@ -165,6 +166,99 @@ function EntryCard({
   );
 }
 
+/** The block's menu: copy it to another day, or save its foods as a meal. */
+function BlockMenu({
+  label,
+  onCopy,
+  onSave,
+}: {
+  label: string;
+  onCopy: () => void;
+  onSave: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    function onDown(e: PointerEvent) {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [open]);
+
+  function choose(action: () => void) {
+    setOpen(false);
+    action();
+  }
+
+  return (
+    <div
+      ref={root}
+      // Phone: the menu hangs from the header row's right edge so it stays on screen.
+      className="z-[2] sm:relative"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && open) {
+          e.stopPropagation();
+          setOpen(false);
+          root.current?.querySelector<HTMLElement>('button')?.focus();
+        }
+        if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && open) {
+          e.preventDefault();
+          const items = [
+            ...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []),
+          ];
+          const i = items.indexOf(document.activeElement as HTMLElement);
+          items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+        }
+      }}
+    >
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="tap flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-border bg-surface transition-colors duration-200 hover:bg-surface-2"
+        aria-label={`Options for the ${label} block`}
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <circle cx="5.5" cy="12" r="1.7" />
+          <circle cx="12" cy="12" r="1.7" />
+          <circle cx="18.5" cy="12" r="1.7" />
+        </svg>
+      </button>
+      {open ? (
+        <div
+          ref={menu}
+          role="menu"
+          aria-label={`${label} block`}
+          className="absolute right-0 top-10 z-20 w-52 rounded-xl sm:left-0 sm:right-auto border border-border bg-surface p-1 shadow-lg"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => choose(onCopy)}
+            className="tap w-full cursor-pointer rounded-lg px-3 py-2.5 text-left font-semibold transition-colors duration-200 hover:bg-surface-2 focus-visible:bg-surface-2"
+          >
+            Copy to another day
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => choose(onSave)}
+            className="tap w-full cursor-pointer rounded-lg px-3 py-2.5 text-left font-semibold transition-colors duration-200 hover:bg-surface-2 focus-visible:bg-surface-2"
+          >
+            Save as meal
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /** Entries grouped into time blocks along a vertical rail, earliest first. */
 export function Timeline({ blocks, scrollToLatest, highlight, ...actions }: Props) {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
@@ -187,6 +281,9 @@ export function Timeline({ blocks, scrollToLatest, highlight, ...actions }: Prop
       {blocks.map((b, i) => {
         const t = sumNutrients(b.entries);
         const at = b.entries[0]?.eaten_at ?? '';
+        const mealNames = [
+          ...new Set(b.entries.map((e) => e.meal_name).filter((n): n is string => !!n)),
+        ];
         return (
           <li
             key={b.wall}
@@ -216,13 +313,22 @@ export function Timeline({ blocks, scrollToLatest, highlight, ...actions }: Prop
             }}
             aria-label={`${b.label}, ${formatNumber(Math.round(t.kcal))} kcal`}
           >
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex flex-wrap items-center gap-2">
               <span
                 className="num relative z-[1] rounded-full bg-text px-3 py-1 text-sm font-semibold text-surface"
                 data-testid="block-pill"
               >
                 {b.label}
               </span>
+              {mealNames.length > 0 ? (
+                <span
+                  className="flex min-w-0 items-center gap-1 text-sm font-semibold text-text-secondary"
+                  data-testid="block-meal"
+                >
+                  <MealIcon width={16} height={16} />
+                  <span className="truncate">{mealNames.join(', ')}</span>
+                </span>
+              ) : null}
               <Link
                 to={`/log?at=${encodeURIComponent(at)}`}
                 className="tap relative z-[1] flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-border bg-surface transition-colors duration-200 hover:bg-surface-2"
@@ -230,14 +336,11 @@ export function Timeline({ blocks, scrollToLatest, highlight, ...actions }: Prop
               >
                 <PlusIcon width={18} height={18} />
               </Link>
-              <button
-                type="button"
-                onClick={() => actions.onCopyBlock(b)}
-                className="tap relative z-[1] flex h-8 cursor-pointer items-center rounded-full border border-border bg-surface px-3 text-sm font-semibold transition-colors duration-200 hover:bg-surface-2"
-                aria-label={`Copy the ${b.label} block`}
-              >
-                Copy
-              </button>
+              <BlockMenu
+                label={b.label}
+                onCopy={() => actions.onCopyBlock(b)}
+                onSave={() => actions.onSaveBlock(b)}
+              />
               <ul className="ml-auto flex flex-wrap justify-end gap-1.5" data-testid="block-chips">
                 {CHIPS.map((c) => (
                   <li

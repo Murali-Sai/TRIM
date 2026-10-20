@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import type { Meal } from '../../api/meals';
 import type { QuickFood, QuickFoods } from '../../api/foods';
 import { PlusIcon } from '../../components/icons';
 import { amountText, fromLastServing, pickedNutrients, type PickedSource } from '../../lib/picked';
@@ -11,6 +12,9 @@ interface Props {
   onOpen: (food: QuickFood, source: PickedSource) => void;
   /** One tap: add at the last serving (or the default serving). */
   onAdd: (food: QuickFood, source: PickedSource) => void;
+  /** Recently logged saved meals, shown at the top of Recent. */
+  meals?: readonly Meal[];
+  renderMeal?: (meal: Meal) => ReactNode;
 }
 
 type ListKey = 'recents' | 'frequents';
@@ -64,11 +68,15 @@ function Row({
 }
 
 /** Before typing: favourites first, then Recent or Frequent (SPEC page 1, UX principle 1). */
-export function QuickLists({ data, onOpen, onAdd }: Props) {
+export function QuickLists({ data, onOpen, onAdd, meals = [], renderMeal }: Props) {
   const [list, setList] = useState<ListKey>('recents');
   const rows = data[list];
+  const recentMeals = list === 'recents' && renderMeal ? meals : [];
   const empty =
-    data.favourites.length === 0 && data.recents.length === 0 && data.frequents.length === 0;
+    data.favourites.length === 0 &&
+    data.recents.length === 0 &&
+    data.frequents.length === 0 &&
+    meals.length === 0;
 
   if (empty) {
     return (
@@ -112,6 +120,11 @@ export function QuickLists({ data, onOpen, onAdd }: Props) {
             </button>
           ))}
         </div>
+        {recentMeals.length > 0 && renderMeal ? (
+          <ul className="mt-1 flex flex-col" aria-label="Recent meals">
+            {recentMeals.map(renderMeal)}
+          </ul>
+        ) : null}
         {rows.length > 0 ? (
           <ul
             className="mt-1 flex flex-col"
@@ -121,7 +134,7 @@ export function QuickLists({ data, onOpen, onAdd }: Props) {
               <Row key={f.id} food={f} source="recent" onOpen={onOpen} onAdd={onAdd} />
             ))}
           </ul>
-        ) : (
+        ) : recentMeals.length > 0 ? null : (
           <p className="mt-2 text-sm text-text-secondary">
             {list === 'frequents'
               ? 'Foods you log twice or more in 90 days show up here.'

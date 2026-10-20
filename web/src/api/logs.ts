@@ -20,6 +20,9 @@ export interface LogEntry {
   sugar_g: number | null;
   sodium_mg: number | null;
   source: string;
+  /** Set when logged from a saved meal (cleared if the meal is deleted). */
+  saved_meal_id: string | null;
+  meal_name: string | null;
 }
 
 /** Nutrients only, with no food or amount. */
@@ -81,4 +84,9 @@ export function moveLogs(ids: string[], eaten_at: string) {
 /** Copies entries (or a time block) to a time on any day up to today, as one new add. */
 export function copyLogs(ids: string[], eaten_at: string) {
   return postJson<LogEntry[]>('/logs/copy', { ids, eaten_at });
+}
+
+/** Undo a whole add (such as a meal) in one step, by its log_group_id. */
+export function deleteGroup(groupId: string) {
+  return deleteJson<null>(`/logs/groups/${groupId}`);
 }

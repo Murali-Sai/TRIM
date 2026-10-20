@@ -76,5 +76,5 @@ export function useLogActions() {
 
   const busy = edit.isPending || remove.isPending || move.isPending || copy.isPending;
   const clearToast = useCallback(() => setToast(null), []);
-  return { edit, remove, move, copy, busy, toast, clearToast, error, setError };
+  return { edit, remove, move, copy, busy, toast, clearToast, say, error, setError };
 }
