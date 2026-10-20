@@ -230,6 +230,7 @@ erDiagram
 | foods | id, owner_id (null = shared cache), source (custom, fdc, off), source_ref, name, brand, kcal_100, protein_100, carbs_100, fat_100, fiber_100, sugar_100, sodium_mg_100 (null = unknown, not zero), density_g_ml. RLS: everyone reads shared rows and their own; users insert, update and delete only their own, so they can never edit the cache or publish a private food to it; the cache is written by the owner role. One cached row per source and source_ref |
 | serving_units | id, food_id, label, grams, is_default (at most one per food). RLS follows the food: visible when the food is, writable when the food is the user's own |
 | food_logs | id, user_id, food_id (null for quick add, or after the custom food is deleted), saved_meal_id (null unless logged from a saved meal), log_group_id (one id per add action, so a whole meal can be moved or undone together), eaten_at (timestamptz, required), logged_on (local date derived from eaten_at and the user's timezone, indexed), name and brand snapshot, grams, quantity and unit label (for "4 egg", "1 bottle"; null for quick add), nutrient snapshot (kcal, protein, carbs, fat, fiber, sugar, sodium_mg), source (search, recent, quick_add, meal, suggestion) |
+| food_favourites | id, user_id, food_id (unique per user and food); recents and frequents are read from food_logs, and the last serving is the latest entry's amount |
 | saved_meals | id, user_id, name (unique per user), note, is_favourite, use_count, last_used_at, archived_at |
 | saved_meal_items | id, user_id, saved_meal_id, food_id, grams, quantity, unit_label, sort_order |
 | weight_entries | id, user_id, measured_at, kg, note |
@@ -392,6 +393,8 @@ Example, with 300 kcal, 40 P, 25 C, 8 F left: chicken breast 120 g (198 kcal, 37
 | /meals/{id}/log | POST | Body: eaten_at, multiplier, skipped_item_ids, item_overrides; creates one entry per item with a shared log_group_id |
 | /meals/from-logs | POST | Create a saved meal from selected log entries or a time block |
 | /foods, /foods/{id} | POST, PATCH | Custom foods, private overrides |
+| /foods/quick | GET | Favourites, recents and frequents (2 or more logs in 90 days), each with the last serving logged |
+| /foods/{id}/favourite | PUT, DELETE | Star or unstar a food |
 | /logs | GET, POST, PATCH, DELETE | Food logs by date range; POST takes `eaten_at` and a list of items; PATCH can change `eaten_at` |
 | /logs/last-time | GET | `eaten_at` of the user's latest add, for the last-used time chip |
 | /logs/{id}/restore | POST | Undo a delete |

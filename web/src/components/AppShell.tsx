@@ -93,7 +93,12 @@ export function AppShell() {
       <NavLink
         to="/log"
         aria-label="Add food"
-        className="fixed bottom-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+1rem)] right-[max(1rem,env(safe-area-inset-right))] z-20 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-contrast shadow-lg lg:hidden"
+        // Hidden on Log food itself, where it would only cover the list.
+        className={({ isActive }) =>
+          isActive
+            ? 'hidden'
+            : 'fixed bottom-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+1rem)] right-[max(1rem,env(safe-area-inset-right))] z-20 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-contrast shadow-lg lg:hidden'
+        }
       >
         <PlusIcon width={28} height={28} />
       </NavLink>

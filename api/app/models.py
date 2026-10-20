@@ -335,6 +335,19 @@ class FoodLog(Timestamps, Base):
     source: Mapped[str] = mapped_column(Text)
 
 
+class FoodFavourite(Timestamps, Base):
+    """A food the user starred; favourites appear first on Log food (SPEC page 1, UX)."""
+
+    __tablename__ = "food_favourites"
+    __table_args__ = (Index("uq_food_favourites_user_food", "user_id", "food_id", unique=True),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    food_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("foods.id", ondelete="CASCADE"), index=True
+    )
+
+
 class FoodQuery(Base):
     """When FoodData Central or Open Food Facts last answered a search, so each source is asked
     at most once per query in 30 days. Holds a hash of the normalized query, never the text,
@@ -357,6 +370,7 @@ RLS_TABLES: dict[str, str] = {
     "weight_entries": "user_id",
     "targets": "user_id",
     "food_logs": "user_id",
+    "food_favourites": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column

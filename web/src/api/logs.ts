@@ -22,10 +22,21 @@ export interface LogEntry {
   source: string;
 }
 
-/** Either grams, or a quantity of one of the food's serving units. */
-export type LogItem = { food_id: string; source?: 'search' | 'recent' } & (
-  { grams: number } | { quantity: number; unit_label: string }
-);
+/** Nutrients only, with no food or amount. */
+export interface QuickAdd {
+  name?: string | null;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+}
+
+/** A food with grams or a quantity of one of its serving units, or a quick add. */
+export type LogItem =
+  | ({ food_id: string; source?: 'search' | 'recent' } & (
+      { grams: number } | { quantity: number; unit_label: string }
+    ))
+  | { quick: QuickAdd };
 
 export const LOGS_KEY = ['logs'] as const;
 export const LAST_TIME_KEY = ['logs', 'last-time'] as const;
