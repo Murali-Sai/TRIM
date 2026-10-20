@@ -29,7 +29,7 @@ Stack: FastAPI, Postgres 16 with row-level security, and Alembic under `api/`. R
 | #3 | `task/2.3-weight-chart` | #2 | 2.3 uPlot weight chart and goal weight | green |
 | #4 | `task/2.4-goal-projection` | #3 | 2.4 goal-date projection | green |
 | #5 | `task/3.1-food-schema` | #4 | 3.1 foods, serving units, food logs schema and RLS | green |
-| #6 | `task/3.2-food-search` | #5 | 3.2 food search waterfall | running at handoff |
+| #6 | `task/3.2-food-search` | #5 | 3.2 food search waterfall | green |
 
 - `TASKS.md` on each branch marks its task `[x]` with the commit hash.
 - This session is subscribed to all five PRs.
@@ -116,7 +116,7 @@ Not in git: `web/pw-local.config.ts`, listed in `.git/info/exclude` (see section
 
 ## 5. Next step
 
-1. **Watch PR #6's CI.** If it's red, fix it on `task/3.2-food-search` and push.
+1. **CI is green on all five PRs** (#6 finished at 14:58 UTC). If anything turns red after a base merge, fix it on that branch and push.
 2. **Get the stack merged.** Ask the owner to merge #2 to #6 in order. When a base PR merges, merge the new base into the next branch if GitHub reports a conflict. Never force-push.
 3. **Start task 3.3** (targets editor and TDEE calculator page) on a new branch `task/3.3-targets-editor`. Base it on `task/3.2-food-search`, or on `main` if the stack is merged by then.
    - **Spec**: read `SPEC.md` page 3, "Energy, TDEE and macro rules", and page 4, "Sign-up flow and TDEE calculator" and "TDEE calculator page".
