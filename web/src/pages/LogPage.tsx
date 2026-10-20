@@ -4,11 +4,14 @@ import { Link, useSearchParams } from 'react-router';
 import { useMe } from '../api/auth';
 import { ApiError } from '../api/client';
 import {
+  FITS_KEY,
+  getFits,
   getQuickFoods,
   QUICK_FOODS_KEY,
   searchFoods,
   setFavourite,
   type Food,
+  type QuickFood,
   type QuickFoods,
 } from '../api/foods';
 import { addLogs, deleteGroup, lastLogTime, LAST_TIME_KEY, LOGS_KEY } from '../api/logs';
@@ -32,6 +35,7 @@ import { useDebounced } from '../lib/useDebounced';
 import { usePageTitle } from '../usePageTitle';
 import { Notice, primaryButton, secondaryButton, Section } from './account/Section';
 import { CustomFoodSheet } from './log/CustomFoodSheet';
+import { FitsList } from './log/FitsList';
 import { FoodDetail } from './log/FoodDetail';
 import { MealRow, MealsTab } from './log/MealsTab';
 import { QuickAddForm } from './log/QuickAddForm';
@@ -96,6 +100,8 @@ function LogFood({ timeZone }: { timeZone: string }) {
   });
   const quick = useQuery({ queryKey: QUICK_FOODS_KEY, queryFn: getQuickFoods });
   const last = useQuery({ queryKey: LAST_TIME_KEY, queryFn: lastLogTime });
+  const fitsDay = wall.slice(0, 10);
+  const fits = useQuery({ queryKey: [...FITS_KEY, fitsDay], queryFn: () => getFits(fitsDay) });
   const lastUsed = last.data?.eaten_at ? isoToZonedWall(last.data.eaten_at, timeZone) : null;
   const favouriteIds = new Set((quick.data?.favourites ?? []).map((f) => f.id));
 
@@ -134,6 +140,7 @@ function LogFood({ timeZone }: { timeZone: string }) {
       setSelected(null);
       await queryClient.invalidateQueries({ queryKey: LOGS_KEY });
       await queryClient.invalidateQueries({ queryKey: QUICK_FOODS_KEY });
+      await queryClient.invalidateQueries({ queryKey: FITS_KEY });
     },
   });
 
@@ -170,7 +177,7 @@ function LogFood({ timeZone }: { timeZone: string }) {
     setDone(null);
   }
 
-  function open(food: Food, source: PickedSource) {
+  function open(food: Food | QuickFood, source: PickedSource) {
     const start = fromLastServing(food, source);
     if (start.kind === 'food') setSelected({ food, start });
   }
@@ -284,6 +291,20 @@ function LogFood({ timeZone }: { timeZone: string }) {
                 <QuickLists
                   data={quick.data}
                   meals={recentMeals}
+                  fits={
+                    fits.data?.has_target ? (
+                      <FitsList
+                        fits={fits.data}
+                        meals={allMeals}
+                        onOpenFood={(food, row) => open({ ...food, last: row.serving }, 'recent')}
+                        onAddFood={(food, row) =>
+                          add(fromLastServing({ ...food, last: row.serving }, 'recent'))
+                        }
+                        onOpenMeal={meals.openMeal}
+                        onLogMeal={meals.quickLog}
+                      />
+                    ) : undefined
+                  }
                   renderMeal={(m: Meal) => (
                     <MealRow
                       key={m.id}

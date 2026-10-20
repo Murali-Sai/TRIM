@@ -15,9 +15,11 @@ interface Props {
   /** Recently logged saved meals, shown at the top of Recent. */
   meals?: readonly Meal[];
   renderMeal?: (meal: Meal) => ReactNode;
+  /** The "Fits my macros" sort, offered when the day has a target. */
+  fits?: ReactNode;
 }
 
-type ListKey = 'recents' | 'frequents';
+type ListKey = 'recents' | 'frequents' | 'fits';
 
 function Row({
   food,
@@ -68,9 +70,9 @@ function Row({
 }
 
 /** Before typing: favourites first, then Recent or Frequent (SPEC page 1, UX principle 1). */
-export function QuickLists({ data, onOpen, onAdd, meals = [], renderMeal }: Props) {
+export function QuickLists({ data, onOpen, onAdd, meals = [], renderMeal, fits }: Props) {
   const [list, setList] = useState<ListKey>('recents');
-  const rows = data[list];
+  const rows = list === 'fits' ? [] : data[list];
   const recentMeals = list === 'recents' && renderMeal ? meals : [];
   const empty =
     data.favourites.length === 0 &&
@@ -99,11 +101,12 @@ export function QuickLists({ data, onOpen, onAdd, meals = [], renderMeal }: Prop
         </div>
       ) : null}
       <div>
-        <div role="tablist" aria-label="Your foods" className="flex gap-1">
+        <div role="tablist" aria-label="Your foods" className="flex flex-wrap gap-1">
           {(
             [
               ['recents', 'Recent'],
               ['frequents', 'Frequent'],
+              ...(fits ? ([['fits', 'Fits my macros']] as const) : []),
             ] as const
           ).map(([key, label]) => (
             <button
@@ -120,12 +123,13 @@ export function QuickLists({ data, onOpen, onAdd, meals = [], renderMeal }: Prop
             </button>
           ))}
         </div>
+        {list === 'fits' ? fits : null}
         {recentMeals.length > 0 && renderMeal ? (
           <ul className="mt-1 flex flex-col" aria-label="Recent meals">
             {recentMeals.map(renderMeal)}
           </ul>
         ) : null}
-        {rows.length > 0 ? (
+        {list === 'fits' ? null : rows.length > 0 ? (
           <ul
             className="mt-1 flex flex-col"
             aria-label={list === 'recents' ? 'Recent' : 'Frequent'}

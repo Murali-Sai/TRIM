@@ -84,3 +84,36 @@ export function createCustomFood(body: CustomFoodInput) {
 export function editCustomFood(id: string, body: CustomFoodInput) {
   return patchJson<Food>(`/foods/${id}`, body);
 }
+
+export type FitMacro = 'kcal' | 'protein_g' | 'carbs_g' | 'fat_g';
+
+export interface FitRow {
+  kind: 'food' | 'meal';
+  food: QuickFood | null;
+  meal_id: string | null;
+  meal_name: string | null;
+  meal_items: number | null;
+  /** The default serving it was scored at. */
+  serving: LastServing | null;
+  nutrients: Record<FitMacro, number>;
+  score: number;
+  label: 'Great fit' | 'Partial fit';
+  /** Share of what is left that each macro fills, 0 to 1. */
+  fills: Record<FitMacro, number>;
+  overflows: FitMacro[];
+  fits_up_to_g: number | null;
+}
+
+export interface Fits {
+  date: string;
+  has_target: boolean;
+  remaining: Record<FitMacro, number> | null;
+  results: FitRow[];
+}
+
+export const FITS_KEY = ['foods', 'fits'] as const;
+
+/** Ranked by fit against what is left of `day` (SPEC page 3, What fits my macros). */
+export function getFits(day: string) {
+  return getJson<Fits>(`/foods/fits-my-macros?on=${day}`);
+}
