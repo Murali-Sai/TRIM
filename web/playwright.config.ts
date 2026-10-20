@@ -4,6 +4,8 @@ const PORT = 4173;
 
 export default defineConfig({
   testDir: './e2e',
+  // Visual regression runs on its own, in a pinned image (playwright.visual.config.ts).
+  testIgnore: '**/*.visual.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

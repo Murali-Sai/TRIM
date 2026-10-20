@@ -11,6 +11,8 @@ import { formatNumber } from '../../lib/units';
 interface Props {
   totals: DayTotals;
   target: MacroTotals & { fiber_g: number | null };
+  /** The Progress dashboard's Today card: eaten against target only, with no controls. */
+  compact?: boolean;
 }
 
 const SHORT: Record<string, string> = {
@@ -99,7 +101,7 @@ function Eaten({ cols, id, large }: { cols: StripColumn[]; id: string; large?: b
  * the dots) for what is left plus fiber, sugar and sodium. Desktop: both, stacked, with
  * larger figures and bars.
  */
-export function TargetStrip({ totals, target }: Props) {
+export function TargetStrip({ totals, target, compact = false }: Props) {
   const cols = stripColumns(totals, target);
   const left = remainingColumns(totals, target);
   const [page, setPage] = useState(0);
@@ -154,6 +156,33 @@ export function TargetStrip({ totals, target }: Props) {
       </div>
     </div>
   );
+
+  if (compact) {
+    const [kcal, ...macros] = cols;
+    // Narrow cards: calories, then one row per macro so labels never squeeze.
+    return (
+      <div data-testid="target-strip-compact">
+        {kcal ? <Eaten cols={[kcal]} id="dash-" /> : null}
+        <ul className="mt-3 flex flex-col gap-2">
+          {macros.map((c) => (
+            <li key={c.key} data-testid={`dash-${c.key}`}>
+              <p className="flex items-baseline gap-2 text-sm">
+                <span className={`font-semibold ${TEXT[c.color] ?? ''}`}>{SHORT[c.key]}</span>
+                <span className="num">
+                  {formatNumber(c.eaten)}
+                  <span className="text-text-secondary"> / {formatNumber(c.target)} g</span>
+                </span>
+                <span className="ml-auto">
+                  <Status c={c} />
+                </span>
+              </p>
+              <Bar fill={c.fill} color={c.color} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <section

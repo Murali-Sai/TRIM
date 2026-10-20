@@ -150,11 +150,11 @@ for (const vp of VIEWPORTS) {
   });
 }
 
-test('the charts page links to each full chart', async ({ page }) => {
+test('tapping a dashboard card opens its full chart, and back', async ({ page }) => {
   await open(page, '/charts');
-  await page.getByRole('link', { name: /^Calories/ }).click();
+  await page.getByRole('link', { name: /^Calories this week/ }).click();
   await expect(page.getByRole('heading', { name: 'Calories' })).toBeVisible();
-  await page.getByRole('link', { name: 'Charts' }).first().click();
-  await page.getByRole('link', { name: /^Macros/ }).click();
+  await page.getByRole('main').getByRole('link', { name: 'Progress' }).click();
+  await page.getByRole('link', { name: /^Macros this week/ }).click();
   await expect(page.getByRole('heading', { name: 'Macros' })).toBeVisible();
 });

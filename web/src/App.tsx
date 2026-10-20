@@ -14,7 +14,7 @@ import { SignupPage } from './pages/SignupPage';
 import { TargetsPage } from './pages/TargetsPage';
 import { TodayPage } from './pages/TodayPage';
 import { VerifyPage } from './pages/VerifyPage';
-import { ChartsIndex } from './pages/charts/ChartsIndex';
+import { ProgressPage } from './pages/progress/ProgressPage';
 
 // The charts load uPlot, so they come in their own chunk.
 const CaloriesPage = lazy(() =>
@@ -35,7 +35,7 @@ export function App() {
         <Route index element={<TodayPage />} />
         <Route path="log" element={<LogPage />} />
         <Route path="body" element={<BodyPage />} />
-        <Route path="charts" element={<ChartsIndex />} />
+        <Route path="charts" element={<ProgressPage />} />
         <Route
           path="charts/calories"
           element={
