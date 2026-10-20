@@ -16,6 +16,7 @@ interface Props {
   onDelete: (entry: WeightEntry) => void;
 }
 
+const SHOWN_AT_FIRST = 20;
 const linkButton = 'tap rounded-lg px-3 py-2 font-semibold text-accent underline-offset-2';
 
 function EditRow({
@@ -96,70 +97,79 @@ function EditRow({
 /** Weigh-ins newest first, each with edit and delete. */
 export function WeightHistory({ entries, points, units, timeZone, onEdit, onDelete }: Props) {
   const [editing, setEditing] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
   const outliers = new Set(points.filter((p) => p.outlier).map((p) => p.at));
   const newestFirst = [...entries].reverse();
+  const shown = all ? newestFirst : newestFirst.slice(0, SHOWN_AT_FIRST);
 
   if (entries.length === 0) {
     return <p className="text-text-secondary">Your weigh-ins will be listed here.</p>;
   }
   return (
-    <ul className="divide-y divide-border">
-      {newestFirst.map((entry) => {
-        const day = formatDay(entry.measured_at, timeZone);
-        const time = formatTime(entry.measured_at, timeZone);
-        if (editing === entry.id) {
+    <>
+      <ul className="divide-y divide-border">
+        {shown.map((entry) => {
+          const day = formatDay(entry.measured_at, timeZone);
+          const time = formatTime(entry.measured_at, timeZone);
+          if (editing === entry.id) {
+            return (
+              <li key={entry.id}>
+                <EditRow
+                  entry={entry}
+                  units={units}
+                  timeZone={timeZone}
+                  onCancel={() => setEditing(null)}
+                  onSave={async (input) => {
+                    await onEdit(entry.id, input);
+                    setEditing(null);
+                  }}
+                />
+              </li>
+            );
+          }
           return (
-            <li key={entry.id}>
-              <EditRow
-                entry={entry}
-                units={units}
-                timeZone={timeZone}
-                onCancel={() => setEditing(null)}
-                onSave={async (input) => {
-                  await onEdit(entry.id, input);
-                  setEditing(null);
-                }}
-              />
+            <li key={entry.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+              <div className="min-w-0 flex-1">
+                <p>
+                  <span className="font-semibold">{displayWeight(entry.kg, units)}</span>{' '}
+                  <span className="text-text-secondary">
+                    {day}, {time}
+                  </span>
+                </p>
+                {outliers.has(entry.measured_at) ? (
+                  <p className="text-sm text-text-secondary">
+                    Not counted in your trend: a big jump from the days around it.
+                  </p>
+                ) : null}
+                {entry.note ? <p className="break-words text-sm">{entry.note}</p> : null}
+              </div>
+              <div className="flex">
+                <button
+                  type="button"
+                  className={linkButton}
+                  aria-label={`Edit ${displayWeight(entry.kg, units)} on ${day}`}
+                  onClick={() => setEditing(entry.id)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className={linkButton}
+                  aria-label={`Delete ${displayWeight(entry.kg, units)} on ${day}`}
+                  onClick={() => onDelete(entry)}
+                >
+                  Delete
+                </button>
+              </div>
             </li>
           );
-        }
-        return (
-          <li key={entry.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-            <div className="min-w-0 flex-1">
-              <p>
-                <span className="font-semibold">{displayWeight(entry.kg, units)}</span>{' '}
-                <span className="text-text-secondary">
-                  {day}, {time}
-                </span>
-              </p>
-              {outliers.has(entry.measured_at) ? (
-                <p className="text-sm text-text-secondary">
-                  Not counted in your trend: a big jump from the days around it.
-                </p>
-              ) : null}
-              {entry.note ? <p className="break-words text-sm">{entry.note}</p> : null}
-            </div>
-            <div className="flex">
-              <button
-                type="button"
-                className={linkButton}
-                aria-label={`Edit ${displayWeight(entry.kg, units)} on ${day}`}
-                onClick={() => setEditing(entry.id)}
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                className={linkButton}
-                aria-label={`Delete ${displayWeight(entry.kg, units)} on ${day}`}
-                onClick={() => onDelete(entry)}
-              >
-                Delete
-              </button>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+        })}
+      </ul>
+      {shown.length < newestFirst.length ? (
+        <button type="button" className={`${secondaryButton} mt-3`} onClick={() => setAll(true)}>
+          Show all {newestFirst.length} weigh-ins
+        </button>
+      ) : null}
+    </>
   );
 }

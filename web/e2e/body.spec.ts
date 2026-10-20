@@ -1,80 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ME, stubExternal } from './fixtures';
+import { stubExternal } from './fixtures';
+import { stubWeights, type Entry } from './weights-stub';
 
 const VIEWPORTS = [
   { name: 'phone', width: 375, height: 812 },
   { name: 'desktop', width: 1280, height: 900 },
 ] as const;
-
-interface Entry {
-  id: string;
-  measured_at: string;
-  day: string;
-  kg: number;
-  note: string | null;
-}
-
-/** An in-memory /api/weights, so the page runs against something that behaves like the API. */
-async function stubWeights(page: Page, initial: Entry[] = []) {
-  const live = [...initial];
-  const deleted = new Map<string, Entry>();
-  let next = 1;
-  const sorted = () => [...live].sort((a, b) => a.measured_at.localeCompare(b.measured_at));
-  const dayOf = (iso: string) =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: ME.timezone }).format(new Date(iso));
-
-  await page.route('**/api/me/body-stats', (route) =>
-    route.fulfill({
-      json: {
-        sex: 'male',
-        age: 30,
-        height_cm: 180,
-        activity_level: 'moderate',
-        unit_system: ME.unit_system,
-        latest_weight_kg: sorted().at(-1)?.kg ?? null,
-      },
-    }),
-  );
-  await page.route('**/api/weights**', async (route) => {
-    const req = route.request();
-    const path = new URL(req.url()).pathname;
-    const id = path.split('/')[3];
-    if (req.method() === 'GET') return route.fulfill({ json: sorted() });
-    if (req.method() === 'POST' && path === '/api/weights') {
-      const body = req.postDataJSON() as { kg: number; measured_at?: string; note?: string };
-      const at = body.measured_at ?? new Date().toISOString();
-      const entry = {
-        id: `w${next++}`,
-        measured_at: at,
-        day: dayOf(at),
-        kg: body.kg,
-        note: body.note ?? null,
-      };
-      live.push(entry);
-      return route.fulfill({ status: 201, json: entry });
-    }
-    if (req.method() === 'POST' && path.endsWith('/restore')) {
-      const entry = deleted.get(id ?? '');
-      if (!entry) return route.fulfill({ status: 404, json: { detail: 'Not found' } });
-      deleted.delete(entry.id);
-      live.push(entry);
-      return route.fulfill({ json: entry });
-    }
-    const index = live.findIndex((e) => e.id === id);
-    if (index < 0) return route.fulfill({ status: 404, json: { detail: 'Not found' } });
-    const entry = live[index] as Entry;
-    if (req.method() === 'DELETE') {
-      live.splice(index, 1);
-      deleted.set(entry.id, entry);
-      return route.fulfill({ status: 204, body: '' });
-    }
-    const patch = req.postDataJSON() as Partial<Entry>;
-    Object.assign(entry, patch);
-    entry.day = dayOf(entry.measured_at);
-    return route.fulfill({ json: entry });
-  });
-  return { live };
-}
 
 function weighIns(days: number, startKg = 80): Entry[] {
   return Array.from({ length: days }, (_, i) => {
@@ -132,11 +63,15 @@ for (const vp of VIEWPORTS) {
       await expect(page.getByLabel('Weight (lb)')).toHaveAttribute('placeholder', '174.4');
       await noHorizontalScroll(page);
       const entry = await page.getByRole('heading', { name: 'Weight', exact: true }).boundingBox();
+      const chart = await page.getByRole('heading', { name: 'Weight chart' }).boundingBox();
       const list = await page.getByRole('heading', { name: 'Weigh-ins' }).boundingBox();
       if (vp.width >= 1024) {
-        expect(list?.x ?? 0).toBeGreaterThan((entry?.x ?? 0) + 200); // side by side
+        expect(chart?.x ?? 0).toBeGreaterThan((entry?.x ?? 0) + 200); // entry form beside chart
+        expect(list?.x).toBe(entry?.x);
       } else {
-        expect(list?.y ?? 0).toBeGreaterThan(entry?.y ?? 0); // stacked
+        // Phone: entry, then chart, then the list.
+        expect(chart?.y ?? 0).toBeGreaterThan(entry?.y ?? 0);
+        expect(list?.y ?? 0).toBeGreaterThan(chart?.y ?? 0);
       }
     });
 

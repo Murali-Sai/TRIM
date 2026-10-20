@@ -57,6 +57,7 @@ export function SetupPage() {
               activity_level: null,
               unit_system: me.data.unit_system,
               latest_weight_kg: null,
+              goal_weight_kg: null,
             }
           }
           onSaved={async (v) => {

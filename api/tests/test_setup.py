@@ -152,6 +152,7 @@ def test_body_stats_round_trip(client: CsrfClient) -> None:
         "activity_level": "moderate",
         "unit_system": "imperial",
         "latest_weight_kg": 95.0,
+        "goal_weight_kg": None,
     }
     assert client.get("/api/me").json()["unit_system"] == "imperial"
 

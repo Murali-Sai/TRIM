@@ -129,6 +129,9 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         path_params=lambda c: {"session_id": c.a_session_ids[0]},
     ),
+    Endpoint(
+        "PUT", "/api/me/goal-weight", requires_session=True, body=lambda c: {"goal_weight_kg": 65}
+    ),
     Endpoint("GET", "/api/weights", requires_session=True),
     Endpoint("POST", "/api/weights", requires_session=True, body=lambda c: {"kg": 72.5}),
     Endpoint(

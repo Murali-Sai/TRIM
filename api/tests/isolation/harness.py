@@ -76,6 +76,7 @@ def create_user_a(app: FastAPI, owner_engine: Engine) -> tuple[str, str, dict[st
     assert a.patch("/api/me/body-stats", json=BODY_STATS).status_code == 200
     assert a.post("/api/targets/apply-calculation", json=WORKED).status_code == 201
     assert a.post("/api/weights", json={"kg": 69.4}).status_code == 201
+    assert a.put("/api/me/goal-weight", json={"goal_weight_kg": 62}).status_code == 200
     gone = a.post("/api/weights", json={"kg": 69.1}).json()["id"]
     assert a.delete(f"/api/weights/{gone}").status_code == 204
     row = user_row(owner_engine, email)
