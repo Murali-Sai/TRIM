@@ -386,6 +386,7 @@ Example, with 300 kcal, 40 P, 25 C, 8 F left: chicken breast 120 g (198 kcal, 37
 | /foods, /foods/{id} | POST, PATCH | Custom foods, private overrides |
 | /logs | GET, POST, PATCH, DELETE | Food logs by date range; POST takes `eaten_at` and a list of items; PATCH can change `eaten_at` |
 | /logs/last-time | GET | `eaten_at` of the user's latest add, for the last-used time chip |
+| /logs/{id}/restore | POST | Undo a delete |
 | /logs/move, /logs/copy | POST | Move or copy selected entries or a time block to a new time or day |
 | /weights, /measurement-types, /measurements | CRUD | Body data |
 | /targets, /annotations | GET, POST | Targets history, chart notes |
