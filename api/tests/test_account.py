@@ -7,10 +7,10 @@ from typing import Any
 import pytest
 from sqlalchemy import Engine, text
 
-from app.models import RLS_TABLES
+from app.models import OWNED_ROWS
 from tests.conftest import CsrfClient
 from tests.fakes import Fakes
-from tests.helpers import PASSWORD, log_in, sign_up, user_row
+from tests.helpers import PASSWORD, log_in, seed_food_rows, sign_up, user_row
 
 NEW_PASSWORD = "a brand new passphrase"
 WORKED = json.loads(
@@ -55,7 +55,7 @@ def rows_owned(owner_engine: Engine, user_id: Any) -> dict[str, int]:
                     text(f"SELECT count(*) FROM {table} WHERE {col} = :u"), {"u": user_id}
                 ).scalar_one()
             )
-            for table, col in RLS_TABLES.items()
+            for table, col in OWNED_ROWS.items()
         }
 
 
@@ -67,6 +67,7 @@ def test_deleted_user_cannot_log_in_and_rows_are_gone(
 ) -> None:
     email = full_account(client)
     user_id = user_row(owner_engine, email).id
+    seed_food_rows(owner_engine, user_id)
     before = rows_owned(owner_engine, user_id)
     assert all(n >= 1 for n in before.values()), before  # every table had data
 
@@ -77,7 +78,7 @@ def test_deleted_user_cannot_log_in_and_rows_are_gone(
         for c in res.headers.get_list("set-cookie")
     )
 
-    assert rows_owned(owner_engine, user_id) == dict.fromkeys(RLS_TABLES, 0)
+    assert rows_owned(owner_engine, user_id) == dict.fromkeys(OWNED_ROWS, 0)
     assert user_row(owner_engine, email) is None
     assert client.get("/api/me").status_code == 401
     assert log_in(client, email).status_code == 401
@@ -102,9 +103,10 @@ def test_delete_needs_the_word_delete(
 def test_deleting_one_account_leaves_others(client: CsrfClient, owner_engine: Engine) -> None:
     other = second_device(client)
     keep = full_account(other)
+    keep_id = user_row(owner_engine, keep).id
+    seed_food_rows(owner_engine, keep_id)
     full_account(client)
     delete_account(client)
-    keep_id = user_row(owner_engine, keep).id
     assert all(n >= 1 for n in rows_owned(owner_engine, keep_id).values())
     assert other.get("/api/me").status_code == 200
 

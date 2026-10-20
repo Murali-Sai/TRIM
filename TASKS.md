@@ -23,7 +23,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 - [x] **2.4 Goal-date projection**: dotted line and sentence, hide rules. AC: trend 79.8, goal 75.0, rate -0.45 kg/week from 17 Oct 2026 shows "around 31 Dec 2026"; flat or wrong-direction trend shows the no-projection message. (13e0fc4)
 
 ## Milestone 3: Food logging, dashboard, charts
-- [ ] **3.1 foods, serving_units, food_logs, targets schema**. AC: migrations up and down.
+- [x] **3.1 foods, serving_units, food_logs, targets schema**. AC: migrations up and down. (853c69e)
 - [ ] **3.2 Search waterfall (personal, cache, FDC, OFF)**. AC: recorded-fixture tests per tier.
 - [ ] **3.3 Targets editor and TDEE calculator page**: custom edits, "Reset to formula", recalculate with latest trend weight, old vs new confirmation, TDEE table for all five levels. AC: editing calories recalculates carbs only; targets never change without the user tapping "Use these targets" or saving an edit.
 - [ ] **3.4 Time-based logging**: `eaten_at` on food_logs, time chip with Now, -30 min, -1 h and last-used, backdating to past days. AC: food logged at 19:00 for 16:00 lands in the 4 PM block and on the correct local date.
