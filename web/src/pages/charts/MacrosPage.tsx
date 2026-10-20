@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { useMe } from '../../api/auth';
@@ -21,6 +22,8 @@ import { formatNumber } from '../../lib/units';
 import { RANGES, type RangeKey } from '../../lib/weightChart';
 import { usePageTitle } from '../../usePageTitle';
 import { Notice } from '../account/Section';
+import { getSettings, SETTINGS_KEY } from '../../api/tracking';
+import { FiberWaterCharts } from './FiberWaterCharts';
 import { useDaySeries, useRange } from './useDaySeries';
 
 export function MacrosPage() {
@@ -169,6 +172,7 @@ function SplitBar({
 function Macros({ timeZone }: { timeZone: string }) {
   const [range, setRange] = useRange('trim.chart.macros.range', '1W');
   const { series, isError } = useDaySeries(range, timeZone);
+  const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: getSettings });
   const today = series?.at(-1);
   const eaten = today?.logged ? calorieSplit(today) : null;
   const planned = today?.target ? calorieSplit(today.target) : null;
@@ -216,6 +220,9 @@ function Macros({ timeZone }: { timeZone: string }) {
       ) : (
         <div className="mt-4 min-h-56" aria-busy="true" />
       )}
+      {series && settings.data ? (
+        <FiberWaterCharts series={series} range={range} settings={settings.data} />
+      ) : null}
     </section>
   );
 }

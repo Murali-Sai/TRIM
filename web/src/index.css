@@ -28,6 +28,9 @@
   --color-carbs-text: #009e73;
   /* Weight and trend charts: Okabe-Ito blue, validated on both light and dark surfaces. */
   --color-weight: #0072b2;
+  /* Water (never on a chart with weight) and fiber: Okabe-Ito blue and reddish purple. */
+  --color-water: #0072b2;
+  --color-fiber: #cc79a7;
 
   --tabbar-height: 64px;
 }

@@ -38,6 +38,7 @@ class Ctx:
     a_log_ids: list[str]  # A's food log entries
     a_group_ids: list[str]  # the log_group_id of A's entries
     a_meal_ids: list[str]  # A's saved meals
+    a_water_ids: list[str]  # A's water adds
 
 
 @dataclass(frozen=True)
@@ -309,5 +310,29 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         body=lambda c: {"eaten_at": "2026-10-17T12:00:00Z"},
         path_params=lambda c: {"meal_id": c.a_meal_ids[0]},
+    ),
+    # A tracks water and has one 250 ml add on 17 Oct (tests.helpers.seed_food_rows).
+    Endpoint("GET", "/api/me/settings", requires_session=True),
+    Endpoint(
+        "PATCH",
+        "/api/me/settings",
+        requires_session=True,
+        body=lambda c: {"track_water": False, "water_unit": "fl_oz"},
+    ),
+    Endpoint(
+        "GET", "/api/water", requires_session=True, params=lambda c: {"date_from": "2026-10-17"}
+    ),
+    Endpoint(
+        "GET",
+        "/api/water/days",
+        requires_session=True,
+        params=lambda c: {"date_from": "2026-10-01", "date_to": "2026-10-31"},
+    ),
+    Endpoint("POST", "/api/water", requires_session=True, body=lambda c: {"ml": 250}),
+    Endpoint(
+        "DELETE",
+        "/api/water/{water_id}",
+        requires_session=True,
+        path_params=lambda c: {"water_id": c.a_water_ids[0]},
     ),
 ]

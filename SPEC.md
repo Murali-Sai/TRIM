@@ -273,7 +273,7 @@ Example, with 300 kcal, 40 P, 25 C, 8 F left: chicken breast 120 g (198 kcal, 37
 
 **Water.** Quick buttons +250 ml, +500 ml and custom (or +8, +16 fl oz; 1 fl oz = 29.5735 ml). Water target is set by the user; no default. Tracking is off until the user turns it on.
 
-**Fiber.** Default target 14 g per 1,000 kcal of the calorie target, from the Dietary Guidelines for Americans **[?]**; 2,759 kcal gives 39 g. Editable. Fiber is summed from logged foods where the source has fiber data; foods missing fiber are counted and the day shows "fiber unknown for 2 foods".
+**Fiber.** Default target 14 g per 1,000 kcal of the calorie target, the Adequate Intake from the Institute of Medicine's Dietary Reference Intakes (2002), which the Dietary Guidelines for Americans use **[V]**; 2,759 kcal gives 39 g. Editable. Fiber is summed from logged foods where the source has fiber data; foods missing fiber are counted and the day shows "fiber unknown for 2 foods".
 
 **Diet phases.** Users create date ranges of kind cut, maintain, bulk or a custom label. Creating a phase never changes targets; the dialog offers a separate, explicit "Also update targets" button. Each phase gets a summary: days, average kcal vs target, days on target, weight trend change and weekly rate, and change in each active measurement.
 
@@ -654,4 +654,4 @@ GitHub Actions: on PR run lint, typecheck, unit, isolation, Playwright and Light
 7. Calorie floor of 1,500 kcal (male) and 1,200 kcal (female): keep, change, or remove?
 
 ### Sources (checked 16 and 17 Oct 2026)
-OWASP Password Storage Cheat Sheet; haveibeenpwned.com/API/v3 (Pwned Passwords); developers.cloudflare.com/turnstile (server-side validation, testing, plans); resend.com/docs (send email); WebKit storage policy; NHANES dietary interview documentation (wwwn.cdc.gov, Individual Foods files); Open Food Facts API docs; FoodData Central API guide; neon.com/pricing; supabase.com/pricing; cloud.google.com/run/pricing; uPlot README benchmark; TanStack Charts comparison; Resend pricing as reported by wpmailsmtp.com, usecarly.com and automationatlas.io.
+OWASP Password Storage Cheat Sheet; haveibeenpwned.com/API/v3 (Pwned Passwords); developers.cloudflare.com/turnstile (server-side validation, testing, plans); resend.com/docs (send email); WebKit storage policy; NHANES dietary interview documentation (wwwn.cdc.gov, Individual Foods files); Open Food Facts API docs; FoodData Central API guide; neon.com/pricing; supabase.com/pricing; cloud.google.com/run/pricing; uPlot README benchmark; TanStack Charts comparison; Resend pricing as reported by wpmailsmtp.com, usecarly.com and automationatlas.io. Fiber Adequate Intake of 14 g per 1,000 kcal (Institute of Medicine DRIs, 2002), as cited in PMC6124841 and PMC3065764 on pmc.ncbi.nlm.nih.gov (checked 20 Oct 2026).

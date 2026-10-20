@@ -26,6 +26,8 @@ from app.models import (
     Target,
     User,
     UserProfile,
+    UserSettings,
+    WaterLog,
     WeightEntry,
 )
 
@@ -105,6 +107,15 @@ def seed_user(label: str) -> Seeded:
         s.add(
             SavedMealItem(
                 user_id=user_id, saved_meal_id=meal.id, food_id=food.id, grams=Decimal("250")
+            )
+        )
+        s.add(UserSettings(user_id=user_id, track_water=True))
+        s.add(
+            WaterLog(
+                user_id=user_id,
+                logged_at=datetime(2026, 10, 17, 12, 0, tzinfo=UTC),
+                logged_on=date(2026, 10, 17),
+                ml=250,
             )
         )
     return Seeded(user_id, email, session_hash, verify_hash)

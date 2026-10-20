@@ -5,6 +5,7 @@ import { useMe } from '../api/auth';
 import { ApiError } from '../api/client';
 import { listLogs, LOGS_KEY, type LogEntry } from '../api/logs';
 import { mealFromLogs, MEALS_KEY } from '../api/meals';
+import { getSettings, SETTINGS_KEY } from '../api/tracking';
 import { Toast } from '../components/Toast';
 import { listTargets, TARGETS_KEY } from '../api/setup';
 import { sumNutrients, targetOn } from '../lib/dayTotals';
@@ -18,6 +19,7 @@ import { SaveMealSheet } from './today/SaveMealSheet';
 import { TargetStrip } from './today/TargetStrip';
 import { Timeline } from './today/Timeline';
 import { useLogActions } from './today/useLogActions';
+import { WaterRow } from './today/WaterRow';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const HIGHLIGHT_MS = 2500;
@@ -50,6 +52,7 @@ function Today({ timeZone }: { timeZone: string }) {
 
   const logs = useQuery({ queryKey: [...LOGS_KEY, day], queryFn: () => listLogs(day) });
   const targets = useQuery({ queryKey: TARGETS_KEY, queryFn: listTargets });
+  const settings = useQuery({ queryKey: SETTINGS_KEY, queryFn: getSettings });
 
   function goTo(next: string) {
     if (next > today) return;
@@ -167,7 +170,11 @@ function Today({ timeZone }: { timeZone: string }) {
           {targets.isError ? (
             <Notice kind="error">Could not load your targets. Try again in a moment.</Notice>
           ) : target ? (
-            <TargetStrip totals={totals} target={target} />
+            <TargetStrip
+              totals={totals}
+              target={target}
+              showFiber={settings.data?.track_fiber ?? true}
+            />
           ) : targets.isSuccess ? (
             <div
               className="rounded-xl border border-border bg-surface p-4"
@@ -187,6 +194,16 @@ function Today({ timeZone }: { timeZone: string }) {
           ) : (
             <div className="min-h-24" aria-busy="true" />
           )}
+          {settings.data?.track_water ? (
+            <WaterRow
+              day={day}
+              isToday={isToday}
+              timeZone={timeZone}
+              unit={settings.data.water_unit}
+              targetMl={target?.water_ml ?? null}
+              onToast={actions.say}
+            />
+          ) : null}
         </div>
 
         <div>

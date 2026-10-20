@@ -49,7 +49,8 @@ def log_in(client: TestClient, email: str, password: str = PASSWORD, **extra: An
 
 
 def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
-    """A custom food with a serving unit, one food log, a favourite and a saved meal for
+    """A custom food with a serving unit, one food log, a favourite, a saved meal, settings and
+    a water add for
     `user_id`, written as the owner.
 
     Stands in until the food logging API exists (tasks 3.2 to 3.5), so account deletion and
@@ -102,4 +103,21 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
             ),
             {"u": user_id, "m": meal_id, "f": food_id},
         )
-    return {"food_id": food_id, "unit_id": unit_id, "log_id": log_id, "meal_id": meal_id}
+        conn.execute(
+            text("INSERT INTO user_settings (user_id, track_water) VALUES (:u, true)"),
+            {"u": user_id},
+        )
+        water_id = conn.execute(
+            text(
+                "INSERT INTO water_logs (id, user_id, logged_at, logged_on, ml) VALUES "
+                "(gen_random_uuid(), :u, '2026-10-17T12:00:00Z', '2026-10-17', 250) RETURNING id"
+            ),
+            {"u": user_id},
+        ).scalar_one()
+    return {
+        "food_id": food_id,
+        "unit_id": unit_id,
+        "log_id": log_id,
+        "meal_id": meal_id,
+        "water_id": water_id,
+    }

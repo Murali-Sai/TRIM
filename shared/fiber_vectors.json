@@ -1,0 +1,11 @@
+{
+  "_note": "Fiber default target, 14 g per 1,000 kcal of the calorie target, rounded half up (SPEC page 3, Fiber). Shared by api/tests and web/src/lib.",
+  "cases": [
+    { "kcal": 2759, "fiber_g": 39 },
+    { "kcal": 2000, "fiber_g": 28 },
+    { "kcal": 1500, "fiber_g": 21 },
+    { "kcal": 1786, "fiber_g": 25 },
+    { "kcal": 3036, "fiber_g": 43 },
+    { "kcal": 1250, "fiber_g": 18 }
+  ]
+}

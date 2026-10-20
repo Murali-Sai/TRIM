@@ -49,6 +49,14 @@ def round_int(x: float) -> int:
     return int(round_half_up(x))
 
 
+# Fiber: the Adequate Intake of 14 g per 1,000 kcal (SPEC page 3, Fiber); 2,759 kcal gives 39 g.
+FIBER_G_PER_1000_KCAL = 14
+
+
+def fiber_default(kcal: float) -> int:
+    return round_int(kcal * FIBER_G_PER_1000_KCAL / 1000)
+
+
 def lb_to_kg(lb: float) -> float:
     return lb * LB_IN_KG
 

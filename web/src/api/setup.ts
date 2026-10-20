@@ -53,7 +53,7 @@ export interface TargetRow {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
-  /** Null until fiber tracking (task 3.13). */
+  /** The fiber target; 14 g per 1,000 kcal unless the user set one. */
   fiber_g: number | null;
   /** Null means water is not tracked. */
   water_ml: number | null;
@@ -78,6 +78,10 @@ export interface CustomTargets {
   carbs_g: number | null;
   /** The calculator result being adjusted, when no targets are saved yet (sign-up). */
   basis?: CalcInput;
+  /** Omitted: a fiber target the user set carries over, else 14 g per 1,000 kcal. */
+  fiber_g?: number;
+  /** Omitted: carries over; null turns the water target off. */
+  water_ml?: number | null;
 }
 
 export function saveCustomTargets(body: CustomTargets) {

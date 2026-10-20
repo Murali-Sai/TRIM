@@ -22,12 +22,19 @@ export interface DayTotal {
 }
 
 export type Nutrient = 'kcal' | 'protein_g' | 'carbs_g' | 'fat_g';
-type TargetLike = { effective_from: string } & Record<Nutrient, number>;
+type TargetLike = {
+  effective_from: string;
+  fiber_g?: number | null;
+  water_ml?: number | null;
+} & Record<Nutrient, number>;
 
 export interface SeriesDay extends Record<Nutrient, number> {
   date: string;
   logged: boolean;
   target: TargetLike | null;
+  /** Fiber from foods that have fiber data, and how many entries had none. */
+  fiber_g: number;
+  fiberUnknown: number;
   /** Calories on target that day (logged, with a target). */
   onTarget: boolean;
 }
@@ -70,6 +77,8 @@ export function daySeries(
       protein_g: d?.protein_g ?? 0,
       carbs_g: d?.carbs_g ?? 0,
       fat_g: d?.fat_g ?? 0,
+      fiber_g: d?.fiber_g ?? 0,
+      fiberUnknown: d?.fiber_unknown ?? 0,
       target,
       onTarget: logged && target !== null && isOnTarget(d.kcal, target.kcal),
     });
