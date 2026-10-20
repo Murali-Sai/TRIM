@@ -8,7 +8,15 @@ from typing import Any
 
 import pytest
 
-from app.tdee import CalcInput, calculate, ft_in_to_cm, lb_to_kg, macros_for, validate_body_stats
+from app.tdee import (
+    CalcInput,
+    calculate,
+    carbs_for_rest,
+    ft_in_to_cm,
+    lb_to_kg,
+    macros_for,
+    validate_body_stats,
+)
 
 VECTORS: dict[str, Any] = json.loads(
     (Path(__file__).resolve().parents[2] / "shared" / "tdee_vectors.json").read_text()
@@ -42,6 +50,12 @@ def test_macros(case: dict[str, Any]) -> None:
     check(asdict(m), expected)
     if from_rounded is not None:
         assert 4 * m.protein_g + 4 * m.carbs_g + 9 * m.fat_g == from_rounded
+
+
+@pytest.mark.parametrize("case", VECTORS["custom_edit"], ids=ids(VECTORS["custom_edit"]))
+def test_custom_edit(case: dict[str, Any]) -> None:
+    i = case["input"]
+    assert asdict(carbs_for_rest(i["kcal"], i["protein_g"], i["fat_g"])) == case["expect"]
 
 
 @pytest.mark.parametrize("case", VECTORS["units"], ids=ids(VECTORS["units"]))

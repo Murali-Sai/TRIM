@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { updateProfile } from '../api/account';
 import { useMe } from '../api/auth';
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from '../theme';
@@ -16,6 +17,23 @@ const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];
+
+function TargetsSection() {
+  const link =
+    'tap inline-block rounded-lg border border-border bg-surface px-4 py-2.5 font-semibold';
+  return (
+    <Section title="Targets" description="Your calorie and macro targets, and the TDEE calculator.">
+      <div className="flex flex-wrap gap-3">
+        <Link to="/targets" className={link}>
+          Edit targets
+        </Link>
+        <Link to="/targets/calculator" className={link}>
+          TDEE calculator
+        </Link>
+      </div>
+    </Section>
+  );
+}
 
 function AppearanceSection() {
   const [theme, setTheme] = useState<ThemeChoice>(getThemeChoice);
@@ -59,6 +77,7 @@ export function AccountPage() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
         <div className="flex flex-col gap-4 lg:gap-6">
           <ProfileSection me={me.data} />
+          <TargetsSection />
           <AppearanceSection />
           <DevicesSection />
         </div>

@@ -2,6 +2,7 @@ import type { WeightEntry } from '../../api/weights';
 import {
   displayWeight,
   formatLongDate,
+  latestTrendKg,
   parseWeight,
   projectionFor,
   projectionSentence,
@@ -131,5 +132,27 @@ describe('projection sentence', () => {
 
   test('formatLongDate ignores the browser locale', () => {
     expect(formatLongDate('2026-12-31')).toBe('31 Dec 2026');
+  });
+});
+
+describe('latestTrendKg (the calculator prefill)', () => {
+  test('no weigh-ins', () => {
+    expect(latestTrendKg([])).toBeNull();
+  });
+
+  test('before the trend shows, the latest weigh-in', () => {
+    const e = entries([
+      ['2026-10-01', 80],
+      ['2026-10-02', 79.5],
+    ]);
+    expect(latestTrendKg(e)).toBe(79.5);
+  });
+
+  test('once the trend shows, the latest trend value, not the last reading', () => {
+    const e = entries([1, 2, 3, 4, 5, 6, 7, 8].map((d) => [`2026-10-0${d}`, 80 - d * 0.1]));
+    const last = trendFor(e).points.at(-1);
+    expect(last?.trend).not.toBeNull();
+    expect(latestTrendKg(e)).toBe(last?.trend);
+    expect(latestTrendKg(e)).not.toBeCloseTo(79.2, 2);
   });
 });

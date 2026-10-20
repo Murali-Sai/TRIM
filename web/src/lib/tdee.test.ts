@@ -1,6 +1,7 @@
 import vectors from '../../../shared/tdee_vectors.json';
 import {
   calculate,
+  carbsForRest,
   ftInToCm,
   lbToKg,
   macrosFor,
@@ -38,6 +39,13 @@ describe('macrosFor', () => {
     if (kcal_from_rounded !== undefined) {
       expect(4 * m.protein_g + 4 * m.carbs_g + 9 * m.fat_g).toBe(kcal_from_rounded);
     }
+  });
+});
+
+describe('carbsForRest (custom edits)', () => {
+  test.each(vectors.custom_edit.map((v) => [v.name, v] as const))('%s', (_, v) => {
+    const { kcal, protein_g, fat_g } = v.input;
+    expect(carbsForRest(kcal, protein_g, fat_g)).toEqual(v.expect);
   });
 });
 
