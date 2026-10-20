@@ -2,6 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import type { UnitSystem } from '../../api/auth';
+import { ChartFrame, ChartHost, ChartTooltip } from '../../components/chart/ChartFrame';
+import { useThemeVersion } from '../../components/chart/useThemeVersion';
+import { canvasFont, cssVar, drawDirectLabel, placeTooltip } from '../../lib/chart/canvas';
+import { nearestIndex } from '../../lib/chart/nearest';
+import { rangeLabel } from '../../lib/chart/headlines';
+import { readStored, writeStored } from '../../lib/chart/storage';
 import { kgToLb } from '../../lib/tdee';
 import type { TrendPoint } from '../../lib/trend';
 import { formatNumber } from '../../lib/units';
@@ -32,55 +38,9 @@ const RANGE_KEY = 'trim.chart.weight.range';
 /** Share of a fixed range added after today for the projection line. */
 const PROJECTION_ROOM = 0.35;
 const NOTE_KEY = 'trim.chart.weight.note-dismissed';
-const RANGE_LABELS: Record<RangeKey, string> = {
-  '1W': 'last week',
-  '1M': 'last month',
-  '3M': 'last 3 months',
-  '6M': 'last 6 months',
-  '1Y': 'last year',
-  All: 'all time',
-};
-
-function readStored(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeStored(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // A convenience only; the chart works without it.
-  }
-}
-
 function storedRange(): RangeKey {
   const value = readStored(RANGE_KEY);
   return RANGES.includes(value as RangeKey) ? (value as RangeKey) : DEFAULT_RANGE;
-}
-
-function cssVar(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-/** Bumps when the theme changes, so the canvas redraws with the new colors. */
-function useThemeVersion(): number {
-  const [version, setVersion] = useState(0);
-  useEffect(() => {
-    const bump = () => setVersion((v) => v + 1);
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    media.addEventListener('change', bump);
-    const observer = new MutationObserver(bump);
-    observer.observe(document.documentElement, { attributeFilter: ['data-theme'] });
-    return () => {
-      media.removeEventListener('change', bump);
-      observer.disconnect();
-    };
-  }, []);
-  return version;
 }
 
 function tooltipText(p: TrendPoint, units: UnitSystem, timeZone: string): string {
@@ -91,16 +51,6 @@ function tooltipText(p: TrendPoint, units: UnitSystem, timeZone: string): string
   }
   if (!p.counted) return `${when}: ${value}, not counted: only the first weigh-in of a day counts`;
   return `${when}: ${value}, trend ${displayWeight(p.trend ?? p.value, units)}`;
-}
-
-/** Index of the nearest real weigh-in to `idx` (skipping the break markers). */
-function nearestPoint(data: ChartData, idx: number | null | undefined): number | null {
-  if (idx == null) return null;
-  for (let d = 0; d < data.xs.length; d++) {
-    if (data.source[idx - d]) return idx - d;
-    if (data.source[idx + d]) return idx + d;
-  }
-  return null;
 }
 
 /** The x window a range chip asks for; All fits the data up to now. */
@@ -125,7 +75,6 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
   const plot = useRef<uPlot | null>(null);
   const [range, setRange] = useState<RangeKey>(storedRange);
   const [zoomed, setZoomed] = useState(false);
-  const [table, setTable] = useState(false);
   const [noteOpen, setNoteOpen] = useState(() => readStored(NOTE_KEY) !== 'yes');
   const themeVersion = useThemeVersion();
 
@@ -149,7 +98,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
     const muted = cssVar('--color-text-secondary');
     const grid = cssVar('--color-border');
     const surface = cssVar('--color-surface');
-    const font = `13px ${getComputedStyle(document.body).fontFamily}`;
+    const font = canvasFont(13 / uPlot.pxRatio);
 
     const fmt = (v: number) => formatNumber(v, 1);
 
@@ -158,26 +107,8 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
       const { left, top, width, height } = u.bbox;
       const dpr = uPlot.pxRatio;
       ctx.save();
-      ctx.font = font.replace(/^(\d+)px/, (_, n: string) => `${Number(n) * dpr}px`);
-      ctx.textBaseline = 'bottom';
-      ctx.textAlign = 'right';
-      // Direct labels on a surface-colored backing, so dots never hide them.
-      // `endX` is where a line ends: the label sits just after it, or right-aligned at the
-      // plot edge when there is no room.
-      const label = (value: string, y: number, color: string, endX = left + width) => {
-        const w = ctx.measureText(value).width;
-        const pad = 6 * dpr;
-        const fits = endX + pad + w <= left + width;
-        const x = fits ? endX + pad : left + width - 4 * dpr;
-        ctx.textAlign = fits ? 'left' : 'right';
-        const boxLeft = fits ? x - 3 * dpr : x - w - 3 * dpr;
-        ctx.fillStyle = surface;
-        ctx.globalAlpha = 0.85;
-        ctx.fillRect(boxLeft, y - 16 * dpr, w + 6 * dpr, 17 * dpr);
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = color;
-        ctx.fillText(value, x, y);
-      };
+      const label = (value: string, y: number, color: string, endX?: number) =>
+        drawDirectLabel(u, value, y, color, endX);
       let goalY: number | null = null;
       if (goal !== null) {
         goalY = u.valToPos(goal, 'y', true);
@@ -251,18 +182,12 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
     function showTip(u: uPlot) {
       const t = tip.current;
       if (!t) return;
-      const i = nearestPoint(data, u.cursor.idx);
+      // The nearest real weigh-in, skipping the break markers.
+      const i = nearestIndex(data.xs.length, u.cursor.idx, (j) => data.source[j] != null);
       const p = i === null ? null : data.source[i];
-      if (i === null || !p || u.cursor.left == null || u.cursor.left < 0) {
-        t.hidden = true;
-        return;
-      }
-      t.textContent = tooltipText(p, units, timeZone);
-      t.hidden = false;
-      const x = u.valToPos(data.xs[i] ?? 0, 'x');
-      const half = t.offsetWidth / 2;
-      const maxLeft = u.over.clientWidth - t.offsetWidth;
-      t.style.left = `${Math.max(0, Math.min(maxLeft, x - half)) + u.over.offsetLeft}px`;
+      const off = u.cursor.left == null || u.cursor.left < 0;
+      const text = i === null || !p || off ? null : tooltipText(p, units, timeZone);
+      placeTooltip(u, t, text, i === null ? 0 : u.valToPos(data.xs[i] ?? 0, 'x'));
     }
 
     function applyRange(u: uPlot) {
@@ -440,7 +365,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
     return !shown || (x >= shown[0] && x <= shown[1]);
   });
   const label =
-    `Weight chart, ${RANGE_LABELS[range]}. ${headline}. ` +
+    `Weight chart, ${rangeLabel(range)}. ${headline}. ` +
     `${visible.length} weigh-in${visible.length === 1 ? '' : 's'} shown.` +
     (goal === null ? '' : ` Goal ${displayWeight(goalKg ?? 0, units)}.`);
 
@@ -467,103 +392,66 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
           </button>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        <div role="radiogroup" aria-label="Time range" className="flex flex-wrap gap-1">
-          {RANGES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              role="radio"
-              aria-checked={range === r}
-              aria-label={RANGE_LABELS[r]}
-              className={`tap min-w-11 rounded-lg px-2 py-2 text-sm font-semibold ${
-                range === r ? 'bg-accent text-accent-contrast' : 'bg-surface-2'
-              }`}
-              onClick={() => {
-                setRange(r);
-                writeStored(RANGE_KEY, r);
-              }}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-        <div className="ml-auto flex gap-2">
-          {!noteOpen ? (
-            <button
-              type="button"
-              className="tap rounded-lg px-3 py-2 text-sm font-semibold"
-              aria-label="What the trend line means"
-              onClick={() => setNoteOpen(true)}
-            >
-              <span aria-hidden="true">ⓘ</span>
-            </button>
-          ) : null}
-          {zoomed ? (
-            <button
-              type="button"
-              className={`${secondaryButton} text-sm`}
-              onClick={() => {
-                const [min, max] = expectedWindow(range, data, projectionEnd);
-                plot.current?.setScale('x', { min, max });
-              }}
-            >
-              Reset zoom
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className={`${secondaryButton} text-sm`}
-            aria-pressed={table}
-            onClick={() => setTable((t) => !t)}
-          >
-            {table ? 'View as chart' : 'View as table'}
-          </button>
-        </div>
-      </div>
-      <div className={table ? 'hidden' : 'relative mt-3'}>
-        <div ref={box} role="img" aria-label={label} data-testid="weight-chart" />
-        <div
-          ref={tip}
-          hidden
-          aria-hidden="true"
-          data-testid="weight-tooltip"
-          className="pointer-events-none absolute top-0 z-10 max-w-[90%] rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow"
-        />
-        <p className="mt-2 text-xs text-text-secondary">
-          Dots are weigh-ins, the line is your trend and the shaded area is your typical daily
-          swing.{goal === null ? '' : ' The dashed line is your goal.'} Hollow dots are not counted.
-        </p>
-      </div>
-      {table ? (
-        <div className="mt-3 max-h-96 overflow-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">{label}</caption>
-            <thead>
-              <tr className="border-b border-border">
-                <th className="py-2 pr-2">Date</th>
-                <th className="py-2 pr-2">Time</th>
-                <th className="py-2 pr-2">Weight ({unit})</th>
-                <th className="py-2 pr-2">Trend ({unit})</th>
-                <th className="py-2">Excluded as outlier</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...visible].reverse().map((p) => (
-                <tr key={p.at} className="border-b border-border">
-                  <td className="py-2 pr-2">{formatDay(p.at, timeZone)}</td>
-                  <td className="py-2 pr-2">{formatTime(p.at, timeZone)}</td>
-                  <td className="py-2 pr-2">{formatNumber(convert(p.value), 1)}</td>
-                  <td className="py-2 pr-2">
-                    {p.trend === null ? '' : formatNumber(convert(p.trend), 1)}
-                  </td>
-                  <td className="py-2">{p.outlier ? 'Yes' : 'No'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+      <ChartFrame
+        range={{
+          value: range,
+          options: RANGES,
+          onChange: (r) => {
+            setRange(r);
+            writeStored(RANGE_KEY, r);
+          },
+        }}
+        controls={
+          <>
+            {!noteOpen ? (
+              <button
+                type="button"
+                className="tap cursor-pointer rounded-lg px-3 py-2 text-sm font-semibold"
+                aria-label="What the trend line means"
+                onClick={() => setNoteOpen(true)}
+              >
+                <span aria-hidden="true">ⓘ</span>
+              </button>
+            ) : null}
+            {zoomed ? (
+              <button
+                type="button"
+                className={`${secondaryButton} cursor-pointer text-sm`}
+                onClick={() => {
+                  const [min, max] = expectedWindow(range, data, projectionEnd);
+                  plot.current?.setScale('x', { min, max });
+                }}
+              >
+                Reset zoom
+              </button>
+            ) : null}
+          </>
+        }
+        note={
+          <>
+            Dots are weigh-ins, the line is your trend and the shaded area is your typical daily
+            swing.{goal === null ? '' : ' The dashed line is your goal.'} Hollow dots are not
+            counted.
+          </>
+        }
+        table={{
+          caption: label,
+          columns: ['Date', 'Time', `Weight (${unit})`, `Trend (${unit})`, 'Excluded as outlier'],
+          numeric: [2, 3],
+          rows: [...visible]
+            .reverse()
+            .map((p) => [
+              formatDay(p.at, timeZone),
+              formatTime(p.at, timeZone),
+              formatNumber(convert(p.value), 1),
+              p.trend === null ? '' : formatNumber(convert(p.trend), 1),
+              p.outlier ? 'Yes' : 'No',
+            ]),
+        }}
+      >
+        <ChartHost ref={box} label={label} testId="weight-chart" />
+        <ChartTooltip ref={tip} testId="weight-tooltip" />
+      </ChartFrame>
     </div>
   );
 }
