@@ -12,13 +12,14 @@ import { ResetPage } from './pages/ResetPage';
 import { SetupPage } from './pages/setup/SetupPage';
 import { SignupPage } from './pages/SignupPage';
 import { TargetsPage } from './pages/TargetsPage';
+import { TodayPage } from './pages/TodayPage';
 import { VerifyPage } from './pages/VerifyPage';
 
 export function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route index element={<Placeholder title="Today" note="Your day will show here." />} />
+        <Route index element={<TodayPage />} />
         <Route path="log" element={<LogPage />} />
         <Route path="body" element={<BodyPage />} />
         <Route

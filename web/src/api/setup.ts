@@ -53,6 +53,10 @@ export interface TargetRow {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  /** Null until fiber tracking (task 3.13). */
+  fiber_g: number | null;
+  /** Null means water is not tracked. */
+  water_ml: number | null;
   source: 'calculator' | 'custom';
   bmr: number | null;
   tdee: number | null;

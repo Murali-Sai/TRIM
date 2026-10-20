@@ -119,6 +119,8 @@ for (const vp of VIEWPORTS) {
         { eaten_at: '2026-10-17T20:00:00.000Z', items: [{ food_id: 'food-rice', grams: 150 }] },
       ]);
       await expect(page.getByTestId('to-log')).toHaveCount(0);
+      await page.getByRole('link', { name: 'See it on Today' }).click();
+      await expect(page).toHaveURL(/\/\?highlight=group1$/);
     });
 
     test('quick chips: Now, -30 min, -1 h and the last time used', async ({ page }) => {
@@ -153,6 +155,8 @@ for (const vp of VIEWPORTS) {
       await page.getByRole('button', { name: 'Log it' }).click();
       await expect(page.getByText('Logged 1 item at 8:15 AM on Wed 14 Oct.')).toBeVisible();
       expect(posted[0]?.eaten_at).toBe('2026-10-14T12:15:00.000Z');
+      await page.getByRole('link', { name: 'See it on that day' }).click();
+      await expect(page).toHaveURL(/\/\?date=2026-10-14&highlight=group1$/);
     });
 
     test('several foods log together as one add, in grams or servings', async ({ page }) => {

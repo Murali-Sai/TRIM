@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { useMe } from '../api/auth';
 import { ApiError } from '../api/client';
 import { searchFoods, type Food } from '../api/foods';
@@ -69,7 +69,7 @@ function LogFood({ timeZone }: { timeZone: string }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Food | null>(null);
   const [picked, setPicked] = useState<Picked[]>([]);
-  const [done, setDone] = useState<string | null>(null);
+  const [done, setDone] = useState<{ message: string; link: string } | null>(null);
 
   const q = useDebounced(query.trim(), 300);
   const search = useQuery({
@@ -84,7 +84,12 @@ function LogFood({ timeZone }: { timeZone: string }) {
   const save = useMutation({
     mutationFn: () => addLogs(zonedWallToIso(wall, timeZone), picked.map(toItem)),
     onSuccess: async (rows) => {
-      setDone(loggedMessage(rows.length, wall, now.slice(0, 10)));
+      const day = wall.slice(0, 10);
+      const group = rows[0]?.log_group_id ?? '';
+      setDone({
+        message: loggedMessage(rows.length, wall, now.slice(0, 10)),
+        link: `/?${day === now.slice(0, 10) ? '' : `date=${day}&`}highlight=${group}`,
+      });
       setPicked([]);
       setSelected(null);
       await queryClient.invalidateQueries({ queryKey: LOGS_KEY });
@@ -115,7 +120,14 @@ function LogFood({ timeZone }: { timeZone: string }) {
       <div className="mt-4">
         <TimeChip wall={wall} now={now} lastUsed={lastUsed} onChange={setWall} />
       </div>
-      {done ? <Notice kind="ok">{done}</Notice> : null}
+      {done ? (
+        <Notice kind="ok">
+          {done.message}{' '}
+          <Link to={done.link} className="font-semibold text-accent underline">
+            See it on {done.link.includes('date=') ? 'that day' : 'Today'}
+          </Link>
+        </Notice>
+      ) : null}
 
       {/* Phone: search, then detail and list. Desktop: search left, detail and list right. */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
