@@ -241,6 +241,7 @@ for (const vp of VIEWPORTS) {
       const state = await stubSetupApi(page);
       const custom: Record<string, unknown>[] = [];
       await page.route('**/api/targets', async (route) => {
+        if (route.request().method() === 'GET') return route.fulfill({ json: [] });
         custom.push(route.request().postDataJSON() as Record<string, unknown>);
         state.setup = 'done';
         await route.fulfill({ status: 201, json: {} });
