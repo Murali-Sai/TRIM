@@ -176,7 +176,7 @@ function Macros({ timeZone }: { timeZone: string }) {
   return (
     <section>
       <Link to="/charts" className="tap text-sm font-semibold text-accent underline">
-        Charts
+        Progress
       </Link>
       <h2 className="mt-2 text-2xl font-bold">Macros</h2>
       {isError ? (

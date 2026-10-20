@@ -54,6 +54,29 @@ jobs:
           path: web/playwright-report
           retention-days: 14
 
+  # Visual regression in the same pinned image the baselines were made in (keep the tag in
+  # step with @playwright/test in web/package.json).
+  visual:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm ci
+      - run: npm run e2e:visual
+        env:
+          HOME: /root
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-diffs
+          path: web/test-results
+          retention-days: 14
+
   api:
     runs-on: ubuntu-latest
     defaults:

@@ -16,5 +16,11 @@
     "noUnusedParameters": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "tailwind.config.ts", "playwright.config.ts", "e2e"]
+  "include": [
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "playwright.config.ts",
+    "playwright.visual.config.ts",
+    "e2e"
+  ]
 }
