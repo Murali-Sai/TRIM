@@ -11,9 +11,18 @@ def test_upgrade_downgrade_upgrade() -> None:
     engine = create_engine(url)
     try:
         migrate(url)
-        assert {"users", "sessions", "auth_tokens", "audit_log", "user_profiles"} <= set(
-            inspect(engine).get_table_names()
-        )
+        assert {
+            "users",
+            "sessions",
+            "auth_tokens",
+            "audit_log",
+            "user_profiles",
+            "weight_entries",
+            "targets",
+            "foods",
+            "serving_units",
+            "food_logs",
+        } <= set(inspect(engine).get_table_names())
         migrate(url, "base", down=True)
         assert set(inspect(engine).get_table_names()) == {"alembic_version"}
         migrate(url)

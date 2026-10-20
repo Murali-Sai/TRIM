@@ -17,6 +17,7 @@ from app.models import (
     RLS_TABLES,
     AuditLog,
     AuthToken,
+    FoodLog,
     SessionRow,
     Target,
     User,
@@ -67,6 +68,18 @@ def seed_user(label: str) -> Seeded:
                     carbs_g=280,
                     fat_g=65,
                     source="custom",
+                ),
+                FoodLog(
+                    user_id=user_id,
+                    log_group_id=uuid7(),
+                    eaten_at=datetime.now(UTC),
+                    logged_on=date(2026, 10, 17),
+                    name="Quick add",
+                    kcal=Decimal("250"),
+                    protein_g=Decimal("10"),
+                    carbs_g=Decimal("30"),
+                    fat_g=Decimal("8"),
+                    source="quick_add",
                 ),
             ]
         )

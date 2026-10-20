@@ -14,9 +14,9 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from sqlalchemy import Engine, text
 
-from app.models import RLS_TABLES
+from app.models import OWNED_ROWS
 from tests.conftest import CsrfClient
-from tests.helpers import log_in, sign_up, user_row
+from tests.helpers import log_in, seed_food_rows, sign_up, user_row
 from tests.isolation.registry import BODY_STATS, ENDPOINTS, WORKED, Ctx, Endpoint
 
 
@@ -60,7 +60,7 @@ def snapshot(owner_engine: Engine, user_id: Any) -> dict[str, list[tuple[str, ..
     """Every row the user owns, as sorted text tuples, read as the owner (bypasses RLS)."""
     out: dict[str, list[tuple[str, ...]]] = {}
     with owner_engine.connect() as conn:
-        for table, col in RLS_TABLES.items():
+        for table, col in OWNED_ROWS.items():
             rows = conn.execute(text(f"SELECT * FROM {table} WHERE {col} = :u"), {"u": user_id})
             out[table] = sorted(tuple(str(v) for v in row) for row in rows)
     return out
@@ -80,6 +80,7 @@ def create_user_a(app: FastAPI, owner_engine: Engine) -> tuple[str, str, dict[st
     gone = a.post("/api/weights", json={"kg": 69.1}).json()["id"]
     assert a.delete(f"/api/weights/{gone}").status_code == 204
     row = user_row(owner_engine, email)
+    seed_food_rows(owner_engine, row.id)
     return email, marker, row._asdict()
 
 
