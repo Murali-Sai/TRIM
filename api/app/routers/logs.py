@@ -251,3 +251,196 @@ def last_time(user: ActiveUserDep) -> LastTimeOut:
             {"u": user.user_id},
         ).scalar_one_or_none()
     return LastTimeOut(eaten_at=at)
+
+
+# --- edit, delete, move and copy (task 3.6) ------------------------------------------------
+
+
+class LogPatchIn(BaseModel):
+    """Any of: a new time, new grams, or a new quantity of the entry's own serving unit.
+
+    A new amount scales the entry's nutrient snapshot, so later edits to the food never leak
+    into history and an entry whose custom food was deleted can still be changed.
+    """
+
+    eaten_at: AwareDatetime | None = None
+    grams: Annotated[float, Field(gt=0, le=MAX_GRAMS)] | None = None
+    quantity: Annotated[float, Field(gt=0, le=MAX_QUANTITY)] | None = None
+
+    @model_validator(mode="after")
+    def _one_amount(self) -> "LogPatchIn":
+        if self.grams is not None and self.quantity is not None:
+            raise ValueError("Send grams or quantity, not both")
+        return self
+
+
+Ids = Annotated[list[uuid.UUID], Field(min_length=1, max_length=MAX_ITEMS * 2)]
+
+
+class LogsAtIn(BaseModel):
+    """Entries (for example a whole time block) and the time to move or copy them to."""
+
+    ids: Ids
+    eaten_at: AwareDatetime
+
+
+NUTRIENTS = ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g", "sugar_g", "sodium_mg")
+NOT_FOUND = "Not found"
+
+
+def _rows(s: Session, user_id: Any, ids: list[uuid.UUID]) -> list[Any]:
+    """The user's live entries with these ids, in the order given. Any other id is a 404, so
+    nobody learns whether another user's entry exists."""
+    wanted = list(dict.fromkeys(ids))
+    rows = s.execute(
+        text(
+            "SELECT * FROM food_logs WHERE user_id = :u AND deleted_at IS NULL AND id = ANY(:ids)"
+        ),
+        {"u": user_id, "ids": wanted},
+    ).all()
+    if len(rows) != len(wanted):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
+    by_id = {r.id: r for r in rows}
+    return [by_id[i] for i in wanted]
+
+
+def _scaled(row: Any, grams: Decimal) -> dict[str, Decimal | None]:
+    factor = grams / row.grams
+    return {
+        n: None
+        if getattr(row, n) is None
+        else (getattr(row, n) * factor).quantize(CENT, rounding=ROUND_HALF_UP)
+        for n in NUTRIENTS
+    }
+
+
+@router.patch("/{log_id}")
+def edit_log(
+    log_id: uuid.UUID, body: LogPatchIn, user: ActiveUserDep, services: ServicesDep
+) -> LogOut:
+    now = services.clock()
+    with user_session(user.user_id) as s:
+        [row] = _rows(s, user.user_id, [log_id])
+        changes: dict[str, Any] = {}
+        if body.eaten_at is not None:
+            tz = _timezone(s, user.user_id)
+            at = _check_time(body.eaten_at, now, tz)
+            changes |= {"eaten_at": at, "logged_on": local_date(at, tz)}
+        if body.grams is not None or body.quantity is not None:
+            if row.grams is None:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_CONTENT, "A quick add has no amount to change"
+                )
+            if body.quantity is not None:
+                if row.quantity is None:
+                    raise HTTPException(
+                        status.HTTP_422_UNPROCESSABLE_CONTENT, "This entry is logged in grams"
+                    )
+                quantity = Decimal(str(body.quantity)).quantize(
+                    Decimal("0.001"), rounding=ROUND_HALF_UP
+                )
+                grams = (row.grams / row.quantity * quantity).quantize(CENT, rounding=ROUND_HALF_UP)
+                changes |= {"quantity": quantity}
+            else:
+                grams = Decimal(str(body.grams)).quantize(CENT, rounding=ROUND_HALF_UP)
+                # Switching to grams drops the serving unit.
+                changes |= {"quantity": None, "unit_label": None}
+            if grams <= 0 or grams > MAX_GRAMS:
+                raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Amount out of range")
+            changes |= {"grams": grams, **_scaled(row, grams)}
+        if changes:
+            sets = ", ".join(f"{k} = :{k}" for k in changes)
+            s.execute(
+                # Column names come from the fixed keys above, never from input.
+                text(
+                    f"UPDATE food_logs SET {sets}, updated_at = :now "  # noqa: S608
+                    "WHERE id = :id AND user_id = :u"
+                ),
+                {**changes, "now": now, "id": log_id, "u": user.user_id},
+            )
+        [updated] = _rows(s, user.user_id, [log_id])
+        return _out(updated)
+
+
+@router.delete("/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_log(log_id: uuid.UUID, user: ActiveUserDep, services: ServicesDep) -> None:
+    with user_session(user.user_id) as s:
+        _rows(s, user.user_id, [log_id])
+        s.execute(
+            text("UPDATE food_logs SET deleted_at = :now WHERE id = :id AND user_id = :u"),
+            {"now": services.clock(), "id": log_id, "u": user.user_id},
+        )
+
+
+@router.post("/{log_id}/restore")
+def restore_log(log_id: uuid.UUID, user: ActiveUserDep) -> LogOut:
+    """Undo a delete."""
+    with user_session(user.user_id) as s:
+        restored = s.execute(
+            text(
+                "UPDATE food_logs SET deleted_at = NULL "
+                "WHERE id = :id AND user_id = :u AND deleted_at IS NOT NULL"
+            ),
+            {"id": log_id, "u": user.user_id},
+        )
+        if restored.rowcount != 1:  # type: ignore[attr-defined]
+            raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
+        [row] = _rows(s, user.user_id, [log_id])
+        return _out(row)
+
+
+@router.post("/move")
+def move_logs(body: LogsAtIn, user: ActiveUserDep, services: ServicesDep) -> list[LogOut]:
+    """Moves entries, or a whole time block, to a new time or day. All or nothing."""
+    now = services.clock()
+    with user_session(user.user_id) as s:
+        tz = _timezone(s, user.user_id)
+        at = _check_time(body.eaten_at, now, tz)
+        rows = _rows(s, user.user_id, body.ids)
+        s.execute(
+            text(
+                "UPDATE food_logs SET eaten_at = :at, logged_on = :on, updated_at = :now "
+                "WHERE user_id = :u AND id = ANY(:ids)"
+            ),
+            {
+                "at": at,
+                "on": local_date(at, tz),
+                "now": now,
+                "u": user.user_id,
+                "ids": [r.id for r in rows],
+            },
+        )
+        return [_out(r) for r in _rows(s, user.user_id, [r.id for r in rows])]
+
+
+@router.post("/copy", status_code=status.HTTP_201_CREATED)
+def copy_logs(body: LogsAtIn, user: ActiveUserDep, services: ServicesDep) -> list[LogOut]:
+    """Copies entries, or a time block, to a time on any day up to today ("copy a time block
+    to today" replaces "copy yesterday's meal"). The copies are one new add."""
+    now = services.clock()
+    with user_session(user.user_id) as s:
+        tz = _timezone(s, user.user_id)
+        at = _check_time(body.eaten_at, now, tz)
+        group = uuid7()
+        copies = [
+            FoodLog(
+                user_id=user.user_id,
+                food_id=r.food_id,
+                saved_meal_id=r.saved_meal_id,
+                log_group_id=group,
+                eaten_at=at,
+                logged_on=local_date(at, tz),
+                name=r.name,
+                brand=r.brand,
+                grams=r.grams,
+                quantity=r.quantity,
+                unit_label=r.unit_label,
+                **{n: getattr(r, n) for n in NUTRIENTS},
+                source=r.source,
+                created_at=now,
+            )
+            for r in _rows(s, user.user_id, body.ids)
+        ]
+        s.add_all(copies)
+        s.flush()
+        return [_out(c) for c in copies]

@@ -2,15 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useMe } from '../api/auth';
-import { listLogs, LOGS_KEY } from '../api/logs';
+import { listLogs, LOGS_KEY, type LogEntry } from '../api/logs';
+import { Toast } from '../components/Toast';
 import { listTargets, TARGETS_KEY } from '../api/setup';
 import { sumNutrients, targetOn } from '../lib/dayTotals';
-import { dayLabel, groupBlocks, shiftWall } from '../lib/logTime';
+import { dayLabel, defaultLogTime, groupBlocks, shiftWall } from '../lib/logTime';
 import { isoToZonedWall, zonedWallToIso } from '../lib/zoned';
 import { usePageTitle } from '../usePageTitle';
-import { Notice } from './account/Section';
+import { Notice, primaryButton, secondaryButton } from './account/Section';
+import { EditEntrySheet } from './today/EditEntrySheet';
+import { MoveCopySheet, type MoveCopyMode } from './today/MoveCopySheet';
 import { TargetStrip } from './today/TargetStrip';
 import { Timeline } from './today/Timeline';
+import { useLogActions } from './today/useLogActions';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const HIGHLIGHT_MS = 2500;
@@ -51,6 +55,37 @@ function Today({ timeZone }: { timeZone: string }) {
 
   // Swipe left or right on the header to change day.
   const touch = useRef<{ x: number; y: number } | null>(null);
+
+  const actions = useLogActions();
+  const [editing, setEditing] = useState<LogEntry | null>(null);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [picker, setPicker] = useState<{ mode: MoveCopyMode; ids: string[]; wall: string } | null>(
+    null,
+  );
+  // A new day starts with nothing selected.
+  useEffect(() => setSelected(new Set()), [day]);
+
+  function toggle(id: string) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function confirmPicker(wall: string) {
+    if (!picker) return;
+    const vars = { ids: picker.ids, at: zonedWallToIso(wall, timeZone) };
+    const done = {
+      onSuccess: () => {
+        setPicker(null);
+        setSelected(new Set());
+      },
+    };
+    if (picker.mode === 'move') actions.move.mutate(vars, done);
+    else actions.copy.mutate(vars, done);
+  }
 
   const entries = logs.data ?? [];
   const blocks = groupBlocks(entries, timeZone);
@@ -159,10 +194,125 @@ function Today({ timeZone }: { timeZone: string }) {
               </Link>
             </div>
           ) : (
-            <Timeline blocks={blocks} scrollToLatest={isToday} highlight={highlight} />
+            <>
+              {actions.error && !editing && !picker ? (
+                <div className="mb-4">
+                  <Notice kind="error">{actions.error}</Notice>
+                </div>
+              ) : null}
+              <Timeline
+                blocks={blocks}
+                scrollToLatest={isToday}
+                highlight={highlight}
+                selected={selected}
+                selecting={selected.size > 0}
+                onToggle={toggle}
+                onOpen={(e) => {
+                  actions.setError(null);
+                  setEditing(e);
+                }}
+                onDelete={(e) => actions.remove.mutate(e)}
+                onDrop={(ids, block) => {
+                  actions.move.mutate(
+                    { ids, at: block.entries[0]?.eaten_at ?? '' },
+                    { onSuccess: () => setSelected(new Set()) },
+                  );
+                }}
+                onCopyBlock={(block) =>
+                  setPicker({
+                    mode: 'copy',
+                    ids: block.entries.map((e) => e.id),
+                    // Copy a time block to today at a chosen time; starts at the block's time.
+                    wall: `${today}T${block.wall.slice(11, 16)}`,
+                  })
+                }
+              />
+              {selected.size > 0 ? (
+                <div
+                  role="toolbar"
+                  aria-label="Selected items"
+                  className="sticky bottom-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+1rem)] z-30 mt-4 grid grid-cols-3 items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-lg lg:bottom-4 lg:flex"
+                  data-testid="selection-bar"
+                >
+                  <p className="col-span-3 font-semibold lg:mr-auto" aria-live="polite">
+                    {selected.size} selected
+                  </p>
+                  <button
+                    type="button"
+                    className={`${primaryButton} cursor-pointer`}
+                    onClick={() =>
+                      setPicker({
+                        mode: 'move',
+                        ids: [...selected],
+                        wall: isoToZonedWall(
+                          entries.find((e) => selected.has(e.id))?.eaten_at ??
+                            new Date().toISOString(),
+                          timeZone,
+                        ),
+                      })
+                    }
+                  >
+                    Move
+                  </button>
+                  <button
+                    type="button"
+                    className={`${secondaryButton} cursor-pointer`}
+                    onClick={() =>
+                      setPicker({
+                        mode: 'copy',
+                        ids: [...selected],
+                        wall: defaultLogTime(new Date().toISOString(), timeZone),
+                      })
+                    }
+                  >
+                    Copy
+                  </button>
+                  <button
+                    type="button"
+                    className={`${secondaryButton} cursor-pointer`}
+                    onClick={() => setSelected(new Set())}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </div>
+
+      {editing ? (
+        <EditEntrySheet
+          entry={editing}
+          timeZone={timeZone}
+          today={today}
+          busy={actions.busy}
+          error={actions.error}
+          onClose={() => setEditing(null)}
+          onSave={(patch) =>
+            actions.edit.mutate({ id: editing.id, patch }, { onSuccess: () => setEditing(null) })
+          }
+          onDuplicate={() =>
+            actions.copy.mutate(
+              { ids: [editing.id], at: editing.eaten_at },
+              { onSuccess: () => setEditing(null) },
+            )
+          }
+          onDelete={() => actions.remove.mutate(editing, { onSuccess: () => setEditing(null) })}
+        />
+      ) : null}
+      {picker ? (
+        <MoveCopySheet
+          mode={picker.mode}
+          count={picker.ids.length}
+          wall={picker.wall}
+          today={today}
+          busy={actions.busy}
+          onClose={() => setPicker(null)}
+          onConfirm={confirmPicker}
+        />
+      ) : null}
+      <Toast toast={actions.toast} onDone={actions.clearToast} />
     </section>
   );
 }

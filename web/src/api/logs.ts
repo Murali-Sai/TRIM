@@ -1,4 +1,4 @@
-import { getJson, postJson } from './client';
+import { deleteJson, getJson, patchJson, postJson } from './client';
 
 export interface LogEntry {
   id: string;
@@ -41,4 +41,33 @@ export function listLogs(dateFrom: string, dateTo = dateFrom) {
 
 export function lastLogTime() {
   return getJson<{ eaten_at: string | null }>('/logs/last-time');
+}
+
+/** A new time, new grams, or a new quantity of the entry's own unit. */
+export interface LogPatch {
+  eaten_at?: string;
+  grams?: number;
+  quantity?: number;
+}
+
+export function editLog(id: string, body: LogPatch) {
+  return patchJson<LogEntry>(`/logs/${id}`, body);
+}
+
+export function deleteLog(id: string) {
+  return deleteJson<null>(`/logs/${id}`);
+}
+
+export function restoreLog(id: string) {
+  return postJson<LogEntry>(`/logs/${id}/restore`);
+}
+
+/** Moves entries (or a whole time block) to a new time or day. */
+export function moveLogs(ids: string[], eaten_at: string) {
+  return postJson<LogEntry[]>('/logs/move', { ids, eaten_at });
+}
+
+/** Copies entries (or a time block) to a time on any day up to today, as one new add. */
+export function copyLogs(ids: string[], eaten_at: string) {
+  return postJson<LogEntry[]>('/logs/copy', { ids, eaten_at });
 }

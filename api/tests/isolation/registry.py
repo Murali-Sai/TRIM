@@ -35,6 +35,7 @@ class Ctx:
     a_weight_ids: list[str]  # live weigh-ins
     a_deleted_weight_ids: list[str]  # deleted, still restorable by A
     a_food_ids: list[str]  # A's custom foods
+    a_log_ids: list[str]  # A's food log entries
 
 
 @dataclass(frozen=True)
@@ -177,6 +178,37 @@ ENDPOINTS: list[Endpoint] = [
         "GET", "/api/logs", requires_session=True, params=lambda c: {"date_from": "2026-10-17"}
     ),
     Endpoint("GET", "/api/logs/last-time", requires_session=True),
+    Endpoint(
+        "PATCH",
+        "/api/logs/{log_id}",
+        requires_session=True,
+        body=lambda c: {"grams": 1, "eaten_at": "2026-10-17T08:00:00Z"},
+        path_params=lambda c: {"log_id": c.a_log_ids[0]},
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/logs/{log_id}",
+        requires_session=True,
+        path_params=lambda c: {"log_id": c.a_log_ids[0]},
+    ),
+    Endpoint(
+        "POST",
+        "/api/logs/{log_id}/restore",
+        requires_session=True,
+        path_params=lambda c: {"log_id": c.a_log_ids[0]},
+    ),
+    Endpoint(
+        "POST",
+        "/api/logs/move",
+        requires_session=True,
+        body=lambda c: {"ids": c.a_log_ids, "eaten_at": "2026-10-17T08:00:00Z"},
+    ),
+    Endpoint(
+        "POST",
+        "/api/logs/copy",
+        requires_session=True,
+        body=lambda c: {"ids": c.a_log_ids, "eaten_at": "2026-10-17T08:00:00Z"},
+    ),
     # A has a custom food named "Overnight oats" (tests.helpers.seed_food_rows).
     Endpoint(
         "GET",

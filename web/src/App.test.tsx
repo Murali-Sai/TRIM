@@ -20,13 +20,16 @@ const ME: Me = {
 function stubMe(me: Me | null) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(() =>
-      Promise.resolve(
-        me
-          ? new Response(JSON.stringify(me), { status: 200 })
-          : new Response(JSON.stringify({ detail: 'Not signed in' }), { status: 401 }),
-      ),
-    ),
+    vi.fn((url: string) => {
+      if (!me) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ detail: 'Not signed in' }), { status: 401 }),
+        );
+      }
+      // The Today screen's lists; everything else answers with the signed-in user.
+      const list = /\/api\/(logs|targets)\b/.test(String(url));
+      return Promise.resolve(new Response(JSON.stringify(list ? [] : me), { status: 200 }));
+    }),
   );
 }
 

@@ -127,6 +127,7 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
         a_weight_ids=[str(w.id) for w in weights if w.deleted_at is None],
         a_deleted_weight_ids=[str(w.id) for w in weights if w.deleted_at is not None],
         a_food_ids=[row[0] for row in before["foods"]],
+        a_log_ids=[row[0] for row in before["food_logs"]],
     )
     res = call(b, ep, ctx)
     name = f"{ep.method} {ep.path}"
@@ -138,7 +139,7 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
     secrets = [a_email, marker, str(a_id), *session_ids]
     secrets += [*ctx.a_weight_ids, *ctx.a_deleted_weight_ids]
     secrets += ctx.a_food_ids
-    secrets += [row[0] for row in before["food_logs"]]  # A's log ids
+    secrets += ctx.a_log_ids
     for secret in secrets:
         assert secret.lower() not in res.text.lower(), f"{name} showed A's data to B"
 
@@ -149,7 +150,13 @@ def check_needs_session(app: FastAPI, ep: Endpoint) -> None:
     anon.get("/api/auth/csrf")
     some = [str(uuid.uuid4())]
     ctx = Ctx(
-        str(uuid.uuid4()), some, "", a_weight_ids=some, a_deleted_weight_ids=some, a_food_ids=some
+        str(uuid.uuid4()),
+        some,
+        "",
+        a_weight_ids=some,
+        a_deleted_weight_ids=some,
+        a_food_ids=some,
+        a_log_ids=some,
     )
     res = call(anon, ep, ctx)
     assert res.status_code == 401, f"{ep.method} {ep.path} without a session: {res.status_code}"
