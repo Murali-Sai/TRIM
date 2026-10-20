@@ -34,6 +34,7 @@ class Ctx:
     b_email: str
     a_weight_ids: list[str]  # live weigh-ins
     a_deleted_weight_ids: list[str]  # deleted, still restorable by A
+    a_food_ids: list[str]  # A's custom foods
 
 
 @dataclass(frozen=True)
@@ -161,6 +162,21 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         path_params=lambda c: {"entry_id": c.a_deleted_weight_ids[0]},
     ),
+    # A has a custom food named "Overnight oats" and one log on 17 Oct
+    # (tests.helpers.seed_food_rows). B may not log A's food or read A's logs.
+    Endpoint(
+        "POST",
+        "/api/logs",
+        requires_session=True,
+        body=lambda c: {
+            "eaten_at": "2026-10-17T12:00:00Z",
+            "items": [{"food_id": c.a_food_ids[0], "grams": 100}],
+        },
+    ),
+    Endpoint(
+        "GET", "/api/logs", requires_session=True, params=lambda c: {"date_from": "2026-10-17"}
+    ),
+    Endpoint("GET", "/api/logs/last-time", requires_session=True),
     # A has a custom food named "Overnight oats" (tests.helpers.seed_food_rows).
     Endpoint(
         "GET",

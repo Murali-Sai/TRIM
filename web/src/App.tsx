@@ -6,6 +6,7 @@ import { CalculatorPage } from './pages/CalculatorPage';
 import { ForgotPage } from './pages/ForgotPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
+import { LogPage } from './pages/LogPage';
 import { Placeholder } from './pages/Placeholder';
 import { ResetPage } from './pages/ResetPage';
 import { SetupPage } from './pages/setup/SetupPage';
@@ -18,10 +19,7 @@ export function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<Placeholder title="Today" note="Your day will show here." />} />
-        <Route
-          path="log"
-          element={<Placeholder title="Log food" note="Food search comes next." />}
-        />
+        <Route path="log" element={<LogPage />} />
         <Route path="body" element={<BodyPage />} />
         <Route
           path="charts"
