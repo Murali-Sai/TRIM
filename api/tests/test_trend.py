@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from app.trend import Reading, compute_trend, gap_alpha, weekly_rate
+from app.trend import Reading, compute_trend, gap_alpha, project_goal, weekly_rate
 
 VECTORS: dict[str, Any] = json.loads(
     (Path(__file__).resolve().parents[2] / "shared" / "trend_vectors.json").read_text()
@@ -61,3 +61,12 @@ def test_weekly_rate_rounds_to_spec_figure() -> None:
     points = [(p["day"], p["trend"]) for p in VECTORS["weekly_rate"][0]["points"]]
     rate = weekly_rate(points)
     assert rate is not None and round(rate, 2) == -0.45
+
+
+@pytest.mark.parametrize("v", VECTORS["projection"], ids=ids(VECTORS["projection"]))
+def test_project_goal(v: dict[str, Any]) -> None:
+    got = project_goal(**v["input"])
+    assert got.kind == v["expect"]["kind"]
+    if got.kind == "projection":
+        near(got.weeks, v["expect"]["weeks"], 0.01, "weeks")
+        assert got.date == v["expect"]["date"]

@@ -1,5 +1,6 @@
 import type { UnitSystem } from '../../api/auth';
 import { kgToLb, lbToKg } from '../../lib/tdee';
+import { projectGoal, type Projection } from '../../lib/projection';
 import { computeTrend, weeklyRate, type TrendResult } from '../../lib/trend';
 import { formatNumber, parseDecimal } from '../../lib/units';
 import type { WeightEntry } from '../../api/weights';
@@ -58,4 +59,46 @@ export function trendSentence(trend: TrendResult, units: UnitSystem): string {
       ? 'steady'
       : `${perWeek < 0 ? 'down' : 'up'} ${formatNumber(shown, 1)} ${unitLabel(units)} a week`;
   return `Trend ${displayWeight(latest, units)}, ${direction}`;
+}
+
+/** The goal-date projection for the latest trend, from the user's local today. */
+export function projectionFor(
+  trend: TrendResult,
+  goalKg: number | null,
+  today: string,
+): Projection {
+  const latest = [...trend.points].reverse().find((p) => p.trend !== null)?.trend ?? null;
+  if (latest === null) return { kind: 'none' };
+  return projectGoal({
+    trend_kg: latest,
+    goal_kg: goalKg,
+    weekly_rate_kg: weeklyRate(trend.points),
+    trend_visible: trend.visible,
+    today,
+  });
+}
+
+/** "31 Dec 2026", the SPEC's date style, for a YYYY-MM-DD date. */
+export function formatLongDate(day: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(`${day}T00:00:00Z`));
+}
+
+export const NO_PROJECTION = 'No projection: your trend is flat or moving away from your goal.';
+
+export function projectionSentence(
+  projection: Projection,
+  goalKg: number | null,
+  units: UnitSystem,
+): string | null {
+  if (projection.kind === 'none' || goalKg === null) return null;
+  if (projection.kind === 'no_projection') return NO_PROJECTION;
+  return (
+    `${displayWeight(goalKg, units)} goal around ${formatLongDate(projection.date)} ` +
+    'if your current rate continues.'
+  );
 }

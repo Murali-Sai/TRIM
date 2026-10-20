@@ -24,9 +24,13 @@ interface Props {
   goalKg: number | null;
   /** The headline sentence, reused in the chart's aria-label. */
   headline: string;
+  /** When the goal-date projection is shown: its local date (YYYY-MM-DD). */
+  projectionDate: string | null;
 }
 
 const RANGE_KEY = 'trim.chart.weight.range';
+/** Share of a fixed range added after today for the projection line. */
+const PROJECTION_ROOM = 0.35;
 const NOTE_KEY = 'trim.chart.weight.note-dismissed';
 const RANGE_LABELS: Record<RangeKey, string> = {
   '1W': 'last week',
@@ -100,12 +104,22 @@ function nearestPoint(data: ChartData, idx: number | null | undefined): number |
 }
 
 /** The x window a range chip asks for; All fits the data up to now. */
-function expectedWindow(range: RangeKey, data: ChartData): [number, number] {
+function expectedWindow(
+  range: RangeKey,
+  data: ChartData,
+  projectionEnd: number | null,
+): [number, number] {
   const now = Date.now() / 1000;
-  return rangeWindow(range, now) ?? [data.xs[0] ?? now, Math.max(now, data.xs.at(-1) ?? now)];
+  const fixed = rangeWindow(range, now);
+  if (!fixed)
+    return [data.xs[0] ?? now, Math.max(now, data.xs.at(-1) ?? now, projectionEnd ?? now)];
+  // Leave room on the right for the projection line, without squeezing the data.
+  if (projectionEnd === null) return fixed;
+  const room = (fixed[1] - fixed[0]) * PROJECTION_ROOM;
+  return [fixed[0], Math.min(projectionEnd, now + room)];
 }
 
-export function WeightChart({ points, units, timeZone, goalKg, headline }: Props) {
+export function WeightChart({ points, units, timeZone, goalKg, headline, projectionDate }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const tip = useRef<HTMLDivElement>(null);
   const plot = useRef<uPlot | null>(null);
@@ -122,6 +136,8 @@ export function WeightChart({ points, units, timeZone, goalKg, headline }: Props
     return { data: built, buildMs: performance.now() - t0 };
   }, [points, convert]);
   const goal = goalKg === null ? null : convert(goalKg);
+  // Noon on the projected day, so the line ends mid-day like a weigh-in.
+  const projectionEnd = projectionDate ? Date.parse(`${projectionDate}T12:00:00Z`) / 1000 : null;
   const unit = unitLabel(units);
 
   useEffect(() => {
@@ -146,12 +162,18 @@ export function WeightChart({ points, units, timeZone, goalKg, headline }: Props
       ctx.textBaseline = 'bottom';
       ctx.textAlign = 'right';
       // Direct labels on a surface-colored backing, so dots never hide them.
-      const label = (value: string, y: number, color: string) => {
-        const x = left + width - 4 * dpr;
+      // `endX` is where a line ends: the label sits just after it, or right-aligned at the
+      // plot edge when there is no room.
+      const label = (value: string, y: number, color: string, endX = left + width) => {
         const w = ctx.measureText(value).width;
+        const pad = 6 * dpr;
+        const fits = endX + pad + w <= left + width;
+        const x = fits ? endX + pad : left + width - 4 * dpr;
+        ctx.textAlign = fits ? 'left' : 'right';
+        const boxLeft = fits ? x - 3 * dpr : x - w - 3 * dpr;
         ctx.fillStyle = surface;
         ctx.globalAlpha = 0.85;
-        ctx.fillRect(x - w - 3 * dpr, y - 16 * dpr, w + 6 * dpr, 17 * dpr);
+        ctx.fillRect(boxLeft, y - 16 * dpr, w + 6 * dpr, 17 * dpr);
         ctx.globalAlpha = 1;
         ctx.fillStyle = color;
         ctx.fillText(value, x, y);
@@ -186,7 +208,37 @@ export function WeightChart({ points, units, timeZone, goalKg, headline }: Props
       if (last >= 0) {
         const value = data.trend[last] as number;
         trendY = u.valToPos(value, 'y', true) - 8 * dpr;
-        label(`Trend ${fmt(value)}`, trendY, text);
+        label(`Trend ${fmt(value)}`, trendY, text, u.valToPos(data.xs[last] ?? 0, 'x', true));
+      }
+      // Projection: a dotted line from today's trend to the goal on the projected date,
+      // clipped to the plot so it points the way even when the date is off to the right.
+      const latestTrend = [...data.trend].reverse().find((v) => typeof v === 'number');
+      if (goal !== null && projectionEnd !== null && typeof latestTrend === 'number') {
+        const x0 = u.valToPos(Date.now() / 1000, 'x', true);
+        const y0 = u.valToPos(latestTrend, 'y', true);
+        const x1 = u.valToPos(projectionEnd, 'x', true);
+        const y1 = u.valToPos(goal, 'y', true);
+        if (x0 < left + width) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(left, top, width, height);
+          ctx.clip();
+          ctx.strokeStyle = weight;
+          ctx.lineWidth = 2 * dpr;
+          ctx.setLineDash([2 * dpr, 4 * dpr]);
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x1, y1);
+          ctx.stroke();
+          ctx.restore();
+          // Label where the visible part of the line ends.
+          const xEnd = Math.min(x1, left + width);
+          const yEnd = x1 === x0 ? y1 : y0 + ((y1 - y0) * (xEnd - x0)) / (x1 - x0);
+          const below = y1 > y0 ? 18 * dpr : -6 * dpr;
+          let yLabel = yEnd + below;
+          if (trendY !== null && Math.abs(trendY - yLabel) < 18 * dpr) yLabel += 18 * dpr;
+          label('projection', yLabel, muted);
+        }
       }
       if (goal !== null && goalY !== null) {
         let y = goalY - 4 * dpr;
@@ -214,7 +266,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline }: Props
     }
 
     function applyRange(u: uPlot) {
-      const [min, max] = expectedWindow(range, data);
+      const [min, max] = expectedWindow(range, data, projectionEnd);
       u.setScale('x', { min, max });
     }
 
@@ -294,7 +346,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline }: Props
         setScale: [
           (u, key) => {
             if (key !== 'x') return;
-            const [min, max] = expectedWindow(range, data);
+            const [min, max] = expectedWindow(range, data, projectionEnd);
             const off = (a: number | undefined, b: number) => Math.abs((a ?? b) - b) > 60;
             setZoomed(off(u.scales.x?.min, min) || off(u.scales.x?.max, max));
           },
@@ -380,7 +432,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline }: Props
       u.destroy();
       plot.current = null;
     };
-  }, [data, buildMs, goal, range, units, unit, timeZone, themeVersion]);
+  }, [data, buildMs, goal, projectionEnd, range, units, unit, timeZone, themeVersion]);
 
   const shown = rangeWindow(range, Date.now() / 1000);
   const visible = points.filter((p) => {
@@ -452,7 +504,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline }: Props
               type="button"
               className={`${secondaryButton} text-sm`}
               onClick={() => {
-                const [min, max] = expectedWindow(range, data);
+                const [min, max] = expectedWindow(range, data, projectionEnd);
                 plot.current?.setScale('x', { min, max });
               }}
             >
