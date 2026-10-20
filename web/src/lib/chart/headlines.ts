@@ -10,7 +10,9 @@ import { formatNumber } from '../units';
 export const ON_TARGET_BAND = 0.05;
 
 export function isOnTarget(value: number, target: number): boolean {
-  return Math.abs(value - target) <= target * ON_TARGET_BAND;
+  // |value - target| / target <= 0.05, as |value - target| x 20 <= target: exact at the
+  // edges for whole numbers (2,415 for 2,300 is on target), with no floating point drift.
+  return Math.abs(value - target) * (1 / ON_TARGET_BAND) <= target;
 }
 
 const whole = (x: number) => formatNumber(Math.round(x));

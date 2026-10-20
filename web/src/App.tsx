@@ -1,3 +1,4 @@
+import { lazy, Suspense, type ReactNode } from 'react';
 import { Route, Routes } from 'react-router';
 import { AppShell } from './components/AppShell';
 import { AccountPage } from './pages/AccountPage';
@@ -7,13 +8,25 @@ import { ForgotPage } from './pages/ForgotPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { LogPage } from './pages/LogPage';
-import { Placeholder } from './pages/Placeholder';
 import { ResetPage } from './pages/ResetPage';
 import { SetupPage } from './pages/setup/SetupPage';
 import { SignupPage } from './pages/SignupPage';
 import { TargetsPage } from './pages/TargetsPage';
 import { TodayPage } from './pages/TodayPage';
 import { VerifyPage } from './pages/VerifyPage';
+import { ChartsIndex } from './pages/charts/ChartsIndex';
+
+// The charts load uPlot, so they come in their own chunk.
+const CaloriesPage = lazy(() =>
+  import('./pages/charts/CaloriesPage').then((m) => ({ default: m.CaloriesPage })),
+);
+const MacrosPage = lazy(() =>
+  import('./pages/charts/MacrosPage').then((m) => ({ default: m.MacrosPage })),
+);
+
+function Loading({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<div className="min-h-56" aria-busy="true" />}>{children}</Suspense>;
+}
 
 export function App() {
   return (
@@ -22,9 +35,22 @@ export function App() {
         <Route index element={<TodayPage />} />
         <Route path="log" element={<LogPage />} />
         <Route path="body" element={<BodyPage />} />
+        <Route path="charts" element={<ChartsIndex />} />
         <Route
-          path="charts"
-          element={<Placeholder title="Progress" note="Your charts will show here." />}
+          path="charts/calories"
+          element={
+            <Loading>
+              <CaloriesPage />
+            </Loading>
+          }
+        />
+        <Route
+          path="charts/macros"
+          element={
+            <Loading>
+              <MacrosPage />
+            </Loading>
+          }
         />
         <Route path="targets" element={<TargetsPage />} />
         <Route path="targets/calculator" element={<CalculatorPage />} />

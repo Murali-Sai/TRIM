@@ -294,6 +294,62 @@ def list_logs(
         return [_out(r) for r in rows]
 
 
+class DayOut(BaseModel):
+    """One logged day's totals, summed from the unrounded entries."""
+
+    date: date
+    entries: int
+    kcal: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+    # Sum of the known values; fiber_unknown entries have no fiber value.
+    fiber_g: float
+    fiber_unknown: int
+
+
+MAX_DAYS_RANGE = 3660
+
+
+@router.get("/days")
+def day_totals(
+    user: ActiveUserDep,
+    date_from: Annotated[date, Query()],
+    date_to: Annotated[date, Query()],
+) -> list[DayOut]:
+    """Totals per local day that has entries, oldest first, for the calorie and macro charts.
+    Days with nothing logged are left out (not zero), so averages use logged days only."""
+    if date_to < date_from or (date_to - date_from) > timedelta(days=MAX_DAYS_RANGE - 1):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"Choose a range of 1 to {MAX_DAYS_RANGE} days.",
+        )
+    with user_session(user.user_id) as s:
+        rows = s.execute(
+            text(
+                "SELECT logged_on, count(*) AS entries, sum(kcal) AS kcal, "
+                "sum(protein_g) AS protein_g, sum(carbs_g) AS carbs_g, sum(fat_g) AS fat_g, "
+                "coalesce(sum(fiber_g), 0) AS fiber_g, count(*) - count(fiber_g) AS fiber_unknown "
+                "FROM food_logs WHERE user_id = :u AND deleted_at IS NULL "
+                "AND logged_on BETWEEN :a AND :b GROUP BY logged_on ORDER BY logged_on"
+            ),
+            {"u": user.user_id, "a": date_from, "b": date_to},
+        ).all()
+    return [
+        DayOut(
+            date=r.logged_on,
+            entries=r.entries,
+            kcal=float(r.kcal),
+            protein_g=float(r.protein_g),
+            carbs_g=float(r.carbs_g),
+            fat_g=float(r.fat_g),
+            fiber_g=float(r.fiber_g),
+            fiber_unknown=r.fiber_unknown,
+        )
+        for r in rows
+    ]
+
+
 @router.get("/last-time")
 def last_time(user: ActiveUserDep) -> LastTimeOut:
     with user_session(user.user_id) as s:
