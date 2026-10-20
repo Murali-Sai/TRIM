@@ -18,7 +18,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 
 ## Milestone 2: Weight logging and trend chart
 - [x] **2.1 Trend math (tests first)**: EWMA, gap alpha, outliers, min points, weekly slope. AC: SPEC page 3 examples match to 0.01. (2f75013)
-- [ ] **2.2 Weight CRUD + quick entry**. AC: entry under 3 s on phone; isolation suite covers it.
+- [x] **2.2 Weight CRUD + quick entry**. AC: entry under 3 s on phone; isolation suite covers it. (1eb17c6)
 - [ ] **2.3 Weight chart (uPlot)**: dots, trend, goal, band, ranges, tap and hover tooltips, pinch and wheel zoom. AC: 365 points render under 300 ms.
 - [ ] **2.4 Goal-date projection**: dotted line and sentence, hide rules. AC: trend 79.8, goal 75.0, rate -0.45 kg/week from 17 Oct 2026 shows "around 31 Dec 2026"; flat or wrong-direction trend shows the no-projection message.
 
