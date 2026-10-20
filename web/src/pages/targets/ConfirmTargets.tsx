@@ -51,10 +51,10 @@ export function ConfirmTargets({ current, next, saving, onConfirm, onCancel }: P
               <th scope="row" className="py-2 font-normal">
                 {label}
               </th>
-              <td className="py-2 text-right tabular-nums" data-testid={`old-${key}`}>
+              <td className="py-2 text-right num" data-testid={`old-${key}`}>
                 {current ? `${formatNumber(current[key])} ${unit}` : 'None'}
               </td>
-              <td className="py-2 text-right font-semibold tabular-nums" data-testid={`new-${key}`}>
+              <td className="py-2 text-right font-semibold num" data-testid={`new-${key}`}>
                 {formatNumber(next[key])} {unit}
               </td>
             </tr>

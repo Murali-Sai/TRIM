@@ -131,7 +131,7 @@ export function WeightHistory({ entries, points, units, timeZone, onEdit, onDele
             <li key={entry.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
               <div className="min-w-0 flex-1">
                 <p>
-                  <span className="font-semibold">{displayWeight(entry.kg, units)}</span>{' '}
+                  <span className="num font-semibold">{displayWeight(entry.kg, units)}</span>{' '}
                   <span className="text-text-secondary">
                     {day}, {time}
                   </span>

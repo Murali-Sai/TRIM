@@ -2,56 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme tokens. Light by default, dark from the OS unless the user picked a theme. */
+/* Theme tokens (design-system/MASTER.md). Dark first: dark unless the user picked Light, or
+   picked Match device on a light-mode device. */
 :root {
-  color-scheme: light;
-  --color-bg: #f7f7f5;
-  --color-surface: #ffffff;
-  --color-surface-2: #eeeeeb;
-  --color-border: #dcdcd7;
-  --color-text: #1b1b19;
-  --color-text-secondary: #5a5a55;
-  --color-accent: #0072b2;
-  --color-accent-contrast: #ffffff;
-  --color-error: #b3261e;
+  color-scheme: dark;
+  --color-bg: #0b0b0c;
+  --color-surface: #141416;
+  --color-surface-2: #1d1d20;
+  --color-border: #2e2e33;
+  --color-text: #ededef;
+  --color-text-secondary: #a3a3ab;
+  --color-accent: #56b4e9;
+  --color-accent-contrast: #0b0b0c;
+  --color-error: #f2b8b5;
 
-  /* Nutrient colors (Okabe-Ito), the same everywhere. */
+  /* Nutrient colors (Okabe-Ito) for bars and lines, the same in both themes. */
   --color-kcal: #56b4e9;
   --color-protein: #d55e00;
   --color-fat: #e69f00;
   --color-carbs: #009e73;
+  /* Text-safe shades of the nutrient colors: 4.5:1 or more on surface and surface-2. */
+  --color-kcal-text: #56b4e9;
+  --color-protein-text: #de6200;
+  --color-fat-text: #e69f00;
+  --color-carbs-text: #009e73;
   /* Weight and trend charts: Okabe-Ito blue, validated on both light and dark surfaces. */
   --color-weight: #0072b2;
 
   --tabbar-height: 64px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    color-scheme: dark;
-    --color-bg: #121211;
-    --color-surface: #1c1c1a;
-    --color-surface-2: #262624;
-    --color-border: #393936;
-    --color-text: #f1f1ee;
-    --color-text-secondary: #b1b1aa;
-    --color-accent: #56b4e9;
-    --color-accent-contrast: #0b0b0a;
-    --color-error: #f2b8b5;
-  }
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #f6f6f7;
+  --color-surface: #ffffff;
+  --color-surface-2: #ededf0;
+  --color-border: #d9d9de;
+  --color-text: #111113;
+  --color-text-secondary: #55555c;
+  --color-accent: #0069a6;
+  --color-accent-contrast: #ffffff;
+  --color-error: #b3261e;
+  --color-kcal-text: #1570a4;
+  --color-protein-text: #af4d00;
+  --color-fat-text: #8c6100;
+  --color-carbs-text: #007857;
 }
 
-:root[data-theme='dark'] {
-  color-scheme: dark;
-  --color-bg: #121211;
-  --color-surface: #1c1c1a;
-  --color-surface-2: #262624;
-  --color-border: #393936;
-  --color-text: #f1f1ee;
-  --color-text-secondary: #b1b1aa;
-  --color-accent: #56b4e9;
-  --color-accent-contrast: #0b0b0a;
-  --color-error: #f2b8b5;
+@media (prefers-color-scheme: light) {
+  :root[data-theme='system'] {
+    color-scheme: light;
+    --color-bg: #f6f6f7;
+    --color-surface: #ffffff;
+    --color-surface-2: #ededf0;
+    --color-border: #d9d9de;
+    --color-text: #111113;
+    --color-text-secondary: #55555c;
+    --color-accent: #0069a6;
+    --color-accent-contrast: #ffffff;
+    --color-error: #b3261e;
+    --color-kcal-text: #1570a4;
+    --color-protein-text: #af4d00;
+    --color-fat-text: #8c6100;
+    --color-carbs-text: #007857;
+  }
 }
 
 @layer base {
@@ -64,8 +78,7 @@
     background: var(--color-bg);
     color: var(--color-text);
     font-family:
-      'Inter Variable',
-      Inter,
+      'Fira Sans',
       ui-sans-serif,
       system-ui,
       -apple-system,
@@ -90,6 +103,23 @@
 }
 
 @layer components {
+  /* Every figure: Fira Code with tabular digits, so columns line up. */
+  .num {
+    font-family: 'Fira Code Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* Small uppercase label that names a figure ("KCAL", "LEFT"). */
+  .eyebrow {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
   /* Touch screens get 44 px minimum targets. */
   @media (pointer: coarse) {
     .tap {

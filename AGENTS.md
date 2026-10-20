@@ -37,6 +37,8 @@ Instructions for any coding agent working on TRIM (Track, Record, Inspect, Measu
 - The Today screen follows the layout in SPEC page 4, but all icons, fonts, colors and copy are original. Never copy assets or text from MacroFactor or any other app.
 - Show the TRIM title block (name with "Track, Record, Inspect, Measure" under it) exactly as specified in SPEC page 1, Name and branding.
 - Charts use uPlot and the Okabe-Ito palette, each with an `aria-label` summary.
+- Follow `design-system/MASTER.md` (dark-first data: Fira Sans text, Fira Code numbers via the `num` class, tokens in `web/src/index.css`). For UI work, use the UI/UX Pro Max skill in `.claude/skills/ui-ux-pro-max` for UX rules and its pre-delivery checklist; where it conflicts with SPEC or this file, they win.
+- Text in a nutrient color uses its text-safe shade (`text-protein-text` and so on); `web/src/test/contrast.test.ts` must keep passing in both themes.
 - No em dashes in user-facing copy or docs.
 
 ## When unsure

@@ -214,7 +214,7 @@ function LogFood({ timeZone }: { timeZone: string }) {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 text-sm font-semibold" data-testid="to-log-total">
+                <p className="num mt-3 text-sm font-semibold" data-testid="to-log-total">
                   Total {macroLine(totals)}
                 </p>
               </>

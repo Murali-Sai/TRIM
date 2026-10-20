@@ -18,6 +18,15 @@ export default {
         protein: 'var(--color-protein)',
         fat: 'var(--color-fat)',
         carbs: 'var(--color-carbs)',
+        'kcal-text': 'var(--color-kcal-text)',
+        'protein-text': 'var(--color-protein-text)',
+        'fat-text': 'var(--color-fat-text)',
+        'carbs-text': 'var(--color-carbs-text)',
+      },
+      // design-system/MASTER.md: 8 px on cards and controls, 12 px on sheets.
+      borderRadius: {
+        xl: '0.5rem',
+        '2xl': '0.75rem',
       },
       spacing: {
         tabbar: 'var(--tabbar-height)',
