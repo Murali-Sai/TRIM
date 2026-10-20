@@ -45,6 +45,9 @@ environment variables, keeping the secret ones in Secret Manager:
 | `TRIM_EMAIL_FROM` | for example `TRIM <no-reply@<domain>>` |
 | `TRIM_FDC_API_KEY` | a free data.gov key for USDA FoodData Central (1,000 requests an hour); server only |
 | `TRIM_OFF_USER_AGENT` | names the app and a contact, for example `TRIM/1.0 (you@<domain>)`, as Open Food Facts asks |
+| `TRIM_VAPID_PUBLIC_KEY`, `TRIM_VAPID_PRIVATE_KEY` | Web Push keys for streak reminders (see step 5); without them reminders stay off |
+| `TRIM_VAPID_SUBJECT` | a contact for push services, for example `mailto:you@<domain>` |
+| `TRIM_JOB_TOKEN` | a long random value the hourly job sends; without it the job is refused |
 
 On Neon, create the roles once (the Docker database does this in `db/init/01-roles.sql`):
 `trim_app` NOLOGIN NOBYPASSRLS, and a login role that is a member of it. Then run
@@ -80,6 +83,28 @@ On an iPhone in Safari and on a Mac in Safari, at `https://app.<domain>`:
    SameSite Lax and set by `app.<domain>`; `__Host-trim_csrf` is not HttpOnly.
 
 When all five pass on both devices, mark 1.8 `[x]` in TASKS.md.
+
+## 5. Streak reminders (task 3.18)
+
+1. Make a VAPID key pair once, from `api/`:
+
+   ```
+   uv run python -c "from py_vapid import Vapid01 as V; v=V(); v.generate_keys(); \
+   import base64; from cryptography.hazmat.primitives import serialization as s; \
+   print('public', base64.urlsafe_b64encode(v.public_key.public_bytes(s.Encoding.X962, \
+   s.PublicFormat.UncompressedPoint)).rstrip(b'=').decode()); \
+   print('private', base64.urlsafe_b64encode(v.private_key.private_numbers().private_value \
+   .to_bytes(32, 'big')).rstrip(b'=').decode())"
+   ```
+
+   Set them as `TRIM_VAPID_PUBLIC_KEY` and `TRIM_VAPID_PRIVATE_KEY` on Cloud Run (the private key as
+   a secret). Keep the same pair for good: changing it drops every browser's subscription.
+2. Create one Cloud Scheduler job, every hour: `POST https://app.<domain>/api/internal/jobs/hourly`
+   with header `X-Job-Token: <TRIM_JOB_TOKEN>` (it goes through the Pages proxy like any /api call).
+3. Check on desktop Chrome, and on an iPhone with TRIM added to the Home Screen (iOS 16.4 or later):
+   turn on Streak reminder in Account at a time a few minutes ahead, leave today unlogged, and
+   wait for the reminder; log something, and check no second reminder arrives that day. When both
+   pass, mark 3.18 `[x]` in TASKS.md.
 
 ## Local development
 

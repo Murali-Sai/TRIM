@@ -8,6 +8,7 @@ from app.config import Settings
 from app.services.breach import BreachChecker, NoBreachCheck, PwnedPasswords
 from app.services.email import EmailSender, OutboxSender, ResendSender
 from app.services.fooddata import FdcClient, FoodSource, NoFoodSource, OffClient
+from app.services.push import NoPush, PushSender, WebPushSender
 from app.services.turnstile import HumanCheck, Turnstile
 
 
@@ -25,6 +26,11 @@ class Services:
     clock: Callable[[], datetime] = field(default=utc_now)
     fdc: FoodSource = field(default_factory=NoFoodSource)
     off: FoodSource = field(default_factory=NoFoodSource)
+    push: PushSender = field(default_factory=NoPush)
+    # Handed to browsers to subscribe; None means reminders cannot be turned on.
+    vapid_public_key: str | None = None
+    # The hourly job's shared secret (X-Job-Token); None refuses the job.
+    job_token: str | None = None
 
 
 def build_services(settings: Settings) -> Services:
@@ -46,4 +52,11 @@ def build_services(settings: Settings) -> Services:
             else NoFoodSource()
         ),
         off=OffClient(client, settings.off_user_agent),
+        push=(
+            WebPushSender(settings.vapid_private_key.get_secret_value(), settings.vapid_subject)
+            if settings.vapid_private_key is not None
+            else NoPush()
+        ),
+        vapid_public_key=settings.vapid_public_key,
+        job_token=settings.job_token.get_secret_value() if settings.job_token else None,
     )

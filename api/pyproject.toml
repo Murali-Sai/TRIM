@@ -13,6 +13,7 @@ dependencies = [
     "argon2-cffi>=23.1",
     "email-validator>=2.2",
     "httpx>=0.28",
+    "pywebpush>=2.5.0",
 ]
 
 [dependency-groups]
@@ -43,6 +44,11 @@ strict = true
 python_version = "3.12"
 plugins = ["pydantic.mypy"]
 files = ["app", "tests", "migrations", "tools"]
+
+[[tool.mypy.overrides]]
+# pywebpush ships no type information.
+module = ["pywebpush"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -20,6 +20,7 @@ from app.models import (
     Food,
     FoodFavourite,
     FoodLog,
+    PushSubscription,
     SavedMeal,
     SavedMealItem,
     SessionRow,
@@ -126,6 +127,14 @@ def seed_user(label: str) -> Seeded:
             )
         )
         s.add(UserBadge(user_id=user_id, badge="streak_7", earned_at=datetime.now(UTC)))
+        s.add(
+            PushSubscription(
+                user_id=user_id,
+                endpoint=f"https://push.example.com/{user_id.hex}",
+                p256dh="p256dh-key",
+                auth="auth-key",
+            )
+        )
         s.add(
             WaterLog(
                 user_id=user_id,

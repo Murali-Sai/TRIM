@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { getSettings, saveSettings, SETTINGS_KEY, type TrackingSettings } from '../../api/tracking';
 import { Switch } from '../../components/Switch';
+import { ReminderControls } from './ReminderControls';
 import { Notice, Section } from './Section';
 
 /** What the user tracks: water (off until turned on), fiber (on), and the water unit. */
@@ -57,14 +58,17 @@ export function TrackingSection() {
             onChange={(on) => save.mutate({ gamification: on })}
           />
           {s.gamification ? (
-            <div className="py-2">
-              <Link
-                to="/account/badges"
-                className="tap text-sm font-semibold text-accent underline"
-              >
-                See your badges
-              </Link>
-            </div>
+            <>
+              <div className="py-2">
+                <Link
+                  to="/account/badges"
+                  className="tap text-sm font-semibold text-accent underline"
+                >
+                  See your badges
+                </Link>
+              </div>
+              <ReminderControls settings={s} onSave={(change) => save.mutate(change)} />
+            </>
           ) : null}
           <Switch
             label="Track fiber"
