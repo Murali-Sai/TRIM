@@ -45,9 +45,9 @@ def me(user: CurrentUserDep, services: ServicesDep) -> MeOut:
             {"u": user.user_id},
         ).one()
     deadline = verify_deadline(user)
-    step: SetupStep = (
-        "body_stats" if not row.has_stats else "targets" if not row.has_targets else "done"
-    )
+    # Targets can only be saved after body stats, so once they exist setup is done, even if
+    # the user later deletes every weigh-in.
+    step: SetupStep = "done" if row.has_targets else "targets" if row.has_stats else "body_stats"
     return MeOut(
         email=row.email,
         display_name=row.display_name,

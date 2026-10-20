@@ -106,3 +106,24 @@ def test_body_stats_latest_weight_follows_the_log(user: CsrfClient) -> None:
     assert user.get("/api/me/body-stats").json()["latest_weight_kg"] == 79.2
     user.delete(f"/api/weights/{latest['id']}")
     assert user.get("/api/me/body-stats").json()["latest_weight_kg"] == 80.0
+
+
+def test_deleting_every_weigh_in_does_not_reopen_setup(client: CsrfClient) -> None:
+    assert log_in(client, sign_up(client)).status_code == 200
+    client.patch(
+        "/api/me/body-stats",
+        json={
+            "sex": "female",
+            "age": 41,
+            "height_cm": 170,
+            "activity_level": "light",
+            "unit_system": "metric",
+            "weight_kg": 70,
+        },
+    )
+    calc = {"sex": "female", "age": 41, "weight_kg": 70, "height_cm": 170, "activity": "light"}
+    assert client.post("/api/targets/apply-calculation", json=calc).status_code == 201
+    assert client.get("/api/me").json()["setup"] == "done"
+    for w in client.get("/api/weights").json():
+        client.delete(f"/api/weights/{w['id']}")
+    assert client.get("/api/me").json()["setup"] == "done"
