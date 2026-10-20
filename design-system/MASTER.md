@@ -75,10 +75,17 @@ the right (desktop); toasts fade. Nothing loops or bounces.
 - **Target strip:** calories on the first line (big figure, "of target", percent, bar), then
   protein, fat and carbs on one row with thin bars. Second page: what is left, fiber, sugar,
   sodium.
-- **Time block:** a mono time pill, "+" and Copy, subtotal chips with a colored underline.
+- **Time block:** a mono time pill (with the meal name when logged from a saved meal), "+",
+  an options menu (Copy to another day, Save as meal), subtotal chips with a colored underline.
 - **Entry row:** icon, name and brand (two lines), the SPEC macro line in mono, secondary color.
 - **Buttons:** primary is accent fill; secondary is surface with a hairline; both 44 px tall
   on touch screens.
+
+- **Charts** (the kit in `web/src/components/chart` and `web/src/lib/chart`): the headline
+  sentence from `lib/chart/headlines.ts` leads the card; `ChartFrame` gives range chips, "View
+  as table" and the too-little-data message; `ChartHost` carries the aria-label built from the
+  headline; `drawDirectLabel` and `drawTarget` label lines at their ends and draw the target
+  line with its plus or minus 5% band; tooltips are sentences placed with `placeTooltip`.
 
 ## Do not
 - Use emoji as icons, or icons copied from another app.
