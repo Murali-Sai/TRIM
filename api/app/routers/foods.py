@@ -1,6 +1,7 @@
 """Food search waterfall (task 3.2, SPEC page 3).
 
-1. Personal: the user's custom foods and foods they have logged before, most used first.
+1. Personal: the user's custom foods, favourites and foods they have logged before, most used
+   first.
 2. Cache: shared rows from earlier lookups, fresh within 30 days.
 3. USDA FoodData Central, when tiers 1 and 2 return fewer than FDC_WHEN_UNDER.
 4. Open Food Facts, only when tiers 1 to 3 return fewer than 5 and the shared OFF budget
@@ -97,7 +98,9 @@ def _personal(s: Session, user_id: Any, words: list[str]) -> list[Any]:
                 f"SELECT {FOOD_COLUMNS}, count(l.id) AS uses FROM foods f "  # noqa: S608
                 "LEFT JOIN food_logs l ON l.food_id = f.id AND l.user_id = :u "
                 "AND l.deleted_at IS NULL "
-                "WHERE f.deleted_at IS NULL AND (f.owner_id = :u OR l.id IS NOT NULL) "
+                "WHERE f.deleted_at IS NULL AND (f.owner_id = :u OR l.id IS NOT NULL "
+                "OR EXISTS (SELECT 1 FROM food_favourites v WHERE v.food_id = f.id "
+                "AND v.user_id = :u)) "
                 f"AND {match} GROUP BY f.id ORDER BY uses DESC, lower(f.name) LIMIT :n"
             ),
             {**params, "u": user_id, "n": MAX_RESULTS},
@@ -170,6 +173,26 @@ def _servings(s: Session, food_ids: list[uuid.UUID]) -> dict[uuid.UUID, list[Ser
             ServingOut(label=r.label, grams=float(r.grams), is_default=r.is_default)
         )
     return out
+
+
+def _food_out(r: Any, tier: Tier, servings: list[ServingOut]) -> FoodOut:
+    return FoodOut(
+        id=r.id,
+        name=r.name,
+        brand=r.brand,
+        source=r.source,
+        tier=tier,
+        kcal_100=float(r.kcal_100),
+        protein_100=float(r.protein_100),
+        carbs_100=float(r.carbs_100),
+        fat_100=float(r.fat_100),
+        fiber_100=None if r.fiber_100 is None else float(r.fiber_100),
+        sugar_100=None if r.sugar_100 is None else float(r.sugar_100),
+        sodium_mg_100=None if r.sodium_mg_100 is None else float(r.sodium_mg_100),
+        density_g_ml=None if r.density_g_ml is None else float(r.density_g_ml),
+        kcal_mismatch=r.kcal_mismatch,
+        servings=servings,
+    )
 
 
 def _off_allowed(now: Any) -> bool:
@@ -254,24 +277,5 @@ def search_foods(
     picked = picked[:MAX_RESULTS]
     with user_session(user.user_id) as s:
         servings = _servings(s, [r.id for r, _ in picked])
-    results = [
-        FoodOut(
-            id=r.id,
-            name=r.name,
-            brand=r.brand,
-            source=r.source,
-            tier=tier,
-            kcal_100=float(r.kcal_100),
-            protein_100=float(r.protein_100),
-            carbs_100=float(r.carbs_100),
-            fat_100=float(r.fat_100),
-            fiber_100=None if r.fiber_100 is None else float(r.fiber_100),
-            sugar_100=None if r.sugar_100 is None else float(r.sugar_100),
-            sodium_mg_100=None if r.sodium_mg_100 is None else float(r.sodium_mg_100),
-            density_g_ml=None if r.density_g_ml is None else float(r.density_g_ml),
-            kcal_mismatch=r.kcal_mismatch,
-            servings=servings[r.id],
-        )
-        for r, tier in picked
-    ]
+    results = [_food_out(r, tier, servings[r.id]) for r, tier in picked]
     return SearchOut(results=results, notice=EXTERNAL_DOWN if failed else None)

@@ -3,33 +3,31 @@ import type { Food } from '../../api/foods';
 import { Field } from '../../components/Field';
 import {
   amountOptions,
+  GRAMS,
   gramsFor,
   macroLine,
   nutrientsFor,
   parseAmount,
 } from '../../lib/foodAmount';
+import type { Picked } from '../../lib/picked';
 import { formatNumber } from '../../lib/units';
 import { primaryButton } from '../account/Section';
 
-export interface Picked {
-  food: Food;
-  quantity: number;
-  /** A serving label, or "g" for grams. */
-  unit: string;
-  grams: number;
-}
-
 interface Props {
   food: Food;
+  /** Where it was picked from, and the amount to start at (the last serving for recents). */
+  start: Extract<Picked, { kind: 'food' }>;
+  favourite: boolean;
+  onFavourite: (on: boolean) => void;
   onAdd: (picked: Picked) => void;
 }
 
 /** The amount picker for one food, with a live preview of what it adds. */
-export function FoodDetail({ food, onAdd }: Props) {
+export function FoodDetail({ food, start, favourite, onFavourite, onAdd }: Props) {
   const options = amountOptions(food);
-  const first = options[0] ?? { label: 'g', grams: 1, is_default: false };
+  const first = options.find((o) => o.label === start.unit) ?? options[0] ?? GRAMS;
   const [unit, setUnit] = useState(first.label);
-  const [amount, setAmount] = useState(first.label === 'g' ? '100' : '1');
+  const [amount, setAmount] = useState(String(start.unit === first.label ? start.quantity : 1));
   const [error, setError] = useState<string | null>(null);
 
   const chosen = options.find((o) => o.label === unit) ?? first;
@@ -43,13 +41,30 @@ export function FoodDetail({ food, onAdd }: Props) {
       return;
     }
     setError(null);
-    onAdd({ food, quantity, unit: chosen.label, grams });
+    onAdd({ kind: 'food', food, quantity, unit: chosen.label, grams, source: start.source });
   }
 
   return (
     <form onSubmit={onSubmit} noValidate data-testid="food-detail">
-      <h3 className="text-lg font-semibold">{food.name}</h3>
-      {food.brand ? <p className="text-sm text-text-secondary">{food.brand}</p> : null}
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-semibold">{food.name}</h3>
+          {food.brand ? <p className="text-sm text-text-secondary">{food.brand}</p> : null}
+        </div>
+        <button
+          type="button"
+          onClick={() => onFavourite(!favourite)}
+          aria-pressed={favourite}
+          aria-label={
+            favourite ? `Remove ${food.name} from favourites` : `Add ${food.name} to favourites`
+          }
+          className={`tap flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border transition-colors duration-200 hover:bg-surface-2 ${
+            favourite ? 'text-fat-text' : 'text-text-secondary'
+          }`}
+        >
+          <StarIcon filled={favourite} />
+        </button>
+      </div>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <Field
           id="log-amount"
@@ -92,5 +107,23 @@ export function FoodDetail({ food, onAdd }: Props) {
         Add to list
       </button>
     </form>
+  );
+}
+
+/** An original star outline; filled when the food is a favourite. */
+export function StarIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.85L12 16.9l-5.25 2.75 1-5.85L3.5 9.7l5.9-.9L12 3.5Z" />
+    </svg>
   );
 }

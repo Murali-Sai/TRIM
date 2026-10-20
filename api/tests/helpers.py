@@ -49,7 +49,8 @@ def log_in(client: TestClient, email: str, password: str = PASSWORD, **extra: An
 
 
 def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
-    """A custom food with a serving unit and one food log for `user_id`, written as the owner.
+    """A custom food with a serving unit, one food log and a favourite for `user_id`, written as
+    the owner.
 
     Stands in until the food logging API exists (tasks 3.2 to 3.5), so account deletion and
     the isolation harness already cover these tables.
@@ -80,4 +81,11 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
             ),
             {"u": user_id, "f": food_id},
         ).scalar_one()
+        conn.execute(
+            text(
+                "INSERT INTO food_favourites (id, user_id, food_id) "
+                "VALUES (gen_random_uuid(), :u, :f)"
+            ),
+            {"u": user_id, "f": food_id},
+        )
     return {"food_id": food_id, "unit_id": unit_id, "log_id": log_id}

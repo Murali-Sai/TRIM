@@ -36,10 +36,22 @@ CENT = Decimal("0.01")
 FOOD_NOT_FOUND = "Food not found"
 
 
-class LogItemIn(BaseModel):
-    """Either grams, or a quantity of one of the food's serving units ("2 x 1 jar")."""
+class QuickAddIn(BaseModel):
+    """Nutrients only, with no food and no amount (SPEC: quick add)."""
 
-    food_id: uuid.UUID
+    name: Annotated[str, Field(max_length=120)] | None = None
+    kcal: Annotated[float, Field(ge=0, le=10000)]
+    protein_g: Annotated[float, Field(ge=0, le=1000)] = 0
+    carbs_g: Annotated[float, Field(ge=0, le=1000)] = 0
+    fat_g: Annotated[float, Field(ge=0, le=1000)] = 0
+
+
+class LogItemIn(BaseModel):
+    """A food with grams, or a quantity of one of its serving units ("2 x 1 jar"); or a quick
+    add with nutrients only."""
+
+    food_id: uuid.UUID | None = None
+    quick: QuickAddIn | None = None
     grams: Annotated[float, Field(gt=0, le=MAX_GRAMS)] | None = None
     quantity: Annotated[float, Field(gt=0, le=MAX_QUANTITY)] | None = None
     unit_label: Annotated[str, Field(min_length=1, max_length=60)] | None = None
@@ -47,6 +59,12 @@ class LogItemIn(BaseModel):
 
     @model_validator(mode="after")
     def _one_amount(self) -> "LogItemIn":
+        if (self.food_id is None) == (self.quick is None):
+            raise ValueError("Send a food_id or a quick add")
+        if self.quick is not None:
+            if self.grams is not None or self.quantity is not None or self.unit_label:
+                raise ValueError("A quick add has no amount")
+            return self
         by_unit = self.quantity is not None and self.unit_label is not None
         half_unit = (self.quantity is None) != (self.unit_label is None)
         if half_unit or (self.grams is not None) == by_unit:
@@ -141,7 +159,13 @@ def _food(s: Session, food_id: uuid.UUID) -> Any:
     return food
 
 
-def _grams(s: Session, item: LogItemIn) -> tuple[Decimal, Decimal | None, str | None]:
+def _cents(v: float) -> Decimal:
+    return Decimal(str(v)).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def _grams(
+    s: Session, item: LogItemIn, food_id: uuid.UUID
+) -> tuple[Decimal, Decimal | None, str | None]:
     if item.grams is not None:
         return Decimal(str(item.grams)).quantize(CENT, rounding=ROUND_HALF_UP), None, None
     if item.quantity is None or item.unit_label is None:  # ruled out by LogItemIn
@@ -151,7 +175,7 @@ def _grams(s: Session, item: LogItemIn) -> tuple[Decimal, Decimal | None, str | 
             "SELECT grams FROM serving_units WHERE food_id = :f AND label = :l "
             "AND deleted_at IS NULL LIMIT 1"
         ),
-        {"f": item.food_id, "l": item.unit_label},
+        {"f": food_id, "l": item.unit_label},
     ).scalar_one_or_none()
     if unit is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown serving unit")
@@ -187,8 +211,29 @@ def add_logs(body: LogsIn, user: ActiveUserDep, services: ServicesDep) -> list[L
         group = uuid7()
         rows: list[FoodLog] = []
         for item in body.items:
-            food = _food(s, item.food_id)
-            grams, quantity, unit_label = _grams(s, item)
+            if item.quick is not None:
+                q = item.quick
+                row = FoodLog(
+                    user_id=user.user_id,
+                    log_group_id=group,
+                    eaten_at=eaten_at,
+                    logged_on=logged_on,
+                    name=(q.name or "").strip() or "Quick add",
+                    kcal=_cents(q.kcal),
+                    protein_g=_cents(q.protein_g),
+                    carbs_g=_cents(q.carbs_g),
+                    fat_g=_cents(q.fat_g),
+                    source="quick_add",
+                    created_at=now,
+                )
+                s.add(row)
+                rows.append(row)
+                continue
+            food_id = item.food_id
+            if food_id is None:  # ruled out by LogItemIn
+                raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, FOOD_NOT_FOUND)
+            food = _food(s, food_id)
+            grams, quantity, unit_label = _grams(s, item, food_id)
             row = FoodLog(
                 user_id=user.user_id,
                 food_id=food.id,

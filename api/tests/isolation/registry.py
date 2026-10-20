@@ -209,6 +209,46 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         body=lambda c: {"ids": c.a_log_ids, "eaten_at": "2026-10-17T08:00:00Z"},
     ),
+    Endpoint("GET", "/api/foods/quick", requires_session=True),
+    Endpoint(
+        "PUT",
+        "/api/foods/{food_id}/favourite",
+        requires_session=True,
+        path_params=lambda c: {"food_id": c.a_food_ids[0]},
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/foods/{food_id}/favourite",
+        requires_session=True,
+        path_params=lambda c: {"food_id": c.a_food_ids[0]},
+    ),
+    Endpoint(
+        "POST",
+        "/api/foods",
+        requires_session=True,
+        body=lambda c: {
+            "name": "B's bar",
+            "per": "100g",
+            "kcal": 350,
+            "protein_g": 30,
+            "carbs_g": 35,
+            "fat_g": 10,
+        },
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/foods/{food_id}",
+        requires_session=True,
+        body=lambda c: {
+            "name": "Changed by B",
+            "per": "100g",
+            "kcal": 1,
+            "protein_g": 0,
+            "carbs_g": 0,
+            "fat_g": 0,
+        },
+        path_params=lambda c: {"food_id": c.a_food_ids[0]},
+    ),
     # A has a custom food named "Overnight oats" (tests.helpers.seed_food_rows).
     Endpoint(
         "GET",

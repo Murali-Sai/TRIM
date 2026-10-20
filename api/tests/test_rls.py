@@ -17,6 +17,8 @@ from app.models import (
     RLS_TABLES,
     AuditLog,
     AuthToken,
+    Food,
+    FoodFavourite,
     FoodLog,
     SessionRow,
     Target,
@@ -83,6 +85,18 @@ def seed_user(label: str) -> Seeded:
                 ),
             ]
         )
+        food = Food(
+            owner_id=user_id,
+            source="custom",
+            name="Overnight oats",
+            kcal_100=Decimal("150"),
+            protein_100=Decimal("6"),
+            carbs_100=Decimal("24"),
+            fat_100=Decimal("4"),
+        )
+        s.add(food)
+        s.flush()
+        s.add(FoodFavourite(user_id=user_id, food_id=food.id))
     return Seeded(user_id, email, session_hash, verify_hash)
 
 

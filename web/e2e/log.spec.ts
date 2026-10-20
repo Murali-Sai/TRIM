@@ -116,7 +116,10 @@ for (const vp of VIEWPORTS) {
 
       await expect(page.getByText('Logged 1 item at 4 PM today.')).toBeVisible();
       expect(posted).toEqual([
-        { eaten_at: '2026-10-17T20:00:00.000Z', items: [{ food_id: 'food-rice', grams: 150 }] },
+        {
+          eaten_at: '2026-10-17T20:00:00.000Z',
+          items: [{ food_id: 'food-rice', grams: 150, source: 'search' }],
+        },
       ]);
       await expect(page.getByTestId('to-log')).toHaveCount(0);
       await page.getByRole('link', { name: 'See it on Today' }).click();
@@ -178,8 +181,8 @@ for (const vp of VIEWPORTS) {
       await expect(page.getByText('Logged 2 items at 7:05 PM today.')).toBeVisible();
       expect(posted).toHaveLength(1);
       expect(posted[0]?.items).toEqual([
-        { food_id: 'food-rice', grams: 150 },
-        { food_id: 'food-yogurt', quantity: 2, unit_label: '1 cup' },
+        { food_id: 'food-rice', grams: 150, source: 'search' },
+        { food_id: 'food-yogurt', quantity: 2, unit_label: '1 cup', source: 'search' },
       ]);
     });
 
@@ -218,7 +221,7 @@ for (const vp of LAYOUT_WIDTHS) {
     await open(page);
     await pick(page, 'rice', 'White rice');
     await noHorizontalScroll(page);
-    const search = await page.getByRole('heading', { name: 'Search' }).boundingBox();
+    const search = await page.getByTestId('find-panel').boundingBox();
     const amount = await page.getByRole('heading', { name: 'How much' }).boundingBox();
     if (!search || !amount) throw new Error('missing sections');
     if (vp.width >= 1024) {
