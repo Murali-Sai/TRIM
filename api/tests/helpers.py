@@ -107,6 +107,19 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
             text("INSERT INTO user_settings (user_id, track_water) VALUES (:u, true)"),
             {"u": user_id},
         )
+        conn.execute(
+            text(
+                "INSERT INTO user_streaks (user_id, current_days, longest_days) VALUES (:u, 3, 5)"
+            ),
+            {"u": user_id},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO streak_events (id, user_id, on_date, kind) "
+                "VALUES (gen_random_uuid(), :u, '2026-10-17', 'counted')"
+            ),
+            {"u": user_id},
+        )
         water_id = conn.execute(
             text(
                 "INSERT INTO water_logs (id, user_id, logged_at, logged_on, ml) VALUES "

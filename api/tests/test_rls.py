@@ -23,10 +23,12 @@ from app.models import (
     SavedMeal,
     SavedMealItem,
     SessionRow,
+    StreakEvent,
     Target,
     User,
     UserProfile,
     UserSettings,
+    UserStreak,
     WaterLog,
     WeightEntry,
 )
@@ -110,6 +112,8 @@ def seed_user(label: str) -> Seeded:
             )
         )
         s.add(UserSettings(user_id=user_id, track_water=True))
+        s.add(UserStreak(user_id=user_id, current_days=3, longest_days=3))
+        s.add(StreakEvent(user_id=user_id, on_date=date(2026, 10, 17), kind="counted"))
         s.add(
             WaterLog(
                 user_id=user_id,

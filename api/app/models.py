@@ -400,6 +400,48 @@ class FoodFavourite(Timestamps, Base):
     )
 
 
+STREAK_EVENT_KINDS = ("counted", "freeze_earned", "freeze_used", "repaired", "broken")
+
+
+class UserStreak(Timestamps, Base):
+    """The walked (final) part of the streaks; see app/streaks.py. One row per user."""
+
+    __tablename__ = "user_streaks"
+    __table_args__ = (
+        CheckConstraint("freezes_held BETWEEN 0 AND 2", name="freezes_held"),
+        CheckConstraint("current_days >= 0 AND longest_days >= current_days", name="days"),
+        CheckConstraint(
+            "weigh_in_current_weeks >= 0 AND weigh_in_longest_weeks >= weigh_in_current_weeks",
+            name="weeks",
+        ),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    current_days: Mapped[int] = mapped_column(Integer, server_default="0")
+    longest_days: Mapped[int] = mapped_column(Integer, server_default="0")
+    last_counted_date: Mapped[date | None] = mapped_column(Date)
+    freezes_held: Mapped[int] = mapped_column(SmallInteger, server_default="0")
+    weigh_in_current_weeks: Mapped[int] = mapped_column(Integer, server_default="0")
+    weigh_in_longest_weeks: Mapped[int] = mapped_column(Integer, server_default="0")
+    # Monday of the last week walked.
+    weigh_in_last_week: Mapped[date | None] = mapped_column(Date)
+
+
+class StreakEvent(Timestamps, Base):
+    __tablename__ = "streak_events"
+    __table_args__ = (
+        CheckConstraint(_in("kind", STREAK_EVENT_KINDS), name="kind"),
+        Index("ix_streak_events_user_date", "user_id", "on_date"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    on_date: Mapped[date] = mapped_column(Date)
+    kind: Mapped[str] = mapped_column(Text)
+
+
 WATER_UNITS = ("ml", "fl_oz")
 
 
@@ -462,6 +504,8 @@ RLS_TABLES: dict[str, str] = {
     "saved_meal_items": "user_id",
     "user_settings": "user_id",
     "water_logs": "user_id",
+    "user_streaks": "user_id",
+    "streak_events": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column
