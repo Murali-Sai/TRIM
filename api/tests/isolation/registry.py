@@ -219,6 +219,13 @@ ENDPOINTS: list[Endpoint] = [
         body=lambda c: {"ids": c.a_log_ids, "eaten_at": "2026-10-17T08:00:00Z"},
     ),
     Endpoint("GET", "/api/foods/quick", requires_session=True),
+    # A has a custom food, a favourite and a saved meal; B must see none of them.
+    Endpoint(
+        "GET",
+        "/api/foods/fits-my-macros",
+        requires_session=True,
+        params=lambda c: {"on": "2026-10-17"},
+    ),
     Endpoint(
         "PUT",
         "/api/foods/{food_id}/favourite",

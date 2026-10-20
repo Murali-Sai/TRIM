@@ -37,7 +37,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 - [~] **3.11 Glance test**: 3 or more new users, 5 questions, seeded month. AC: at least 13 of 15 correct within 5 s; failing cards redesigned and retested. Seed tool (api/tools/seed_glance_month.py) and session script (docs/glance-test.md) are ready (e248300); the sessions need 3 or more people and question 5 needs measurements (4.1).
 - [x] **3.12 Timezone-correct days**. AC: tests for users in UTC-5 and UTC+9 at 23:30 local. UTC-5 is New York in January. (068b744)
 - [x] **3.13 Water and fiber**: settings toggles, water row with +250/+500 ml, fiber target default 14 g per 1,000 kcal, "fiber unknown" count. AC: 2,759 kcal gives 39 g fiber; fl oz conversion test. (d70cab1)
-- [ ] **3.14 Fits my macros**: candidate set, fit score, labels, "fits up to N g". AC: worked example ranks chicken 0.60, yogurt 0.35, peanut butter 0.28, rice 0.27.
+- [x] **3.14 Fits my macros**: candidate set, fit score, labels, "fits up to N g". AC: worked example ranks chicken 0.60, yogurt 0.35, peanut butter 0.28, rice 0.27. Yogurt and peanut butter use USDA values (nonfat Greek yogurt 59 kcal, 10.19 P, 3.6 C, 0.39 F; peanut butter 588, 25, 20, 50 per 100 g), since the SPEC gives only their scores. (992b613)
 
 - [ ] **3.15 Streak engine (tests first)**: logging streak, repair window, freezes, weekly weigh-in streak, lazy evaluation, streak_events. AC: the 13-day example in SPEC page 3 plays out exactly; a day over target still counts; timezone and DST tests pass.
 - [ ] **3.16 Weekly goals and badges**: Monday goal selection from tracked features only, progress rings, Perfect week, badge awards. AC: a user not tracking water never gets the water goal; each badge awarded once.

@@ -6,21 +6,25 @@ is stored for them; the last serving is the amount of the latest entry for that 
 """
 
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import fit
 from app.db import user_session
 from app.deps import ServicesDep
 from app.ids import uuid7
 from app.models import Food, ServingUnit
 from app.routers.foods import FOOD_COLUMNS, FoodOut, _food_out, _servings
+from app.routers.meals import _items as meal_items
+from app.routers.meals import _meal_out as meal_out
 from app.security.sessions import ActiveUserDep
+from app.timeutil import local_date
 
 router = APIRouter(prefix="/foods", tags=["foods"])
 
@@ -319,3 +323,162 @@ def edit_custom_food(food_id: uuid.UUID, body: CustomFoodIn, user: ActiveUserDep
             raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
         _set_serving(s, food_id, body)
         return _custom_out(s, food_id)
+
+
+# --- what fits my macros (task 3.14) ---------------------------------------------------------
+
+FIT_DAYS = 60
+FIT_RESULTS = 20
+
+
+class FitNutrients(BaseModel):
+    kcal: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+
+
+class FitServing(BaseModel):
+    """The default serving the food is scored at: grams, or one of its units."""
+
+    grams: float
+    quantity: float | None
+    unit_label: str | None
+
+
+class FitRow(BaseModel):
+    kind: Literal["food", "meal"]
+    food: QuickFood | None = None
+    meal_id: uuid.UUID | None = None
+    meal_name: str | None = None
+    meal_items: int | None = None
+    serving: FitServing | None = None
+    nutrients: FitNutrients
+    score: float
+    label: Literal["Great fit", "Partial fit"]
+    # How much of what is left each macro fills (0 to 1), and the macros it pushes over.
+    fills: dict[str, float]
+    overflows: list[str]
+    fits_up_to_g: int | None = None
+
+
+class FitOut(BaseModel):
+    date: date
+    has_target: bool
+    remaining: FitNutrients | None
+    results: list[FitRow]
+
+
+def _default_serving(food: QuickFood) -> FitServing:
+    serving = next((sv for sv in food.servings if sv.is_default), None) or (
+        food.servings[0] if food.servings else None
+    )
+    if serving is None:
+        return FitServing(grams=100, quantity=None, unit_label=None)
+    return FitServing(grams=serving.grams, quantity=1, unit_label=serving.label)
+
+
+@router.get("/fits-my-macros")
+def fits_my_macros(
+    user: ActiveUserDep, services: ServicesDep, on: Annotated[date | None, Query()] = None
+) -> FitOut:
+    """Favourites, saved meals, custom foods and foods logged in the last 60 days, each at its
+    default serving, ranked by fit score against what is left of `on` (default today).
+    Display only: nothing here changes a target."""
+    with user_session(user.user_id) as s:
+        tz: str = s.execute(
+            text("SELECT timezone FROM user_profiles WHERE user_id = :u"), {"u": user.user_id}
+        ).scalar_one()
+        day = on or local_date(services.clock(), tz)
+        target = s.execute(
+            text(
+                "SELECT kcal, protein_g, carbs_g, fat_g FROM targets WHERE user_id = :u "
+                "AND deleted_at IS NULL AND effective_from <= :d "
+                "ORDER BY effective_from DESC, created_at DESC, id DESC LIMIT 1"
+            ),
+            {"u": user.user_id, "d": day},
+        ).one_or_none()
+        if target is None:
+            return FitOut(date=day, has_target=False, remaining=None, results=[])
+        eaten = s.execute(
+            text(
+                "SELECT coalesce(sum(kcal), 0) AS kcal, coalesce(sum(protein_g), 0) AS protein_g, "
+                "coalesce(sum(carbs_g), 0) AS carbs_g, coalesce(sum(fat_g), 0) AS fat_g "
+                "FROM food_logs WHERE user_id = :u AND deleted_at IS NULL AND logged_on = :d"
+            ),
+            {"u": user.user_id, "d": day},
+        ).one()
+        goal = {m: float(getattr(target, m)) for m in fit.MACROS}
+        left = fit.remaining(goal, {m: float(getattr(eaten, m)) for m in fit.MACROS})
+
+        food_ids = list(
+            s.execute(
+                text(
+                    "SELECT food_id FROM food_favourites WHERE user_id = :u "
+                    "UNION SELECT id FROM foods WHERE owner_id = :u AND deleted_at IS NULL "
+                    "UNION SELECT food_id FROM food_logs WHERE user_id = :u "
+                    "AND deleted_at IS NULL AND food_id IS NOT NULL AND logged_on >= :since"
+                ),
+                {"u": user.user_id, "since": day - timedelta(days=FIT_DAYS)},
+            ).scalars()
+        )
+        rows: list[FitRow] = []
+        for food in _quick(s, user.user_id, food_ids):
+            serving = _default_serving(food)
+            k = serving.grams / 100
+            n = {
+                "kcal": food.kcal_100 * k,
+                "protein_g": food.protein_100 * k,
+                "carbs_g": food.carbs_100 * k,
+                "fat_g": food.fat_100 * k,
+            }
+            scored = fit.fit_score(n, left, goal)
+            label = fit.label_for(scored.score)
+            if label is None:
+                continue
+            rows.append(
+                FitRow(
+                    kind="food",
+                    food=food,
+                    serving=serving,
+                    nutrients=FitNutrients(**n),
+                    score=round(scored.score, 2),
+                    label=label,
+                    fills=scored.fills,
+                    overflows=scored.overflows,
+                    fits_up_to_g=fit.fits_up_to_g(food.kcal_100, left["kcal"]),
+                )
+            )
+
+        meals = s.execute(
+            text(
+                "SELECT * FROM saved_meals WHERE user_id = :u AND deleted_at IS NULL "
+                "AND archived_at IS NULL"
+            ),
+            {"u": user.user_id},
+        ).all()
+        items = meal_items(s, [m.id for m in meals])
+        for m in meals:
+            out = meal_out(m, items[m.id])
+            n = out.totals.model_dump()
+            scored = fit.fit_score(n, left, goal)
+            label = fit.label_for(scored.score)
+            if label is None or not out.items:
+                continue
+            rows.append(
+                FitRow(
+                    kind="meal",
+                    meal_id=m.id,
+                    meal_name=m.name,
+                    meal_items=len(out.items),
+                    nutrients=FitNutrients(**n),
+                    score=round(scored.score, 2),
+                    label=label,
+                    fills=scored.fills,
+                    overflows=scored.overflows,
+                )
+            )
+    rows.sort(key=lambda r: (-r.score, (r.food.name if r.food else r.meal_name) or ""))
+    return FitOut(
+        date=day, has_target=True, remaining=FitNutrients(**left), results=rows[:FIT_RESULTS]
+    )
