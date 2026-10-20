@@ -101,7 +101,13 @@ def test_harness_catches_a_missing_session_check(fakes: Fakes, owner_engine: Eng
 
 def test_ctx_carries_only_ids() -> None:
     # The harness hands B nothing but ids and B's own email.
-    assert set(Ctx.__dataclass_fields__) == {"a_user_id", "a_session_ids", "b_email"}
+    assert set(Ctx.__dataclass_fields__) == {
+        "a_user_id",
+        "a_session_ids",
+        "b_email",
+        "a_weight_ids",
+        "a_deleted_weight_ids",
+    }
 
 
 def test_harness_catches_data_shown_to_b(fakes: Fakes, owner_engine: Engine) -> None:

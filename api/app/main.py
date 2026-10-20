@@ -1,7 +1,7 @@
 from fastapi import APIRouter, FastAPI
 
 from app.config import get_settings
-from app.routers import account, auth, me, password, setup
+from app.routers import account, auth, me, password, setup, weights
 from app.security.csrf import install_csrf
 from app.security.proxy_guard import install_proxy_guard
 from app.services.registry import Services, build_services
@@ -20,6 +20,7 @@ api.include_router(password.router)
 api.include_router(me.router)
 api.include_router(account.router)
 api.include_router(setup.router)
+api.include_router(weights.router)
 
 
 def create_app(services: Services | None = None) -> FastAPI:

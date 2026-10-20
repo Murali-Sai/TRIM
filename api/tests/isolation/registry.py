@@ -31,6 +31,8 @@ class Ctx:
     a_user_id: str
     a_session_ids: list[str]
     b_email: str
+    a_weight_ids: list[str]  # live weigh-ins
+    a_deleted_weight_ids: list[str]  # deleted, still restorable by A
 
 
 @dataclass(frozen=True)
@@ -126,5 +128,26 @@ ENDPOINTS: list[Endpoint] = [
         "/api/me/sessions/{session_id}",
         requires_session=True,
         path_params=lambda c: {"session_id": c.a_session_ids[0]},
+    ),
+    Endpoint("GET", "/api/weights", requires_session=True),
+    Endpoint("POST", "/api/weights", requires_session=True, body=lambda c: {"kg": 72.5}),
+    Endpoint(
+        "PATCH",
+        "/api/weights/{entry_id}",
+        requires_session=True,
+        body=lambda c: {"kg": 99.0, "note": "changed by B"},
+        path_params=lambda c: {"entry_id": c.a_weight_ids[0]},
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/weights/{entry_id}",
+        requires_session=True,
+        path_params=lambda c: {"entry_id": c.a_weight_ids[0]},
+    ),
+    Endpoint(
+        "POST",
+        "/api/weights/{entry_id}/restore",
+        requires_session=True,
+        path_params=lambda c: {"entry_id": c.a_deleted_weight_ids[0]},
     ),
 ]

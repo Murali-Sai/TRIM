@@ -75,6 +75,9 @@ def create_user_a(app: FastAPI, owner_engine: Engine) -> tuple[str, str, dict[st
     assert log_in(a, email).status_code == 200
     assert a.patch("/api/me/body-stats", json=BODY_STATS).status_code == 200
     assert a.post("/api/targets/apply-calculation", json=WORKED).status_code == 201
+    assert a.post("/api/weights", json={"kg": 69.4}).status_code == 201
+    gone = a.post("/api/weights", json={"kg": 69.1}).json()["id"]
+    assert a.delete(f"/api/weights/{gone}").status_code == 204
     row = user_row(owner_engine, email)
     return email, marker, row._asdict()
 
@@ -109,7 +112,18 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
     session_ids = [r[0] for r in before["sessions"]]
 
     b, b_email = b_client(app)
-    ctx = Ctx(a_user_id=str(a_id), a_session_ids=session_ids, b_email=b_email)
+    with owner_engine.connect() as conn:
+        weights = conn.execute(
+            text("SELECT id, deleted_at FROM weight_entries WHERE user_id = :u ORDER BY id"),
+            {"u": a_id},
+        ).all()
+    ctx = Ctx(
+        a_user_id=str(a_id),
+        a_session_ids=session_ids,
+        b_email=b_email,
+        a_weight_ids=[str(w.id) for w in weights if w.deleted_at is None],
+        a_deleted_weight_ids=[str(w.id) for w in weights if w.deleted_at is not None],
+    )
     res = call(b, ep, ctx)
     name = f"{ep.method} {ep.path}"
 
@@ -117,7 +131,9 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
     if ep.path_params:
         assert res.status_code == 404, f"{name} with A's id: {res.status_code}, expected 404"
     assert snapshot(owner_engine, a_id) == before, f"{name} changed user A's rows"
-    for secret in [a_email, marker, str(a_id), *session_ids]:
+    secrets = [a_email, marker, str(a_id), *session_ids]
+    secrets += [*ctx.a_weight_ids, *ctx.a_deleted_weight_ids]
+    for secret in secrets:
         assert secret.lower() not in res.text.lower(), f"{name} showed A's data to B"
 
 
@@ -125,6 +141,7 @@ def check_needs_session(app: FastAPI, ep: Endpoint) -> None:
     """Raise AssertionError unless `ep` answers 401 without a session."""
     anon = CsrfClient(app)
     anon.get("/api/auth/csrf")
-    ctx = Ctx(a_user_id=str(uuid.uuid4()), a_session_ids=[str(uuid.uuid4())], b_email="")
+    some = [str(uuid.uuid4())]
+    ctx = Ctx(str(uuid.uuid4()), some, "", a_weight_ids=some, a_deleted_weight_ids=some)
     res = call(anon, ep, ctx)
     assert res.status_code == 401, f"{ep.method} {ep.path} without a session: {res.status_code}"
