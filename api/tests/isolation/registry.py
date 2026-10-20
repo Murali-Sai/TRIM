@@ -344,4 +344,7 @@ ENDPOINTS: list[Endpoint] = [
     ),
     # A has a stored streak (tests.helpers.seed_food_rows); B gets only its own.
     Endpoint("GET", "/api/streaks", requires_session=True, params=lambda c: {"month": "2026-10"}),
+    # A has a weekly goal and a badge (tests.helpers.seed_food_rows).
+    Endpoint("GET", "/api/goals", requires_session=True),
+    Endpoint("GET", "/api/badges", requires_session=True),
 ]
