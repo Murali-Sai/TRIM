@@ -6,6 +6,7 @@ import { listTargets, TARGETS_KEY, type TargetRow } from '../api/setup';
 import { formatNumber } from '../lib/units';
 import { usePageTitle } from '../usePageTitle';
 import { Notice, Section } from './account/Section';
+import { FiberWaterSection } from './targets/FiberWaterSection';
 import { formatLongDate } from './body/weightFormat';
 import { TARGETS_SAVED } from './CalculatorPage';
 import { TargetsEditor } from './targets/TargetsEditor';
@@ -95,6 +96,14 @@ export function TargetsPage() {
                 }}
               />
             </Section>
+          </div>
+        ) : null}
+        {current ? (
+          <div className="lg:col-start-1 lg:row-start-3">
+            <FiberWaterSection
+              key={`${current.effective_from}-${current.fiber_g}-${current.water_ml}`}
+              current={current}
+            />
           </div>
         ) : null}
         <div className="lg:col-start-1 lg:row-start-2">

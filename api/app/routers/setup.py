@@ -26,6 +26,7 @@ from app.tdee import (
     CalcResult,
     calculate,
     carbs_for_rest,
+    fiber_default,
 )
 from app.timeutil import local_date, whole_years_between
 
@@ -315,7 +316,8 @@ def _target_out(row: Target) -> TargetOut:
         protein_g=row.protein_g,
         carbs_g=row.carbs_g,
         fat_g=row.fat_g,
-        fiber_g=row.fiber_g,
+        # Rows from before fiber targets fall back to the default for their calories.
+        fiber_g=row.fiber_g if row.fiber_g is not None else fiber_default(row.kcal),
         water_ml=row.water_ml,
         source=row.source,
         bmr=row.bmr,
@@ -323,6 +325,30 @@ def _target_out(row: Target) -> TargetOut:
         tolerance_pct=row.tolerance_pct if row.tolerance_pct is not None else 5,
         formula=_formula(row.calc_inputs),
     )
+
+
+def _current(s: Session, user_id: Any) -> Any:
+    return s.execute(
+        text(
+            "SELECT kcal, fiber_g, water_ml FROM targets WHERE user_id = :u "
+            "AND deleted_at IS NULL ORDER BY effective_from DESC, created_at DESC, id DESC LIMIT 1"
+        ),
+        {"u": user_id},
+    ).one_or_none()
+
+
+def _current_water(s: Session, user_id: Any) -> int | None:
+    row = _current(s, user_id)
+    return None if row is None else row.water_ml
+
+
+def _fiber_for(s: Session, user_id: Any, kcal: int) -> int:
+    """A fiber target the user set carries over; otherwise the default for these calories."""
+    row = _current(s, user_id)
+    if row is not None and row.fiber_g is not None and row.fiber_g != fiber_default(row.kcal):
+        fiber: int = row.fiber_g
+        return fiber
+    return fiber_default(kcal)
 
 
 @router.post("/targets/apply-calculation", status_code=status.HTTP_201_CREATED)
@@ -345,6 +371,9 @@ def apply_calculation(body: CalcIn, user: ActiveUserDep, services: ServicesDep) 
             protein_g=result.protein_g,
             carbs_g=result.carbs_g,
             fat_g=result.fat_g,
+            fiber_g=_fiber_for(s, user.user_id, result.target_kcal),
+            # Water has no default; a target the user set carries over.
+            water_ml=_current_water(s, user.user_id),
             source="calculator",
             calc_inputs=_calc_inputs(body, result),
             bmr=result.bmr,
@@ -370,6 +399,11 @@ class CustomTargetIn(BaseModel):
     protein_g: Annotated[int, Field(ge=0, le=GRAMS_MAX)]
     fat_g: Annotated[int, Field(ge=0, le=GRAMS_MAX)]
     carbs_g: Annotated[int, Field(ge=0, le=GRAMS_MAX)] | None = None
+    # Omitted: a fiber target the user set carries over, else the default for these calories
+    # (14 g per 1,000 kcal).
+    fiber_g: Annotated[int, Field(ge=0, le=200)] | None = None
+    # Omitted: the current water target carries over; null turns it off.
+    water_ml: Annotated[int, Field(ge=250, le=10000)] | None = None
     # The calculator result being adjusted, when there is no saved formula yet (the "Adjust"
     # button at sign-up). Otherwise the formula of the targets in effect carries over.
     basis: CalcIn | None = None
@@ -404,6 +438,11 @@ def save_custom_targets(
             ).one_or_none()
             if current is not None:
                 calc_inputs, bmr, tdee = current.calc_inputs, current.bmr, current.tdee
+        water = (
+            body.water_ml
+            if "water_ml" in body.model_fields_set
+            else _current_water(s, user.user_id)
+        )
         row = Target(
             user_id=user.user_id,
             effective_from=today,
@@ -411,6 +450,10 @@ def save_custom_targets(
             protein_g=body.protein_g,
             carbs_g=carbs,
             fat_g=body.fat_g,
+            fiber_g=body.fiber_g
+            if body.fiber_g is not None
+            else _fiber_for(s, user.user_id, body.kcal),
+            water_ml=water,
             source="custom",
             calc_inputs=calc_inputs,
             bmr=bmr,

@@ -23,6 +23,7 @@ from sqlalchemy import (
     false,
     func,
     text,
+    true,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -399,6 +400,41 @@ class FoodFavourite(Timestamps, Base):
     )
 
 
+WATER_UNITS = ("ml", "fl_oz")
+
+
+class UserSettings(Timestamps, Base):
+    """What the user tracks (SPEC page 2, user_settings). No row means the defaults."""
+
+    __tablename__ = "user_settings"
+    __table_args__ = (CheckConstraint(_in("water_unit", WATER_UNITS), name="water_unit"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    # Water is off until the user turns it on (SPEC page 3, Water).
+    track_water: Mapped[bool] = mapped_column(Boolean, server_default=false())
+    track_fiber: Mapped[bool] = mapped_column(Boolean, server_default=true())
+    water_unit: Mapped[str] = mapped_column(Text, server_default="ml")
+
+
+class WaterLog(Timestamps, Base):
+    """One water add, stored in ml; fl oz is only for display."""
+
+    __tablename__ = "water_logs"
+    __table_args__ = (
+        CheckConstraint("ml > 0 AND ml <= 5000", name="ml_range"),
+        Index("ix_water_logs_user_day", "user_id", "logged_on"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # The user's local date, fixed when logged.
+    logged_on: Mapped[date] = mapped_column(Date)
+    ml: Mapped[int] = mapped_column(Integer)
+
+
 class FoodQuery(Base):
     """When FoodData Central or Open Food Facts last answered a search, so each source is asked
     at most once per query in 30 days. Holds a hash of the normalized query, never the text,
@@ -424,6 +460,8 @@ RLS_TABLES: dict[str, str] = {
     "food_favourites": "user_id",
     "saved_meals": "user_id",
     "saved_meal_items": "user_id",
+    "user_settings": "user_id",
+    "water_logs": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column

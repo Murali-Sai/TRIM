@@ -11,6 +11,7 @@ import { DevicesSection } from './account/DevicesSection';
 import { PasswordSection } from './account/PasswordSection';
 import { ProfileSection } from './account/ProfileSection';
 import { secondaryButton, Section } from './account/Section';
+import { TrackingSection } from './account/TrackingSection';
 
 const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
   { value: 'dark', label: 'Dark' },
@@ -78,6 +79,7 @@ export function AccountPage() {
         <div className="flex flex-col gap-4 lg:gap-6">
           <ProfileSection me={me.data} />
           <TargetsSection />
+          <TrackingSection />
           <AppearanceSection />
           <DevicesSection />
         </div>

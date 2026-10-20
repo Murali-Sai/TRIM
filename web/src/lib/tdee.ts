@@ -42,6 +42,13 @@ export function roundHalfUp(x: number, digits = 0): number {
   return Math.floor(Number((x * scale).toFixed(9)) + 0.5) / scale;
 }
 
+/** Fiber: the Adequate Intake of 14 g per 1,000 kcal (SPEC page 3); 2,759 kcal gives 39 g. */
+export const FIBER_G_PER_1000_KCAL = 14;
+
+export function fiberDefault(kcal: number): number {
+  return roundHalfUp((kcal * FIBER_G_PER_1000_KCAL) / 1000);
+}
+
 export function lbToKg(lb: number): number {
   return lb * LB_IN_KG;
 }

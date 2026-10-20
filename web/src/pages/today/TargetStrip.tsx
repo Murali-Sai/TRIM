@@ -13,6 +13,8 @@ interface Props {
   target: MacroTotals & { fiber_g: number | null };
   /** The Progress dashboard's Today card: eaten against target only, with no controls. */
   compact?: boolean;
+  /** Off when the user does not track fiber. */
+  showFiber?: boolean;
 }
 
 const SHORT: Record<string, string> = {
@@ -101,26 +103,42 @@ function Eaten({ cols, id, large }: { cols: StripColumn[]; id: string; large?: b
  * the dots) for what is left plus fiber, sugar and sodium. Desktop: both, stacked, with
  * larger figures and bars.
  */
-export function TargetStrip({ totals, target, compact = false }: Props) {
+export function TargetStrip({ totals, target, compact = false, showFiber = true }: Props) {
   const cols = stripColumns(totals, target);
   const left = remainingColumns(totals, target);
   const [page, setPage] = useState(0);
   const scroller = useRef<HTMLDivElement>(null);
 
+  // Foods with no fiber data are counted, so a low total is not mistaken for a low day.
+  const unknownFiber = totals.unknown.fiber_g;
   const extras = [
+    ...(showFiber
+      ? [
+          {
+            key: 'fiber',
+            label: 'Fiber',
+            value:
+              target.fiber_g !== null
+                ? `${formatNumber(Math.round(totals.fiber_g))} / ${formatNumber(target.fiber_g)} g`
+                : `${formatNumber(Math.round(totals.fiber_g))} g`,
+            note:
+              unknownFiber > 0
+                ? `fiber unknown for ${unknownFiber} ${unknownFiber === 1 ? 'food' : 'foods'}`
+                : null,
+          },
+        ]
+      : []),
     {
-      key: 'fiber',
-      label: 'Fiber',
-      value:
-        target.fiber_g !== null
-          ? `${formatNumber(Math.round(totals.fiber_g))} / ${formatNumber(target.fiber_g)} g`
-          : `${formatNumber(Math.round(totals.fiber_g))} g`,
+      key: 'sugar',
+      label: 'Sugar',
+      value: `${formatNumber(Math.round(totals.sugar_g))} g`,
+      note: null,
     },
-    { key: 'sugar', label: 'Sugar', value: `${formatNumber(Math.round(totals.sugar_g))} g` },
     {
       key: 'sodium',
       label: 'Sodium',
       value: `${formatNumber(Math.round(totals.sodium_mg))} mg`,
+      note: null,
     },
   ];
 
@@ -151,6 +169,11 @@ export function TargetStrip({ totals, target, compact = false }: Props) {
           <p key={x.key} className="min-w-0" data-testid={`${id}extra-${x.key}`}>
             <span className="block truncate text-text-secondary">{x.label}</span>
             <span className="num font-semibold">{x.value}</span>
+            {x.note ? (
+              <span className="block text-xs text-text-secondary" data-testid="fiber-unknown">
+                {x.note}
+              </span>
+            ) : null}
           </p>
         ))}
       </div>
