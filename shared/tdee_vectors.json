@@ -125,6 +125,33 @@
       "expect": { "protein_g": 141, "fat_g": 53, "carbs_g": 430, "carbs_clamped": false, "kcal_from_rounded": 2761 }
     }
   ],
+  "custom_edit": [
+    {
+      "name": "SPEC example edited to 2,500 kcal: protein and fat stay, carbs take the rest",
+      "input": { "kcal": 2500, "protein_g": 141, "fat_g": 53 },
+      "expect": { "carbs_g": 365, "carbs_clamped": false }
+    },
+    {
+      "name": "unchanged 2,759 kcal gives back 430 g carbs (429.5 rounds half up)",
+      "input": { "kcal": 2759, "protein_g": 141, "fat_g": 53 },
+      "expect": { "carbs_g": 430, "carbs_clamped": false }
+    },
+    {
+      "name": "Lose example 2,380 edited to 2,200 kcal",
+      "input": { "kcal": 2200, "protein_g": 168, "fat_g": 63 },
+      "expect": { "carbs_g": 240, "carbs_clamped": false }
+    },
+    {
+      "name": "protein and fat use exactly the whole target: carbs 0, not clamped",
+      "input": { "kcal": 1298, "protein_g": 176, "fat_g": 66 },
+      "expect": { "carbs_g": 0, "carbs_clamped": false }
+    },
+    {
+      "name": "protein and fat exceed the target: carbs clamp at 0",
+      "input": { "kcal": 1000, "protein_g": 176, "fat_g": 66 },
+      "expect": { "carbs_g": 0, "carbs_clamped": true }
+    }
+  ],
   "units": [
     { "name": "176.4 lb to kg", "lb": 176.4, "expect_kg": 80.01 },
     { "name": "1 lb is exactly 0.45359237 kg", "lb": 1, "expect_kg": 0.45 },

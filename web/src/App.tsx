@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router';
 import { AppShell } from './components/AppShell';
 import { AccountPage } from './pages/AccountPage';
 import { BodyPage } from './pages/BodyPage';
+import { CalculatorPage } from './pages/CalculatorPage';
 import { ForgotPage } from './pages/ForgotPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
@@ -9,6 +10,7 @@ import { Placeholder } from './pages/Placeholder';
 import { ResetPage } from './pages/ResetPage';
 import { SetupPage } from './pages/setup/SetupPage';
 import { SignupPage } from './pages/SignupPage';
+import { TargetsPage } from './pages/TargetsPage';
 import { VerifyPage } from './pages/VerifyPage';
 
 export function App() {
@@ -25,6 +27,8 @@ export function App() {
           path="charts"
           element={<Placeholder title="Progress" note="Your charts will show here." />}
         />
+        <Route path="targets" element={<TargetsPage />} />
+        <Route path="targets/calculator" element={<CalculatorPage />} />
         <Route path="account" element={<AccountPage />} />
       </Route>
       <Route path="setup" element={<SetupPage />} />

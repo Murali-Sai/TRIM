@@ -105,6 +105,12 @@ ENDPOINTS: list[Endpoint] = [
     ),
     Endpoint("GET", "/api/targets", requires_session=True),
     Endpoint(
+        "POST",
+        "/api/targets",
+        requires_session=True,
+        body=lambda c: {"kcal": 2100, "protein_g": 120, "fat_g": 60, "basis": WORKED},
+    ),
+    Endpoint(
         "PATCH",
         "/api/me/profile",
         requires_session=True,

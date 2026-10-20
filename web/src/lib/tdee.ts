@@ -106,6 +106,20 @@ export function macrosFor(targetKcal: number, weightKg: number, ruleSet: RuleSet
   };
 }
 
+/**
+ * Custom edits (SPEC page 3, "Custom targets"): protein and fat stay as the user has them and
+ * carbs fill the rest of the calorie target.
+ */
+export function carbsForRest(
+  kcal: number,
+  proteinG: number,
+  fatG: number,
+): { carbs_g: number; carbs_clamped: boolean } {
+  const rest = (kcal - KCAL_PER_G.protein * proteinG - KCAL_PER_G.fat * fatG) / KCAL_PER_G.carbs;
+  if (rest < 0) return { carbs_g: 0, carbs_clamped: true };
+  return { carbs_g: roundHalfUp(rest), carbs_clamped: false };
+}
+
 export interface CalcInput {
   sex: Sex;
   age: number;

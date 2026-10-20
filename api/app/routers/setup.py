@@ -10,7 +10,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.db import user_session
@@ -25,6 +25,7 @@ from app.tdee import (
     CalcInput,
     CalcResult,
     calculate,
+    carbs_for_rest,
 )
 from app.timeutil import local_date, whole_years_between
 
@@ -249,6 +250,18 @@ def tdee_calculate(body: CalcIn, user: ActiveUserDep) -> CalcOut:
 # --- targets ------------------------------------------------------------------------------
 
 
+class FormulaOut(BaseModel):
+    """The calculator inputs a target row came from, so "Reset to formula" can recompute it."""
+
+    sex: SexIn
+    age: int
+    weight_kg: float
+    height_cm: float
+    activity: ActivityIn
+    plan: Literal["maintain", "lose"]
+    deficit_kcal: int
+
+
 class TargetOut(BaseModel):
     effective_from: date
     kcal: int
@@ -261,6 +274,55 @@ class TargetOut(BaseModel):
     bmr: int | None
     tdee: int | None
     tolerance_pct: int
+    formula: FormulaOut | None
+
+
+def _formula(calc_inputs: dict[str, Any] | None) -> FormulaOut | None:
+    if not calc_inputs:
+        return None
+    c = calc_inputs
+    return FormulaOut(
+        sex=c["sex"],
+        age=c["age"],
+        weight_kg=c["weight_kg"],
+        height_cm=c["height_cm"],
+        activity=c["activity_level"],
+        plan=c["plan"],
+        # A Maintain row stores 0; the chip it would reset to is the default.
+        deficit_kcal=c["deficit_kcal"] or 650,
+    )
+
+
+def _calc_inputs(body: CalcIn, result: CalcResult) -> dict[str, Any]:
+    return {
+        "age": body.age,
+        "sex": body.sex,
+        "weight_kg": body.weight_kg,
+        "height_cm": body.height_cm,
+        "activity_level": body.activity,
+        "bmi": result.bmi,
+        "plan": result.plan,
+        "deficit_kcal": result.deficit_kcal,
+        "rule_set": result.rule_set,
+        "floor_applied": result.floor_applied,
+    }
+
+
+def _target_out(row: Target) -> TargetOut:
+    return TargetOut(
+        effective_from=row.effective_from,
+        kcal=row.kcal,
+        protein_g=row.protein_g,
+        carbs_g=row.carbs_g,
+        fat_g=row.fat_g,
+        fiber_g=row.fiber_g,
+        water_ml=row.water_ml,
+        source=row.source,
+        bmr=row.bmr,
+        tdee=row.tdee,
+        tolerance_pct=row.tolerance_pct if row.tolerance_pct is not None else 5,
+        formula=_formula(row.calc_inputs),
+    )
 
 
 @router.post("/targets/apply-calculation", status_code=status.HTTP_201_CREATED)
@@ -284,37 +346,81 @@ def apply_calculation(body: CalcIn, user: ActiveUserDep, services: ServicesDep) 
             carbs_g=result.carbs_g,
             fat_g=result.fat_g,
             source="calculator",
-            calc_inputs={
-                "age": body.age,
-                "sex": body.sex,
-                "weight_kg": body.weight_kg,
-                "height_cm": body.height_cm,
-                "activity_level": body.activity,
-                "bmi": result.bmi,
-                "plan": result.plan,
-                "deficit_kcal": result.deficit_kcal,
-                "rule_set": result.rule_set,
-                "floor_applied": result.floor_applied,
-            },
+            calc_inputs=_calc_inputs(body, result),
             bmr=result.bmr,
             tdee=result.tdee,
             created_at=now,
         )
         s.add(row)
         s.flush()
-        out = TargetOut(
-            effective_from=row.effective_from,
-            kcal=row.kcal,
-            protein_g=row.protein_g,
-            carbs_g=row.carbs_g,
-            fat_g=row.fat_g,
-            fiber_g=row.fiber_g,
-            water_ml=row.water_ml,
-            source="calculator",
-            bmr=row.bmr,
-            tdee=row.tdee,
-            tolerance_pct=5,
+        s.refresh(row)
+        out = _target_out(row)
+    return out
+
+
+KCAL_RANGE = (500, 10000)
+GRAMS_MAX = 1500
+
+
+class CustomTargetIn(BaseModel):
+    """A custom edit from the Targets editor. Omit carbs_g (or send null) and carbs fill the
+    rest of the calories with protein and fat as given, the same rule the calculator uses."""
+
+    kcal: Annotated[int, Field(ge=KCAL_RANGE[0], le=KCAL_RANGE[1])]
+    protein_g: Annotated[int, Field(ge=0, le=GRAMS_MAX)]
+    fat_g: Annotated[int, Field(ge=0, le=GRAMS_MAX)]
+    carbs_g: Annotated[int, Field(ge=0, le=GRAMS_MAX)] | None = None
+    # The calculator result being adjusted, when there is no saved formula yet (the "Adjust"
+    # button at sign-up). Otherwise the formula of the targets in effect carries over.
+    basis: CalcIn | None = None
+
+
+@router.post("/targets", status_code=status.HTTP_201_CREATED)
+def save_custom_targets(
+    body: CustomTargetIn, user: ActiveUserDep, services: ServicesDep
+) -> TargetOut:
+    """Saves an edit as a new row (source = custom), only when the user taps Save."""
+    carbs = body.carbs_g
+    if carbs is None:
+        carbs = carbs_for_rest(body.kcal, body.protein_g, body.fat_g).carbs_g
+    now = services.clock()
+    with user_session(user.user_id) as s:
+        p = _profile(s, user.user_id)
+        today = local_date(now, p.timezone)
+        calc_inputs: dict[str, Any] | None = None
+        bmr: int | None = None
+        tdee: int | None = None
+        if body.basis is not None:
+            result = calculate(body.basis.to_input())
+            calc_inputs, bmr, tdee = _calc_inputs(body.basis, result), result.bmr, result.tdee
+        else:
+            current = s.execute(
+                text(
+                    "SELECT calc_inputs, bmr, tdee FROM targets "
+                    "WHERE user_id = :u AND deleted_at IS NULL "
+                    "ORDER BY effective_from DESC, created_at DESC, id DESC LIMIT 1"
+                ),
+                {"u": user.user_id},
+            ).one_or_none()
+            if current is not None:
+                calc_inputs, bmr, tdee = current.calc_inputs, current.bmr, current.tdee
+        row = Target(
+            user_id=user.user_id,
+            effective_from=today,
+            kcal=body.kcal,
+            protein_g=body.protein_g,
+            carbs_g=carbs,
+            fat_g=body.fat_g,
+            source="custom",
+            calc_inputs=calc_inputs,
+            bmr=bmr,
+            tdee=tdee,
+            created_at=now,
         )
+        s.add(row)
+        s.flush()
+        s.refresh(row)
+        out = _target_out(row)
     return out
 
 
@@ -322,13 +428,13 @@ def apply_calculation(body: CalcIn, user: ActiveUserDep, services: ServicesDep) 
 def list_targets(user: ActiveUserDep) -> list[TargetOut]:
     """Target history, newest first. The first row is the one in effect now."""
     with user_session(user.user_id) as s:
-        rows = s.execute(
-            text(
-                "SELECT effective_from, kcal, protein_g, carbs_g, fat_g, fiber_g, water_ml, "
-                "source, bmr, tdee, tolerance_pct FROM targets "
-                "WHERE user_id = :u AND deleted_at IS NULL "
-                "ORDER BY effective_from DESC, created_at DESC, id DESC"
-            ),
-            {"u": user.user_id},
-        ).all()
-    return [TargetOut(**r._asdict()) for r in rows]
+        rows = (
+            s.execute(
+                select(Target)
+                .where(Target.user_id == user.user_id, Target.deleted_at.is_(None))
+                .order_by(Target.effective_from.desc(), Target.created_at.desc(), Target.id.desc())
+            )
+            .scalars()
+            .all()
+        )
+        return [_target_out(r) for r in rows]

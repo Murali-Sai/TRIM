@@ -237,6 +237,59 @@ for (const vp of VIEWPORTS) {
       expect(state.applied[0]).toMatchObject({ plan: 'maintain' });
     });
 
+    test('Adjust opens the Targets editor; carbs follow a calorie edit', async ({ page }) => {
+      const state = await stubSetupApi(page);
+      const custom: Record<string, unknown>[] = [];
+      await page.route('**/api/targets', async (route) => {
+        custom.push(route.request().postDataJSON() as Record<string, unknown>);
+        state.setup = 'done';
+        await route.fulfill({ status: 201, json: {} });
+      });
+      await page.goto('/setup');
+      await page.getByLabel('Age (years)').fill('35');
+      await page.getByLabel('Sex for calorie formula').selectOption('male');
+      await page.getByLabel('Weight (kg)').fill('95');
+      await page.getByLabel('Height (cm)').fill('188');
+      await page
+        .getByLabel('Activity level')
+        .selectOption({ label: ACTIVITY_LABEL.moderate ?? '' });
+      await page.getByRole('button', { name: 'Continue' }).click();
+
+      await page.getByRole('button', { name: 'Adjust' }).click();
+      await expect(page.getByRole('heading', { name: 'Adjust your targets' })).toBeVisible();
+      await expect(page.getByLabel('Calories (kcal)')).toHaveValue('2380');
+      await page.getByLabel('Calories (kcal)').fill('2300');
+      await expect(page.getByLabel('Protein (g)')).toHaveValue('168');
+      await expect(page.getByLabel('Fat (g)')).toHaveValue('63');
+      // (2,300 - 4 x 168 - 9 x 63) / 4 = 265.25
+      await expect(page.getByLabel('Carbs (g)')).toHaveValue('265');
+      await noHorizontalScroll(page);
+
+      await page.getByRole('button', { name: 'Use these targets' }).click();
+      await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+      expect(state.applied).toHaveLength(0);
+      expect(custom).toHaveLength(1);
+      expect(custom[0]).toMatchObject({ kcal: 2300, protein_g: 168, fat_g: 63, carbs_g: null });
+      expect(custom[0]?.basis).toMatchObject({ weight_kg: 95, plan: 'lose', deficit_kcal: 650 });
+    });
+
+    test('Adjust and Cancel goes back to the result card without saving', async ({ page }) => {
+      const state = await stubSetupApi(page);
+      await page.goto('/setup');
+      await page.getByLabel('Age (years)').fill('30');
+      await page.getByLabel('Sex for calorie formula').selectOption('male');
+      await page.getByLabel('Weight (kg)').fill('80');
+      await page.getByLabel('Height (cm)').fill('180');
+      await page
+        .getByLabel('Activity level')
+        .selectOption({ label: ACTIVITY_LABEL.moderate ?? '' });
+      await page.getByRole('button', { name: 'Continue' }).click();
+      await page.getByRole('button', { name: 'Adjust' }).click();
+      await page.getByRole('button', { name: 'Cancel' }).click();
+      await expect(page.getByTestId('tdee')).toHaveText('2,759');
+      expect(state.applied).toHaveLength(0);
+    });
+
     test('the calorie floor is explained', async ({ page }) => {
       await stubSetupApi(page);
       await page.goto('/setup');

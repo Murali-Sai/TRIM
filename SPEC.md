@@ -361,7 +361,7 @@ Example, with 300 kcal, 40 P, 25 C, 8 F left: chicken breast 120 g (198 kcal, 37
 - If protein and fat alone exceed the calorie target (possible only with a custom low target), carbs are set to 0 and the user sees: "Protein and fat already use your full calorie target. Lower them or raise calories."
 - Inputs are validated: age 18 to 100 (sign-up is 18+), weight 30 to 300 kg, height 120 to 230 cm. Imperial inputs (lb, ft and in) convert to kg and cm before the formula.
 
-**Custom targets.** Users can still edit calories or any macro on the Targets screen. Editing calories recalculates carbs under the same rules unless the user also edits carbs; any manual change sets `source = custom`. "Reset to formula" restores the rule-based values. Each change adds a `targets` row with `effective_from`, so history charts use the target that applied on each date.
+**Custom targets.** Users can still edit calories or any macro on the Targets screen. Editing calories recalculates carbs under the same rules unless the user also edits carbs; any manual change sets `source = custom`. "Reset to formula" restores the rule-based values. Custom values must be 500 to 10,000 kcal and 0 to 1,500 g for each macro. Each change adds a `targets` row with `effective_from`, so history charts use the target that applied on each date.
 
 **Never automatic.** The app does not recalculate on new weigh-ins. The calculator prefills the latest trend weight, and nothing changes until the user taps "Use these targets".
 

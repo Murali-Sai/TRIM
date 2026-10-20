@@ -38,6 +38,21 @@ export function trendFor(entries: readonly WeightEntry[]): TrendResult {
   return computeTrend(entries.map((e) => ({ day: e.day, at: e.measured_at, value: e.kg })));
 }
 
+/**
+ * The weight the TDEE calculator prefills: the latest trend value once the trend shows,
+ * otherwise the latest weigh-in. Null with no weigh-ins.
+ */
+export function latestTrendKg(entries: readonly WeightEntry[]): number | null {
+  const trend = trendFor(entries);
+  if (trend.visible) {
+    for (let i = trend.points.length - 1; i >= 0; i--) {
+      const t = trend.points[i]?.trend;
+      if (t != null) return t;
+    }
+  }
+  return trend.points.at(-1)?.value ?? null;
+}
+
 function plural(n: number, word: string): string {
   return `${n} more ${word}${n === 1 ? '' : 's'}`;
 }

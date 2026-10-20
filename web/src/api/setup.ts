@@ -1,6 +1,6 @@
 import { getJson, patchJson, postJson, putJson } from './client';
 import type { UnitSystem } from './auth';
-import type { ActivityLevel, CalcInput, Sex } from '../lib/tdee';
+import type { ActivityLevel, CalcInput, Deficit, Plan, Sex } from '../lib/tdee';
 
 export interface BodyStats {
   sex: Sex | null;
@@ -36,6 +36,17 @@ export function saveBodyStats(body: BodyStatsUpdate) {
   return patchJson<BodyStats>('/me/body-stats', body);
 }
 
+/** The calculator inputs a target row came from; "Reset to formula" recomputes from these. */
+export interface Formula {
+  sex: Sex;
+  age: number;
+  weight_kg: number;
+  height_cm: number;
+  activity: ActivityLevel;
+  plan: Plan;
+  deficit_kcal: Deficit;
+}
+
 export interface TargetRow {
   effective_from: string;
   kcal: number;
@@ -43,6 +54,30 @@ export interface TargetRow {
   carbs_g: number;
   fat_g: number;
   source: 'calculator' | 'custom';
+  bmr: number | null;
+  tdee: number | null;
+  formula: Formula | null;
+}
+
+export const TARGETS_KEY = ['targets'] as const;
+
+/** Newest first: the first row is the one in effect now. */
+export function listTargets() {
+  return getJson<TargetRow[]>('/targets');
+}
+
+export interface CustomTargets {
+  kcal: number;
+  protein_g: number;
+  fat_g: number;
+  /** Null: carbs are the rest, recalculated by the server under the same rule. */
+  carbs_g: number | null;
+  /** The calculator result being adjusted, when no targets are saved yet (sign-up). */
+  basis?: CalcInput;
+}
+
+export function saveCustomTargets(body: CustomTargets) {
+  return postJson<TargetRow>('/targets', body);
 }
 
 /** The server recalculates from these inputs; it never stores numbers sent by the browser. */

@@ -110,6 +110,22 @@ def macros_for(target_kcal: float, weight_kg: float, rule_set: RuleSet) -> Macro
 
 
 @dataclass(frozen=True)
+class Carbs:
+    carbs_g: int
+    # True when protein and fat alone exceed the calorie target, so carbs were set to 0.
+    carbs_clamped: bool
+
+
+def carbs_for_rest(kcal: int, protein_g: int, fat_g: int) -> Carbs:
+    """Custom edits (SPEC page 3, "Custom targets"): protein and fat stay as the user has them
+    and carbs fill the rest of the calorie target."""
+    rest = (kcal - KCAL_PER_G_PROTEIN * protein_g - KCAL_PER_G_FAT * fat_g) / KCAL_PER_G_CARBS
+    if rest < 0:
+        return Carbs(carbs_g=0, carbs_clamped=True)
+    return Carbs(carbs_g=round_int(rest), carbs_clamped=False)
+
+
+@dataclass(frozen=True)
 class CalcInput:
     sex: Sex
     age: int
