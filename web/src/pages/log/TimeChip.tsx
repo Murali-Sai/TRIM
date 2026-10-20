@@ -20,6 +20,8 @@ const chip = 'tap rounded-full border px-3 py-1.5 text-sm font-semibold';
 export function TimeChip({ wall, now, lastUsed, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const panel = useId();
+  const timeId = `${panel}-time`;
+  const dateId = `${panel}-date`;
   const today = now.slice(0, 10);
   const day = wall.slice(0, 10);
   // Last used keeps the chosen day and takes the time of day.
@@ -63,11 +65,11 @@ export function TimeChip({ wall, now, lastUsed, onChange }: Props) {
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="log-time" className="block font-semibold">
+              <label htmlFor={timeId} className="block font-semibold">
                 Time
               </label>
               <input
-                id="log-time"
+                id={timeId}
                 type="time"
                 value={wall.slice(11, 16)}
                 onChange={(e) => e.target.value && onChange(`${day}T${e.target.value}`)}
@@ -75,11 +77,11 @@ export function TimeChip({ wall, now, lastUsed, onChange }: Props) {
               />
             </div>
             <div>
-              <label htmlFor="log-date" className="block font-semibold">
+              <label htmlFor={dateId} className="block font-semibold">
                 Date
               </label>
               <input
-                id="log-date"
+                id={dateId}
                 type="date"
                 value={day}
                 max={today}

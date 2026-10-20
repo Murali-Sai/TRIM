@@ -109,6 +109,8 @@ def test_ctx_carries_only_ids() -> None:
         "a_deleted_weight_ids",
         "a_food_ids",
         "a_log_ids",
+        "a_group_ids",
+        "a_meal_ids",
     }
 
 

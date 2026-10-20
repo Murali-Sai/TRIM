@@ -312,8 +312,10 @@ class FoodLog(Timestamps, Base):
     food_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("foods.id", ondelete="SET NULL"), index=True
     )
-    # Points at saved_meals once that table exists (task 3.7b).
-    saved_meal_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # The saved meal this entry was logged from; cleared if that meal is deleted.
+    saved_meal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("saved_meals.id", ondelete="SET NULL"), index=True
+    )
     # One id per add action, so a whole meal can be moved or undone together.
     log_group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     eaten_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -333,6 +335,55 @@ class FoodLog(Timestamps, Base):
     sugar_g: Mapped[Decimal | None] = mapped_column(Numeric(7, 2))
     sodium_mg: Mapped[Decimal | None] = mapped_column(Numeric(9, 2))
     source: Mapped[str] = mapped_column(Text)
+
+
+class SavedMeal(Timestamps, Base):
+    """A named list of foods with amounts, logged as one time block (SPEC page 4)."""
+
+    __tablename__ = "saved_meals"
+    __table_args__ = (
+        Index(
+            "uq_saved_meals_user_name",
+            "user_id",
+            text("lower(name)"),
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    name: Mapped[str] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
+    is_favourite: Mapped[bool] = mapped_column(Boolean, server_default=false())
+    use_count: Mapped[int] = mapped_column(Integer, server_default="0")
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SavedMealItem(Timestamps, Base):
+    """One food and amount in a saved meal. Nutrients come from the food when the meal is
+    logged, so editing a food changes the meal's next log but never past entries."""
+
+    __tablename__ = "saved_meal_items"
+    __table_args__ = (
+        CheckConstraint("grams > 0", name="grams_positive"),
+        CheckConstraint("quantity IS NULL OR quantity > 0", name="quantity_positive"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    saved_meal_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("saved_meals.id", ondelete="CASCADE"), index=True
+    )
+    # Null once the custom food it pointed at is deleted; the meal then flags it.
+    food_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("foods.id", ondelete="SET NULL"), index=True
+    )
+    grams: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    quantity: Mapped[Decimal | None] = mapped_column(Numeric(8, 3))
+    unit_label: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, server_default="0")
 
 
 class FoodFavourite(Timestamps, Base):
@@ -371,6 +422,8 @@ RLS_TABLES: dict[str, str] = {
     "targets": "user_id",
     "food_logs": "user_id",
     "food_favourites": "user_id",
+    "saved_meals": "user_id",
+    "saved_meal_items": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column

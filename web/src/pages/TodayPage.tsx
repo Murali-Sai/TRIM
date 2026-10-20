@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useMe } from '../api/auth';
+import { ApiError } from '../api/client';
 import { listLogs, LOGS_KEY, type LogEntry } from '../api/logs';
+import { mealFromLogs, MEALS_KEY } from '../api/meals';
 import { Toast } from '../components/Toast';
 import { listTargets, TARGETS_KEY } from '../api/setup';
 import { sumNutrients, targetOn } from '../lib/dayTotals';
@@ -12,6 +14,7 @@ import { usePageTitle } from '../usePageTitle';
 import { Notice, primaryButton, secondaryButton } from './account/Section';
 import { EditEntrySheet } from './today/EditEntrySheet';
 import { MoveCopySheet, type MoveCopyMode } from './today/MoveCopySheet';
+import { SaveMealSheet } from './today/SaveMealSheet';
 import { TargetStrip } from './today/TargetStrip';
 import { Timeline } from './today/Timeline';
 import { useLogActions } from './today/useLogActions';
@@ -62,6 +65,21 @@ function Today({ timeZone }: { timeZone: string }) {
   const [picker, setPicker] = useState<{ mode: MoveCopyMode; ids: string[]; wall: string } | null>(
     null,
   );
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState<string[] | null>(null);
+  const saveMeal = useMutation({
+    mutationFn: ({ name, ids }: { name: string; ids: string[] }) => mealFromLogs(name, ids),
+    onSuccess: async (meal) => {
+      setSaving(null);
+      setSelected(new Set());
+      actions.say(`Saved ${meal.name} as a meal.`);
+      await queryClient.invalidateQueries({ queryKey: MEALS_KEY });
+    },
+  });
+  function startSaving(ids: string[]) {
+    saveMeal.reset();
+    setSaving(ids);
+  }
   // A new day starts with nothing selected.
   useEffect(() => setSelected(new Set()), [day]);
 
@@ -218,6 +236,7 @@ function Today({ timeZone }: { timeZone: string }) {
                     { onSuccess: () => setSelected(new Set()) },
                   );
                 }}
+                onSaveBlock={(block) => startSaving(block.entries.map((e) => e.id))}
                 onCopyBlock={(block) =>
                   setPicker({
                     mode: 'copy',
@@ -231,10 +250,10 @@ function Today({ timeZone }: { timeZone: string }) {
                 <div
                   role="toolbar"
                   aria-label="Selected items"
-                  className="sticky bottom-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+1rem)] z-30 mt-4 grid grid-cols-3 items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-lg lg:bottom-4 lg:flex"
+                  className="sticky bottom-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+1rem)] z-30 mt-4 grid grid-cols-2 items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-lg lg:bottom-4 lg:flex"
                   data-testid="selection-bar"
                 >
-                  <p className="col-span-3 font-semibold lg:mr-auto" aria-live="polite">
+                  <p className="col-span-2 font-semibold lg:mr-auto" aria-live="polite">
                     {selected.size} selected
                   </p>
                   <button
@@ -266,6 +285,13 @@ function Today({ timeZone }: { timeZone: string }) {
                     }
                   >
                     Copy
+                  </button>
+                  <button
+                    type="button"
+                    className={`${secondaryButton} cursor-pointer`}
+                    onClick={() => startSaving([...selected])}
+                  >
+                    Save as meal
                   </button>
                   <button
                     type="button"
@@ -310,6 +336,21 @@ function Today({ timeZone }: { timeZone: string }) {
           busy={actions.busy}
           onClose={() => setPicker(null)}
           onConfirm={confirmPicker}
+        />
+      ) : null}
+      {saving ? (
+        <SaveMealSheet
+          count={saving.length}
+          quickAdds={entries.filter((e) => saving.includes(e.id) && e.food_id === null).length}
+          busy={saveMeal.isPending}
+          error={
+            saveMeal.error
+              ? (saveMeal.error instanceof ApiError && saveMeal.error.userMessage) ||
+                'Could not save. Check your connection and try again.'
+              : null
+          }
+          onClose={() => setSaving(null)}
+          onSave={(name) => saveMeal.mutate({ name, ids: saving })}
         />
       ) : null}
       <Toast toast={actions.toast} onDone={actions.clearToast} />

@@ -1,7 +1,18 @@
 from fastapi import APIRouter, FastAPI
 
 from app.config import get_settings
-from app.routers import account, auth, foods, logs, me, my_foods, password, setup, weights
+from app.routers import (
+    account,
+    auth,
+    foods,
+    logs,
+    me,
+    meals,
+    my_foods,
+    password,
+    setup,
+    weights,
+)
 from app.security.csrf import install_csrf
 from app.security.proxy_guard import install_proxy_guard
 from app.services.registry import Services, build_services
@@ -23,6 +34,7 @@ api.include_router(setup.router)
 api.include_router(weights.router)
 api.include_router(foods.router)
 api.include_router(my_foods.router)
+api.include_router(meals.router)
 api.include_router(logs.router)
 
 

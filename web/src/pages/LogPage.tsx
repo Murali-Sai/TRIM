@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useMe } from '../api/auth';
 import { ApiError } from '../api/client';
@@ -11,7 +11,8 @@ import {
   type Food,
   type QuickFoods,
 } from '../api/foods';
-import { addLogs, lastLogTime, LAST_TIME_KEY, LOGS_KEY } from '../api/logs';
+import { addLogs, deleteGroup, lastLogTime, LAST_TIME_KEY, LOGS_KEY } from '../api/logs';
+import type { Meal } from '../api/meals';
 import { Field } from '../components/Field';
 import { macroLine } from '../lib/foodAmount';
 import { defaultLogTime, loggedMessage } from '../lib/logTime';
@@ -27,22 +28,16 @@ import {
 } from '../lib/picked';
 import { formatNumber } from '../lib/units';
 import { isoToZonedWall, zonedWallToIso } from '../lib/zoned';
+import { useDebounced } from '../lib/useDebounced';
 import { usePageTitle } from '../usePageTitle';
 import { Notice, primaryButton, secondaryButton, Section } from './account/Section';
 import { CustomFoodSheet } from './log/CustomFoodSheet';
 import { FoodDetail } from './log/FoodDetail';
+import { MealRow, MealsTab } from './log/MealsTab';
 import { QuickAddForm } from './log/QuickAddForm';
 import { QuickLists } from './log/QuickLists';
 import { TimeChip } from './log/TimeChip';
-
-function useDebounced(value: string, ms: number): string {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return debounced;
-}
+import { useMealSheets } from './log/useMealSheets';
 
 function perServing(food: Food): string {
   const serving = food.servings.find((s) => s.is_default) ?? food.servings[0];
@@ -53,7 +48,14 @@ function perServing(food: Food): string {
   return `${formatNumber(Math.round(food.kcal_100))} kcal per 100 g`;
 }
 
-type Tab = 'search' | 'quick';
+type Tab = 'search' | 'meals' | 'quick';
+
+/** What was just logged: a link to see it, and Undo for the whole add. */
+interface Done {
+  message: string;
+  link: string;
+  group: string;
+}
 type Selected = { food: Food; start: Extract<Picked, { kind: 'food' }> };
 
 /**
@@ -83,7 +85,7 @@ function LogFood({ timeZone }: { timeZone: string }) {
   const [selected, setSelected] = useState<Selected | null>(null);
   const [picked, setPicked] = useState<Picked[]>([]);
   const [creating, setCreating] = useState(false);
-  const [done, setDone] = useState<{ message: string; link: string } | null>(null);
+  const [done, setDone] = useState<Done | null>(null);
 
   const q = useDebounced(query.trim(), 300);
   const search = useQuery({
@@ -115,21 +117,52 @@ function LogFood({ timeZone }: { timeZone: string }) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['foods'] }),
   });
 
+  function logged(message: string, at: string, group: string) {
+    const day = at.slice(0, 10);
+    setDone({
+      message,
+      link: `/?${day === now.slice(0, 10) ? '' : `date=${day}&`}highlight=${group}`,
+      group,
+    });
+  }
+
   const save = useMutation({
     mutationFn: () => addLogs(zonedWallToIso(wall, timeZone), picked.map(toItem)),
     onSuccess: async (rows) => {
-      const day = wall.slice(0, 10);
-      const group = rows[0]?.log_group_id ?? '';
-      setDone({
-        message: loggedMessage(rows.length, wall, now.slice(0, 10)),
-        link: `/?${day === now.slice(0, 10) ? '' : `date=${day}&`}highlight=${group}`,
-      });
+      logged(loggedMessage(rows.length, wall, now.slice(0, 10)), wall, rows[0]?.log_group_id ?? '');
       setPicked([]);
       setSelected(null);
       await queryClient.invalidateQueries({ queryKey: LOGS_KEY });
       await queryClient.invalidateQueries({ queryKey: QUICK_FOODS_KEY });
     },
   });
+
+  const undo = useMutation({
+    mutationFn: (group: string) => deleteGroup(group),
+    onSuccess: async () => {
+      setDone(null);
+      await queryClient.invalidateQueries({ queryKey: LOGS_KEY });
+      await queryClient.invalidateQueries({ queryKey: QUICK_FOODS_KEY });
+    },
+  });
+
+  const meals = useMealSheets({
+    timeZone,
+    wall,
+    now,
+    lastUsed,
+    recents: quick.data?.recents ?? [],
+    onLogged: (meal, entries, at) => {
+      const items = loggedMessage(entries.length, at, now.slice(0, 10)).replace('Logged ', '');
+      logged(`Logged ${meal.name}, ${items}`, at, entries[0]?.log_group_id ?? '');
+    },
+  });
+  const allMeals = meals.meals.data ?? [];
+  const mealMatches = q.length >= 2 ? allMeals.filter((m) => matches(m.name, q)).slice(0, 5) : [];
+  const recentMeals = allMeals
+    .filter((m) => m.last_used_at !== null)
+    .sort((a, b) => (b.last_used_at ?? '').localeCompare(a.last_used_at ?? ''))
+    .slice(0, 3);
 
   function add(p: Picked) {
     setPicked((list) => [...list, p]);
@@ -166,8 +199,25 @@ function LogFood({ timeZone }: { timeZone: string }) {
           <Link to={done.link} className="font-semibold text-accent underline">
             See it on {done.link.includes('date=') ? 'that day' : 'Today'}
           </Link>
+          {done.group ? (
+            <>
+              {' · '}
+              <button
+                type="button"
+                onClick={() => undo.mutate(done.group)}
+                disabled={undo.isPending}
+                className="cursor-pointer font-semibold text-accent underline"
+              >
+                Undo
+              </button>
+            </>
+          ) : null}
         </Notice>
       ) : null}
+      {undo.isError ? (
+        <Notice kind="error">Could not undo. Check your connection and try again.</Notice>
+      ) : null}
+      {meals.pageError ? <Notice kind="error">{meals.pageError}</Notice> : null}
 
       {/* Phone: find, then detail and list. Desktop: find left, detail and list right. */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
@@ -175,29 +225,44 @@ function LogFood({ timeZone }: { timeZone: string }) {
           <div
             role="tablist"
             aria-label="Ways to log"
-            className="grid grid-cols-2 gap-1 rounded-lg bg-surface-2 p-1"
+            className="grid grid-cols-3 gap-1 rounded-lg bg-surface-2 p-1"
           >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === 'search'}
-              onClick={() => setTab('search')}
-              className={tabClass('search')}
-            >
-              Search
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === 'quick'}
-              onClick={() => setTab('quick')}
-              className={tabClass('quick')}
-            >
-              Quick add
-            </button>
+            {(
+              [
+                ['search', 'Search'],
+                ['meals', 'Meals'],
+                ['quick', 'Quick add'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+                className={tabClass(key)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          {tab === 'quick' ? (
+          {tab === 'meals' ? (
+            <div className="mt-4" role="tabpanel" aria-label="Meals">
+              <MealsTab
+                meals={meals.meals.data}
+                failed={meals.meals.isError}
+                busy={meals.busy}
+                onNew={meals.startNew}
+                onOpen={meals.openMeal}
+                onLog={(m) => {
+                  setDone(null);
+                  meals.quickLog(m);
+                }}
+                onEdit={meals.edit}
+              />
+            </div>
+          ) : tab === 'quick' ? (
             <div className="mt-4" role="tabpanel" aria-label="Quick add">
               <QuickAddForm onAdd={(quickAdd) => add({ kind: 'quick', quick: quickAdd })} />
             </div>
@@ -218,6 +283,16 @@ function LogFood({ timeZone }: { timeZone: string }) {
               {!searching && quick.data ? (
                 <QuickLists
                   data={quick.data}
+                  meals={recentMeals}
+                  renderMeal={(m: Meal) => (
+                    <MealRow
+                      key={m.id}
+                      meal={m}
+                      onOpen={meals.openMeal}
+                      onLog={meals.quickLog}
+                      busy={meals.busy}
+                    />
+                  )}
                   onOpen={open}
                   onAdd={(food, source) => add(fromLastServing(food, source))}
                 />
@@ -226,7 +301,20 @@ function LogFood({ timeZone }: { timeZone: string }) {
               {search.isError ? (
                 <Notice kind="error">Search is not answering. Try again in a moment.</Notice>
               ) : null}
-              {searching && search.isSuccess && results.length === 0 ? (
+              {mealMatches.length > 0 ? (
+                <ul className="mt-3 flex flex-col" aria-label="Matching meals">
+                  {mealMatches.map((m) => (
+                    <MealRow
+                      key={m.id}
+                      meal={m}
+                      onOpen={meals.openMeal}
+                      onLog={meals.quickLog}
+                      busy={meals.busy}
+                    />
+                  ))}
+                </ul>
+              ) : null}
+              {searching && search.isSuccess && results.length === 0 && mealMatches.length === 0 ? (
                 <p className="mt-3 text-text-secondary">No foods match &ldquo;{q}&rdquo;.</p>
               ) : null}
               {searching && results.length > 0 ? (
@@ -340,6 +428,16 @@ function LogFood({ timeZone }: { timeZone: string }) {
           }}
         />
       ) : null}
+      {meals.sheets}
     </section>
   );
+}
+
+/** Every word typed appears in the name, ignoring case. */
+function matches(name: string, q: string): boolean {
+  const n = name.toLowerCase();
+  return q
+    .toLowerCase()
+    .split(/\s+/)
+    .every((w) => n.includes(w));
 }

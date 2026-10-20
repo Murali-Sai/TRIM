@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import type { Food } from '../../api/foods';
 import { Field } from '../../components/Field';
 import {
@@ -17,18 +17,28 @@ interface Props {
   food: Food;
   /** Where it was picked from, and the amount to start at (the last serving for recents). */
   start: Extract<Picked, { kind: 'food' }>;
-  favourite: boolean;
+  /** null hides the star. */
+  favourite: boolean | null;
   onFavourite: (on: boolean) => void;
   onAdd: (picked: Picked) => void;
+  addLabel?: string;
 }
 
 /** The amount picker for one food, with a live preview of what it adds. */
-export function FoodDetail({ food, start, favourite, onFavourite, onAdd }: Props) {
+export function FoodDetail({
+  food,
+  start,
+  favourite,
+  onFavourite,
+  onAdd,
+  addLabel = 'Add to list',
+}: Props) {
   const options = amountOptions(food);
   const first = options.find((o) => o.label === start.unit) ?? options[0] ?? GRAMS;
   const [unit, setUnit] = useState(first.label);
   const [amount, setAmount] = useState(String(start.unit === first.label ? start.quantity : 1));
   const [error, setError] = useState<string | null>(null);
+  const id = useId();
 
   const chosen = options.find((o) => o.label === unit) ?? first;
   const quantity = parseAmount(amount);
@@ -51,23 +61,25 @@ export function FoodDetail({ food, start, favourite, onFavourite, onAdd }: Props
           <h3 className="text-lg font-semibold">{food.name}</h3>
           {food.brand ? <p className="text-sm text-text-secondary">{food.brand}</p> : null}
         </div>
-        <button
-          type="button"
-          onClick={() => onFavourite(!favourite)}
-          aria-pressed={favourite}
-          aria-label={
-            favourite ? `Remove ${food.name} from favourites` : `Add ${food.name} to favourites`
-          }
-          className={`tap flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border transition-colors duration-200 hover:bg-surface-2 ${
-            favourite ? 'text-fat-text' : 'text-text-secondary'
-          }`}
-        >
-          <StarIcon filled={favourite} />
-        </button>
+        {favourite === null ? null : (
+          <button
+            type="button"
+            onClick={() => onFavourite(!favourite)}
+            aria-pressed={favourite}
+            aria-label={
+              favourite ? `Remove ${food.name} from favourites` : `Add ${food.name} to favourites`
+            }
+            className={`tap flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border transition-colors duration-200 hover:bg-surface-2 ${
+              favourite ? 'text-fat-text' : 'text-text-secondary'
+            }`}
+          >
+            <StarIcon filled={favourite} />
+          </button>
+        )}
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <Field
-          id="log-amount"
+          id={`${id}-amount`}
           label="Amount"
           inputMode="decimal"
           autoComplete="off"
@@ -76,11 +88,11 @@ export function FoodDetail({ food, start, favourite, onFavourite, onAdd }: Props
           error={error}
         />
         <div>
-          <label htmlFor="log-unit" className="block font-semibold">
+          <label htmlFor={`${id}-unit`} className="block font-semibold">
             Unit
           </label>
           <select
-            id="log-unit"
+            id={`${id}-unit`}
             value={unit}
             onChange={(e) => {
               const next = e.target.value;
@@ -104,7 +116,7 @@ export function FoodDetail({ food, start, favourite, onFavourite, onAdd }: Props
           : `${macroLine(nutrientsFor(food, grams))} · ${formatNumber(grams)} g`}
       </p>
       <button type="submit" className={`${primaryButton} mt-4`}>
-        Add to list
+        {addLabel}
       </button>
     </form>
   );

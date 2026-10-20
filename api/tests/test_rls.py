@@ -20,6 +20,8 @@ from app.models import (
     Food,
     FoodFavourite,
     FoodLog,
+    SavedMeal,
+    SavedMealItem,
     SessionRow,
     Target,
     User,
@@ -97,6 +99,14 @@ def seed_user(label: str) -> Seeded:
         s.add(food)
         s.flush()
         s.add(FoodFavourite(user_id=user_id, food_id=food.id))
+        meal = SavedMeal(user_id=user_id, name="Breakfast")
+        s.add(meal)
+        s.flush()
+        s.add(
+            SavedMealItem(
+                user_id=user_id, saved_meal_id=meal.id, food_id=food.id, grams=Decimal("250")
+            )
+        )
     return Seeded(user_id, email, session_hash, verify_hash)
 
 

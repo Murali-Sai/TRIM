@@ -36,6 +36,8 @@ class Ctx:
     a_deleted_weight_ids: list[str]  # deleted, still restorable by A
     a_food_ids: list[str]  # A's custom foods
     a_log_ids: list[str]  # A's food log entries
+    a_group_ids: list[str]  # the log_group_id of A's entries
+    a_meal_ids: list[str]  # A's saved meals
 
 
 @dataclass(frozen=True)
@@ -255,5 +257,51 @@ ENDPOINTS: list[Endpoint] = [
         "/api/foods/search",
         requires_session=True,
         params=lambda c: {"q": "Overnight oats"},
+    ),
+    # A has a saved meal "Morning jar" (tests.helpers.seed_food_rows).
+    Endpoint(
+        "DELETE",
+        "/api/logs/groups/{log_group_id}",
+        requires_session=True,
+        path_params=lambda c: {"log_group_id": c.a_group_ids[0]},
+    ),
+    Endpoint("GET", "/api/meals", requires_session=True, params=lambda c: {"archived": "false"}),
+    Endpoint(
+        "POST",
+        "/api/meals",
+        requires_session=True,
+        body=lambda c: {"name": "B meal", "items": [{"food_id": c.a_food_ids[0], "grams": 100}]},
+    ),
+    Endpoint(
+        "POST",
+        "/api/meals/from-logs",
+        requires_session=True,
+        body=lambda c: {"name": "B meal", "log_ids": c.a_log_ids},
+    ),
+    Endpoint(
+        "GET",
+        "/api/meals/{meal_id}",
+        requires_session=True,
+        path_params=lambda c: {"meal_id": c.a_meal_ids[0]},
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/meals/{meal_id}",
+        requires_session=True,
+        body=lambda c: {"name": "Changed by B", "archived": True},
+        path_params=lambda c: {"meal_id": c.a_meal_ids[0]},
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/meals/{meal_id}",
+        requires_session=True,
+        path_params=lambda c: {"meal_id": c.a_meal_ids[0]},
+    ),
+    Endpoint(
+        "POST",
+        "/api/meals/{meal_id}/log",
+        requires_session=True,
+        body=lambda c: {"eaten_at": "2026-10-17T12:00:00Z"},
+        path_params=lambda c: {"meal_id": c.a_meal_ids[0]},
     ),
 ]

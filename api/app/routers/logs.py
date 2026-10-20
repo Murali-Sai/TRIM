@@ -32,6 +32,10 @@ MAX_GRAMS = 5000
 MAX_QUANTITY = 1000
 MAX_RANGE_DAYS = 62
 EARLIEST = date(2000, 1, 1)
+# Entries with the name of the saved meal they came from, if any.
+WITH_MEAL = (
+    "l.*, m.name AS meal_name FROM food_logs l LEFT JOIN saved_meals m ON m.id = l.saved_meal_id"
+)
 CENT = Decimal("0.01")
 FOOD_NOT_FOUND = "Food not found"
 
@@ -96,6 +100,9 @@ class LogOut(BaseModel):
     sugar_g: float | None
     sodium_mg: float | None
     source: str
+    # Set when logged from a saved meal; the timeline shows the name beside the time pill.
+    saved_meal_id: uuid.UUID | None = None
+    meal_name: str | None = None
 
 
 class LastTimeOut(BaseModel):
@@ -128,6 +135,8 @@ def _out(row: Any) -> LogOut:
         sugar_g=_f(row.sugar_g),
         sodium_mg=_f(row.sodium_mg),
         source=row.source,
+        saved_meal_id=row.saved_meal_id,
+        meal_name=getattr(row, "meal_name", None),
     )
 
 
@@ -277,8 +286,8 @@ def list_logs(
     with user_session(user.user_id) as s:
         rows = s.execute(
             text(
-                "SELECT * FROM food_logs WHERE user_id = :u AND deleted_at IS NULL "
-                "AND logged_on BETWEEN :a AND :b ORDER BY eaten_at, created_at, id"
+                f"SELECT {WITH_MEAL} WHERE l.user_id = :u AND l.deleted_at IS NULL "
+                "AND l.logged_on BETWEEN :a AND :b ORDER BY l.eaten_at, l.created_at, l.id"
             ),
             {"u": user.user_id, "a": date_from, "b": end},
         ).all()
@@ -339,7 +348,7 @@ def _rows(s: Session, user_id: Any, ids: list[uuid.UUID]) -> list[Any]:
     wanted = list(dict.fromkeys(ids))
     rows = s.execute(
         text(
-            "SELECT * FROM food_logs WHERE user_id = :u AND deleted_at IS NULL AND id = ANY(:ids)"
+            f"SELECT {WITH_MEAL} WHERE l.user_id = :u AND l.deleted_at IS NULL AND l.id = ANY(:ids)"
         ),
         {"u": user_id, "ids": wanted},
     ).all()
@@ -489,3 +498,18 @@ def copy_logs(body: LogsAtIn, user: ActiveUserDep, services: ServicesDep) -> lis
         s.add_all(copies)
         s.flush()
         return [_out(c) for c in copies]
+
+
+@router.delete("/groups/{log_group_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_group(log_group_id: uuid.UUID, user: ActiveUserDep, services: ServicesDep) -> None:
+    """Undo a whole add, such as a saved meal, in one step (SPEC page 4)."""
+    with user_session(user.user_id) as s:
+        gone = s.execute(
+            text(
+                "UPDATE food_logs SET deleted_at = :now WHERE user_id = :u "
+                "AND log_group_id = :g AND deleted_at IS NULL"
+            ),
+            {"now": services.clock(), "u": user.user_id, "g": log_group_id},
+        )
+        if gone.rowcount == 0:  # type: ignore[attr-defined]
+            raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
