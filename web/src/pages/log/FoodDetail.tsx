@@ -83,7 +83,7 @@ export function FoodDetail({ food, onAdd }: Props) {
           </select>
         </div>
       </div>
-      <p className="mt-3 text-sm" data-testid="detail-preview">
+      <p className="num mt-3 text-sm" data-testid="detail-preview">
         {grams === null
           ? 'Enter an amount to see calories.'
           : `${macroLine(nutrientsFor(food, grams))} · ${formatNumber(grams)} g`}

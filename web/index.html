@@ -14,12 +14,12 @@
     <meta name="apple-mobile-web-app-title" content="TRIM" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#0072b2" />
+    <meta name="theme-color" content="#0b0b0c" />
     <script>
-      // Apply a saved theme before first paint so dark mode never flashes light.
+      // Apply the theme before first paint: dark unless the user chose Light or Match device.
       try {
         var t = localStorage.getItem('trim.theme');
-        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+        if (t === 'light' || t === 'system') document.documentElement.setAttribute('data-theme', t);
       } catch (e) {}
     </script>
   </head>

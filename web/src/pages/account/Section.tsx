@@ -18,11 +18,11 @@ export function Section({
       className="rounded-xl border border-border bg-surface p-4"
       data-testid={testId}
     >
-      <h3 id={id} className="text-lg font-semibold">
+      <h3 id={id} className="eyebrow">
         {title}
       </h3>
       {description ? <p className="mt-1 text-sm text-text-secondary">{description}</p> : null}
-      <div className="mt-4">{children}</div>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }

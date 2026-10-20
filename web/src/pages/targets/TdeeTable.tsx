@@ -36,7 +36,7 @@ export function TdeeTable({ input, selected }: Props) {
                 <span className={current ? 'font-semibold' : ''}>{r.label}</span>
                 {current ? <span className="ml-2 text-text-secondary">(yours)</span> : null}
               </th>
-              <td className="py-2 text-right tabular-nums">{formatNumber(r.tdee)}</td>
+              <td className="py-2 text-right num">{formatNumber(r.tdee)}</td>
             </tr>
           );
         })}

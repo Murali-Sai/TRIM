@@ -19,7 +19,7 @@ function CurrentTargets({ t }: { t: TargetRow }) {
   return (
     <div data-testid="current-targets">
       <p>
-        <span className="text-4xl font-bold" data-testid="current-kcal">
+        <span className="num text-4xl font-semibold" data-testid="current-kcal">
           {formatNumber(t.kcal)}
         </span>{' '}
         kcal a day

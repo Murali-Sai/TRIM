@@ -106,7 +106,7 @@ No adaptive TDEE: the app never estimates expenditure from logged intake or weig
 2. **Same app, adapted layout.** Phone: one-handed, bottom tab bar. Desktop: sidebar, multi-column, keyboard shortcuts.
 3. **Minimal taps.** New entries default to the current time (rounded down to 5 minutes) in the user's timezone, or to the time of the block whose "+" was tapped; the time is one tap to change.
 4. **Accessible.** 44 px touch targets on touch screens, WCAG 2.2 AA contrast, every chart has a text summary and a table view.
-5. **Dark mode** via CSS variables and `prefers-color-scheme`, with a manual override.
+5. **Dark first.** The app opens in its dark theme. Light and "Match device" (`prefers-color-scheme`) are one choice away in Account, Appearance. Both themes are CSS variables and meet WCAG 2.2 AA.
 
 ### Name and branding
 - **Product name:** TRIM. **Full form:** Track, Record, Inspect, Measure.
@@ -118,6 +118,14 @@ No adaptive TDEE: the app never estimates expenditure from logged intake or weig
 - **Browser and install names:** HTML `<title>` is "TRIM: Track, Record, Inspect, Measure" on the landing page and "Today, TRIM" style titles inside the app. Web manifest `name` "TRIM: Track, Record, Inspect, Measure", `short_name` "TRIM"; `apple-mobile-web-app-title` "TRIM", so the home-screen label reads TRIM.
 - **Emails** (verification, reset, weekly check-in) use the same title block in the header.
 - **Accessibility:** the title block is one `<header>` with an `<h1>` "TRIM" and a paragraph for the full form, so screen readers announce both once.
+
+### Visual design: dark-first data
+Chosen 20 Oct 2026 with the UI/UX Pro Max skill (`.claude/skills/ui-ux-pro-max`). The full token list and rules are in `design-system/MASTER.md`; this is the summary.
+- **Feel:** a precise tracking tool. Dark surfaces, hairline borders instead of heavy shadows, compact spacing, numbers that line up.
+- **Type:** Fira Sans for text and Fira Code for every number (amounts, calories, macros, weights, times), both SIL Open Font License 1.1, self-hosted from `@fontsource`. Numbers use tabular figures so columns align. Small uppercase labels with wide letter spacing name each figure ("KCAL", "LEFT").
+- **Color:** near-black background (#0B0B0C) with slightly lighter surfaces; the accent is Okabe-Ito sky blue. Nutrient colors stay Okabe-Ito everywhere (calories sky blue, protein vermillion, fat orange, carbs bluish green). Where a nutrient color is used for text, each theme has a text-safe shade that meets 4.5:1; bars and chart lines keep the exact Okabe-Ito colors.
+- **Shape:** 8 px corners on cards and controls, 12 px on sheets; 1 px borders; shadows only on floating layers (sheets, toasts, the selection bar).
+- **Density:** the Today strip leads with calories on one line and protein, fat and carbs beneath; entries are compact rows. Touch targets stay at least 44 px on touch screens.
 
 ---
 
@@ -427,11 +435,11 @@ Example, with 300 kcal, 40 P, 25 C, 8 F left: chicken breast 120 g (198 kcal, 37
 | Account | Profile, units, password, sessions, download my data, delete | Same, two columns | Delete confirms with password and typed "DELETE" |
 
 ### Today screen design and time-based logging
-The layout follows the reference screenshot's structure (target strip on top, time-ordered timeline below). All visual assets are our own: original food-category icons, our own typeface (Inter, SIL Open Font License 1.1, self-hosted from the `@fontsource-variable/inter` package **[V]**), palette and wording. No icons, artwork or copy are taken from MacroFactor or any other app.
+The layout follows the reference screenshot's structure (target strip on top, time-ordered timeline below). All visual assets are our own: original food-category icons, our own typefaces (Fira Sans and Fira Code, SIL Open Font License 1.1, self-hosted from the `@fontsource` packages), palette and wording. No icons, artwork or copy are taken from MacroFactor or any other app.
 
 **Header.** "Today" title (shows the date when browsing other days); buttons for the date picker, display options and an overflow menu. Swipe left or right on the header to change day.
 
-**Target strip.** Four columns: calories, protein, fat, carbs, each as "eaten / target" (for example "1774 / 2300") over a thin progress bar in that nutrient's color. Over target: the bar fills and the value shows "+42 over" in the same color at reduced opacity, no red alarm. A second swipe page shows remaining amounts plus fiber (with target), sugar and sodium. When water tracking is on, a water row sits under the strip: a bar toward the target and +250 ml and +500 ml buttons, one tap each. Paging dots under the strip.
+**Target strip.** Four columns: calories, protein, fat, carbs, each as "eaten / target" (for example "1774 / 2300") over a thin progress bar in that nutrient's color. Over target: the bar fills and the value shows "+42 over" in that nutrient's text-safe shade, no red alarm. A second swipe page shows remaining amounts plus fiber (with target), sugar and sodium. When water tracking is on, a water row sits under the strip: a bar toward the target and +250 ml and +500 ml buttons, one tap each. Paging dots under the strip.
 
 **Timeline.** A vertical rail on the left. Entries are grouped into **time blocks**: all entries with the same `eaten_at` minute form one block. Each block has:
 - a time pill ("4 PM" on the hour, otherwise "4:30 PM"; 24-hour if the user prefers),

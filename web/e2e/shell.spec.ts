@@ -75,11 +75,26 @@ test.describe('phone behaviour', () => {
   });
 });
 
-test('manual dark theme overrides a light device setting', async ({ page }) => {
+test('dark is the default, even on a light device', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/account');
-  await page.getByLabel('Theme').selectOption('dark');
-  await page.reload();
+  await expect(page.getByLabel('Theme')).toHaveValue('dark');
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  expect(bg).toBe('rgb(18, 18, 17)');
+  expect(bg).toBe('rgb(11, 11, 12)');
+});
+
+test('Match device follows a light device, and Light sticks on a dark one', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/account');
+  await page.getByLabel('Theme').selectOption('system');
+  await page.reload();
+  const body = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(await body()).toBe('rgb(246, 246, 247)');
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  expect(await body()).toBe('rgb(11, 11, 12)');
+
+  await page.getByLabel('Theme').selectOption('light');
+  await page.reload();
+  expect(await body()).toBe('rgb(246, 246, 247)');
 });

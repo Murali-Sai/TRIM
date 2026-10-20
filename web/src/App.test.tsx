@@ -69,17 +69,23 @@ test('marks the current section as active', async () => {
   expect(active.map((a) => a.textContent)).toEqual(['Body', 'Body']);
 });
 
-test('theme choice applies and persists', async () => {
+test('theme choice applies and persists; dark is the default', async () => {
   stubMe(ME);
   renderAt('/account');
   const select = await screen.findByLabelText('Theme');
+  expect(select).toHaveValue('dark');
+
+  fireEvent.change(select, { target: { value: 'light' } });
+  expect(document.documentElement.dataset.theme).toBe('light');
+  expect(localStorage.getItem('trim.theme')).toBe('light');
+
+  fireEvent.change(select, { target: { value: 'system' } });
+  expect(document.documentElement.dataset.theme).toBe('system');
+  expect(localStorage.getItem('trim.theme')).toBe('system');
+
   fireEvent.change(select, { target: { value: 'dark' } });
   expect(document.documentElement.dataset.theme).toBe('dark');
   expect(localStorage.getItem('trim.theme')).toBe('dark');
-
-  fireEvent.change(select, { target: { value: 'system' } });
-  expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-  expect(localStorage.getItem('trim.theme')).toBeNull();
 });
 
 test('signed-out visitors are sent to the landing page', async () => {

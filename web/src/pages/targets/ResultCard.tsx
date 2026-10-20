@@ -179,14 +179,16 @@ export function ResultCard({ result: r }: { result: CalcResult }) {
         Your maintenance calories
       </h3>
       <p className="mt-1">
-        <span className="text-4xl font-bold" data-testid="tdee">
+        <span className="num text-4xl font-semibold" data-testid="tdee">
           {formatNumber(r.tdee)}
         </span>{' '}
         kcal a day
       </p>
       <p className="text-sm text-text-secondary">{formatNumber(r.weekly_tdee)} a week</p>
       <div className="mt-2 flex items-start text-sm text-text-secondary">
-        <p data-testid="bmr">BMR {formatNumber(r.bmr)} kcal</p>
+        <p className="num" data-testid="bmr">
+          BMR {formatNumber(r.bmr)} kcal
+        </p>
         <InfoToggle label="About BMR and maintenance">
           BMR is the energy your body uses at rest. Maintenance adds your daily activity, so eating
           this much keeps your weight about the same.

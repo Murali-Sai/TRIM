@@ -45,7 +45,7 @@ const PATHS: Record<FoodCategory, ReactNode> = {
 
 export function FoodIcon({ category }: { category: FoodCategory }) {
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text-secondary">
+    <span className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text-secondary">
       <svg
         viewBox="0 0 24 24"
         width="22"

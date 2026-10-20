@@ -122,10 +122,7 @@ export function EditEntrySheet(p: Props) {
           </div>
         </div>
 
-        <p
-          className="rounded-lg bg-surface-2 px-3 py-2 text-sm tabular-nums"
-          data-testid="edit-preview"
-        >
+        <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm num" data-testid="edit-preview">
           {preview
             ? `${macroLine(preview)} · ${formatNumber(read.grams ?? 0)} g`
             : e.grams === null

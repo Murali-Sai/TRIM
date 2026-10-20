@@ -94,7 +94,7 @@ function EntryCard({
       </label>
       <button
         type="button"
-        className="flex min-w-0 flex-1 cursor-pointer items-start gap-3 rounded-xl p-3 text-left [-webkit-touch-callout:none]"
+        className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5 rounded-xl p-2.5 text-left sm:gap-3 sm:p-3 [-webkit-touch-callout:none]"
         // While selecting, the checkbox is the accessible control; the card is a big target.
         aria-label={actions.selecting ? undefined : `Edit ${e.name}`}
         aria-hidden={actions.selecting ? true : undefined}
@@ -132,7 +132,7 @@ function EntryCard({
             {e.brand ? <span className="font-normal text-text-secondary"> {e.brand}</span> : null}
           </span>
           <span
-            className="mt-0.5 block text-sm text-text-secondary tabular-nums"
+            className="num mt-0.5 block text-[13px] text-text-secondary sm:text-sm"
             data-testid="entry-macros"
           >
             {macroLine(e)}
@@ -218,7 +218,7 @@ export function Timeline({ blocks, scrollToLatest, highlight, ...actions }: Prop
           >
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className="relative z-[1] rounded-full bg-text px-3 py-1 text-sm font-semibold text-surface"
+                className="num relative z-[1] rounded-full bg-text px-3 py-1 text-sm font-semibold text-surface"
                 data-testid="block-pill"
               >
                 {b.label}
@@ -242,7 +242,7 @@ export function Timeline({ blocks, scrollToLatest, highlight, ...actions }: Prop
                 {CHIPS.map((c) => (
                   <li
                     key={c.key}
-                    className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold tabular-nums"
+                    className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold num"
                     style={{ boxShadow: `inset 0 -2px 0 var(--color-${c.color})` }}
                     data-testid={`chip-${c.key}`}
                   >
@@ -252,7 +252,7 @@ export function Timeline({ blocks, scrollToLatest, highlight, ...actions }: Prop
                 ))}
               </ul>
             </div>
-            <ul className="mt-3 flex flex-col gap-2 pl-10">
+            <ul className="mt-3 flex flex-col gap-2 pl-6 sm:pl-10">
               {b.entries.map((e) => (
                 <EntryCard
                   key={e.id}

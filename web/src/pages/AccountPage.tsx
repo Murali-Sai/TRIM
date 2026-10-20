@@ -13,9 +13,9 @@ import { ProfileSection } from './account/ProfileSection';
 import { secondaryButton, Section } from './account/Section';
 
 const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
-  { value: 'system', label: 'Match device' },
-  { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+  { value: 'system', label: 'Match device' },
 ];
 
 function TargetsSection() {
