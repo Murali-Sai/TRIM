@@ -26,10 +26,12 @@ from app.models import (
     StreakEvent,
     Target,
     User,
+    UserBadge,
     UserProfile,
     UserSettings,
     UserStreak,
     WaterLog,
+    WeeklyGoal,
     WeightEntry,
 )
 
@@ -114,6 +116,16 @@ def seed_user(label: str) -> Seeded:
         s.add(UserSettings(user_id=user_id, track_water=True))
         s.add(UserStreak(user_id=user_id, current_days=3, longest_days=3))
         s.add(StreakEvent(user_id=user_id, on_date=date(2026, 10, 17), kind="counted"))
+        s.add(
+            WeeklyGoal(
+                user_id=user_id,
+                week_start=date(2026, 10, 12),
+                kind="log_food",
+                position=0,
+                needed=5,
+            )
+        )
+        s.add(UserBadge(user_id=user_id, badge="streak_7", earned_at=datetime.now(UTC)))
         s.add(
             WaterLog(
                 user_id=user_id,

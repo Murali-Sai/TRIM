@@ -442,6 +442,42 @@ class StreakEvent(Timestamps, Base):
     kind: Mapped[str] = mapped_column(Text)
 
 
+GOAL_KINDS = ("log_food", "protein", "calories", "weigh_in", "water", "measurement")
+
+
+class WeeklyGoal(Timestamps, Base):
+    """One of the week's three goals (app/goals.py). completed_at is set the first time the
+    goal is met; closed once the week has ended and was checked for the last time."""
+
+    __tablename__ = "weekly_goals"
+    __table_args__ = (
+        CheckConstraint(_in("kind", GOAL_KINDS), name="kind"),
+        CheckConstraint("needed > 0", name="needed_positive"),
+        Index("uq_weekly_goals_user_week_kind", "user_id", "week_start", "kind", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    week_start: Mapped[date] = mapped_column(Date)
+    kind: Mapped[str] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(SmallInteger)
+    needed: Mapped[int] = mapped_column(Integer)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closed: Mapped[bool] = mapped_column(Boolean, server_default=false())
+
+
+class UserBadge(Timestamps, Base):
+    """A badge earned, once (the unique index makes awarding idempotent)."""
+
+    __tablename__ = "user_badges"
+    __table_args__ = (Index("uq_user_badges_user_badge", "user_id", "badge", unique=True),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    badge: Mapped[str] = mapped_column(Text)
+    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 WATER_UNITS = ("ml", "fl_oz")
 
 
@@ -506,6 +542,8 @@ RLS_TABLES: dict[str, str] = {
     "water_logs": "user_id",
     "user_streaks": "user_id",
     "streak_events": "user_id",
+    "weekly_goals": "user_id",
+    "user_badges": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column

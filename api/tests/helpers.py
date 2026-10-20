@@ -120,6 +120,20 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
             ),
             {"u": user_id},
         )
+        conn.execute(
+            text(
+                "INSERT INTO weekly_goals (id, user_id, week_start, kind, position, needed) "
+                "VALUES (gen_random_uuid(), :u, '2026-10-12', 'log_food', 0, 5)"
+            ),
+            {"u": user_id},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO user_badges (id, user_id, badge, earned_at) "
+                "VALUES (gen_random_uuid(), :u, 'streak_7', now())"
+            ),
+            {"u": user_id},
+        )
         water_id = conn.execute(
             text(
                 "INSERT INTO water_logs (id, user_id, logged_at, logged_on, ml) VALUES "
