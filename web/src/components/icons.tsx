@@ -94,3 +94,23 @@ export function ChevronIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** The streak flame (original drawing). */
+export function FlameIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 21c-3.6 0-6.5-2.6-6.5-6.2 0-2.9 1.8-4.9 3.4-6.6.3 1.6 1.1 2.7 2.2 3.2-.3-3.3 1.2-6.2 3.9-8.4-.1 2.8 1 4.5 2.4 6.2 1 1.3 1.6 2.8 1.6 4.7 0 4.2-3.2 7.1-7 7.1Z" />
+      <path d="M12 21c-1.6 0-2.8-1.2-2.8-2.8 0-1.4 1-2.4 2-3.4.4 1 1 1.5 1.8 1.7.1-.9.6-1.6 1.2-2.2.4.8.7 1.6.7 2.6 0 2.4-1.2 4.1-2.9 4.1Z" />
+    </Icon>
+  );
+}
+
+/** A freeze, shown on days a freeze kept the streak going. */
+export function SnowflakeIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" />
+      <path d="m9.5 4.5 2.5 2 2.5-2M9.5 19.5l2.5-2 2.5 2" />
+    </Icon>
+  );
+}

@@ -31,26 +31,35 @@ class SettingsOut(BaseModel):
     track_water: bool
     track_fiber: bool
     water_unit: WaterUnit
+    # Streaks, goals and badges shown (they are always kept, so turning back on restores them).
+    gamification: bool
 
 
 class SettingsPatch(BaseModel):
     track_water: bool | None = None
     track_fiber: bool | None = None
     water_unit: WaterUnit | None = None
+    gamification: bool | None = None
 
 
-DEFAULTS = SettingsOut(track_water=False, track_fiber=True, water_unit="ml")
+DEFAULTS = SettingsOut(track_water=False, track_fiber=True, water_unit="ml", gamification=True)
 
 
 def _settings(s: Any, user_id: Any) -> SettingsOut:
     row = s.execute(
-        text("SELECT track_water, track_fiber, water_unit FROM user_settings WHERE user_id = :u"),
+        text(
+            "SELECT track_water, track_fiber, water_unit, gamification FROM user_settings "
+            "WHERE user_id = :u"
+        ),
         {"u": user_id},
     ).one_or_none()
     if row is None:
         return DEFAULTS
     return SettingsOut(
-        track_water=row.track_water, track_fiber=row.track_fiber, water_unit=row.water_unit
+        track_water=row.track_water,
+        track_fiber=row.track_fiber,
+        water_unit=row.water_unit,
+        gamification=row.gamification,
     )
 
 
@@ -66,15 +75,17 @@ def patch_settings(body: SettingsPatch, user: ActiveUserDep) -> SettingsOut:
         merged = _settings(s, user.user_id).model_copy(update=body.model_dump(exclude_none=True))
         s.execute(
             text(
-                "INSERT INTO user_settings (user_id, track_water, track_fiber, water_unit) "
-                "VALUES (:u, :w, :f, :unit) ON CONFLICT (user_id) DO UPDATE SET "
-                "track_water = :w, track_fiber = :f, water_unit = :unit, updated_at = now()"
+                "INSERT INTO user_settings (user_id, track_water, track_fiber, water_unit, "
+                "gamification) VALUES (:u, :w, :f, :unit, :g) ON CONFLICT (user_id) DO UPDATE SET "
+                "track_water = :w, track_fiber = :f, water_unit = :unit, gamification = :g, "
+                "updated_at = now()"
             ),
             {
                 "u": user.user_id,
                 "w": merged.track_water,
                 "f": merged.track_fiber,
                 "unit": merged.water_unit,
+                "g": merged.gamification,
             },
         )
         return merged

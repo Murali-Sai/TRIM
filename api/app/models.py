@@ -494,6 +494,8 @@ class UserSettings(Timestamps, Base):
     track_water: Mapped[bool] = mapped_column(Boolean, server_default=false())
     track_fiber: Mapped[bool] = mapped_column(Boolean, server_default=true())
     water_unit: Mapped[str] = mapped_column(Text, server_default="ml")
+    # Streaks and badges (SPEC: off switch). Off hides them everywhere; data keeps being kept.
+    gamification: Mapped[bool] = mapped_column(Boolean, server_default=true())
 
 
 class WaterLog(Timestamps, Base):

@@ -2,6 +2,7 @@ import { Navigate, NavLink, Outlet } from 'react-router';
 import { useMe } from '../api/auth';
 import { useLogout } from '../useLogout';
 import { PlusIcon } from './icons';
+import { StreakFlame } from './streak/StreakFlame';
 import { NAV_ITEMS } from './nav';
 import { TitleBlock } from './TitleBlock';
 import { VerifyBanner, VerifyRequired } from './VerifyNotice';
@@ -39,7 +40,13 @@ export function AppShell() {
         aria-label="Main"
         className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-64 lg:shrink-0 lg:flex-col lg:gap-6 lg:border-r lg:border-border lg:bg-surface lg:px-4 lg:py-6"
       >
-        <TitleBlock variant="sidebar" className="px-1" />
+        {/* The flame sits on the TRIM line, to the right, clear of the full form below. */}
+        <div className="relative">
+          <TitleBlock variant="sidebar" className="px-1" />
+          <div className="absolute -right-2 top-0">
+            <StreakFlame placement="sidebar" />
+          </div>
+        </div>
         <NavLink
           to="/log"
           className="tap flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-contrast"
@@ -73,8 +80,9 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="sticky top-0 z-10 border-b border-border bg-surface pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-safe-top lg:hidden">
-          <div className="flex h-14 items-center">
+          <div className="flex h-14 items-center justify-between gap-2">
             <TitleBlock variant="header" />
+            <StreakFlame placement="header" />
           </div>
         </div>
 
