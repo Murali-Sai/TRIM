@@ -1,10 +1,19 @@
 """Fakes for everything outside the process, so tests never call Turnstile, HIBP or Resend."""
 
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Any
 
 from app.email.layout import RenderedEmail
+from app.services.fooddata import (
+    FoodCandidate,
+    FoodSourceError,
+    parse_fdc_food,
+    parse_off_product,
+)
 from app.services.registry import Services
 
 
@@ -61,14 +70,54 @@ class FakeClock:
         self.now += timedelta(**kwargs)
 
 
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def load_fixture(name: str) -> Any:
+    return json.loads((FIXTURES / name).read_text())
+
+
+class FakeFoodSource:
+    """Serves parsed fixture results; records each query; can be made to fail."""
+
+    def __init__(self, results: list[FoodCandidate] | None = None) -> None:
+        self.results = results or []
+        self.fail = False
+        self.calls: list[str] = []
+
+    def search(self, query: str, limit: int) -> list[FoodCandidate]:
+        self.calls.append(query)
+        if self.fail:
+            raise FoodSourceError("fake outage")
+        return self.results[:limit]
+
+
+def fdc_fixture() -> list[FoodCandidate]:
+    foods = load_fixture("fdc_search_greek_yogurt.json")["foods"]
+    return [c for c in (parse_fdc_food(f) for f in foods) if c is not None]
+
+
+def off_fixture() -> list[FoodCandidate]:
+    products = load_fixture("off_search_skyr.json")["products"]
+    return [c for c in (parse_off_product(p) for p in products) if c is not None]
+
+
 @dataclass
 class Fakes:
     human: FakeHumanCheck = field(default_factory=FakeHumanCheck)
     breach: FakeBreach = field(default_factory=FakeBreach)
     outbox: MemoryOutbox = field(default_factory=MemoryOutbox)
     clock: FakeClock = field(default_factory=FakeClock)
+    # Empty by default, so tests that do not search never see external foods.
+    fdc: FakeFoodSource = field(default_factory=lambda: FakeFoodSource())
+    off: FakeFoodSource = field(default_factory=lambda: FakeFoodSource())
 
     def services(self) -> Services:
         return Services(
-            human_check=self.human, breach=self.breach, email=self.outbox, clock=self.clock
+            human_check=self.human,
+            breach=self.breach,
+            email=self.outbox,
+            clock=self.clock,
+            fdc=self.fdc,
+            off=self.off,
         )

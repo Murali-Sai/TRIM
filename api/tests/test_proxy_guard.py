@@ -7,7 +7,7 @@ from collections.abc import Iterator
 import pytest
 from pydantic import ValidationError
 
-from app.config import Settings, get_settings
+from app.config import DEV_OFF_USER_AGENT, Settings, get_settings
 from tests.conftest import CsrfClient
 
 SECRET = "s" * 40
@@ -84,9 +84,27 @@ def test_prod_requires_a_long_proxy_secret() -> None:
         "ip_hash_pepper": "real-pepper",
         "resend_api_key": "re_real",
         "cookie_secure": True,
+        "fdc_api_key": "real-fdc-key",
+        "off_user_agent": "TRIM/1.0 (ops@example.com)",
     }
     with pytest.raises(ValidationError, match="TRIM_PROXY_SECRET"):
         Settings(**base)  # type: ignore[arg-type]
     with pytest.raises(ValidationError, match="TRIM_PROXY_SECRET"):
         Settings(**base, proxy_secret="short")  # type: ignore[arg-type]
     assert Settings(**base, proxy_secret=SECRET).proxy_secret is not None  # type: ignore[arg-type]
+
+
+def test_prod_requires_food_search_config() -> None:
+    base = {
+        "env": "prod",
+        "turnstile_secret": "real-turnstile-secret",
+        "ip_hash_pepper": "real-pepper",
+        "resend_api_key": "re_real",
+        "cookie_secure": True,
+        "proxy_secret": SECRET,
+        "off_user_agent": "TRIM/1.0 (ops@example.com)",
+    }
+    with pytest.raises(ValidationError, match="TRIM_FDC_API_KEY"):
+        Settings(**base)  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match="TRIM_OFF_USER_AGENT"):
+        Settings(**{**base, "fdc_api_key": "k", "off_user_agent": DEV_OFF_USER_AGENT})  # type: ignore[arg-type]

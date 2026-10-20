@@ -259,6 +259,8 @@ class Food(Timestamps, Base):
     sugar_100: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
     sodium_mg_100: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
     density_g_ml: Mapped[Decimal | None] = mapped_column(Numeric(6, 3))
+    # Energy differs from 4P + 4C + 9F by more than 15%: shown with a "check the label" note.
+    kcal_mismatch: Mapped[bool] = mapped_column(Boolean, server_default=false())
 
 
 class ServingUnit(Timestamps, Base):
@@ -331,6 +333,18 @@ class FoodLog(Timestamps, Base):
     sugar_g: Mapped[Decimal | None] = mapped_column(Numeric(7, 2))
     sodium_mg: Mapped[Decimal | None] = mapped_column(Numeric(9, 2))
     source: Mapped[str] = mapped_column(Text)
+
+
+class FoodQuery(Base):
+    """When FoodData Central or Open Food Facts last answered a search, so each source is asked
+    at most once per query in 30 days. Holds a hash of the normalized query, never the text,
+    and nothing about who searched. Read and written only through food_query_* functions."""
+
+    __tablename__ = "food_queries"
+
+    source: Mapped[str] = mapped_column(Text, primary_key=True)
+    query_hash: Mapped[bytes] = mapped_column(LargeBinary, primary_key=True)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 # Every table that row-level security protects, with the column that names the owner.

@@ -7,6 +7,7 @@ import httpx
 from app.config import Settings
 from app.services.breach import BreachChecker, NoBreachCheck, PwnedPasswords
 from app.services.email import EmailSender, OutboxSender, ResendSender
+from app.services.fooddata import FdcClient, FoodSource, NoFoodSource, OffClient
 from app.services.turnstile import HumanCheck, Turnstile
 
 
@@ -22,6 +23,8 @@ class Services:
     breach: BreachChecker
     email: EmailSender
     clock: Callable[[], datetime] = field(default=utc_now)
+    fdc: FoodSource = field(default_factory=NoFoodSource)
+    off: FoodSource = field(default_factory=NoFoodSource)
 
 
 def build_services(settings: Settings) -> Services:
@@ -37,4 +40,10 @@ def build_services(settings: Settings) -> Services:
         human_check=Turnstile(client, settings.turnstile_secret.get_secret_value()),
         breach=PwnedPasswords(client) if settings.breach_check_enabled else NoBreachCheck(),
         email=email,
+        fdc=(
+            FdcClient(client, settings.fdc_api_key.get_secret_value())
+            if settings.fdc_api_key is not None
+            else NoFoodSource()
+        ),
+        off=OffClient(client, settings.off_user_agent),
     )

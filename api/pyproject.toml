@@ -42,7 +42,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
 strict = true
 python_version = "3.12"
 plugins = ["pydantic.mypy"]
-files = ["app", "tests", "migrations"]
+files = ["app", "tests", "migrations", "tools"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

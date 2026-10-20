@@ -94,7 +94,8 @@ def b_client(app: FastAPI) -> tuple[CsrfClient, str]:
 
 def call(client: CsrfClient, ep: Endpoint, ctx: Ctx) -> Any:
     path = ep.path.format(**ep.path_params(ctx)) if ep.path_params else ep.path
-    kwargs: dict[str, Any] = {"params": {"user_id": ctx.a_user_id}}
+    params = ep.params(ctx) if ep.params else {}
+    kwargs: dict[str, Any] = {"params": {**params, "user_id": ctx.a_user_id}}
     if ep.method != "GET":
         body = ep.body(ctx) if ep.body else {}
         if isinstance(body, dict):
@@ -135,6 +136,7 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
     assert snapshot(owner_engine, a_id) == before, f"{name} changed user A's rows"
     secrets = [a_email, marker, str(a_id), *session_ids]
     secrets += [*ctx.a_weight_ids, *ctx.a_deleted_weight_ids]
+    secrets += [row[0] for row in before["foods"]]  # A's custom food ids
     for secret in secrets:
         assert secret.lower() not in res.text.lower(), f"{name} showed A's data to B"
 

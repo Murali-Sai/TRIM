@@ -1,0 +1,57 @@
+{
+  "_fixture": "Hand-written in the shape of the Open Food Facts search API (/cgi/search.pl?json=1 with fields=code,product_name,brands,nutriments,serving_quantity,serving_size). Brands and barcodes are invented. Re-record with api/tools/record_food_fixtures.py when network access allows.",
+  "count": 5,
+  "page": 1,
+  "page_size": 5,
+  "products": [
+    {
+      "code": "0000000000017",
+      "product_name": "Skyr natur",
+      "brands": "Examplefarm, Example Group",
+      "serving_quantity": 150,
+      "serving_size": "150 g",
+      "nutriments": {
+        "energy-kcal_100g": 63,
+        "energy_100g": 264,
+        "proteins_100g": 11,
+        "carbohydrates_100g": 4,
+        "sugars_100g": 4,
+        "fat_100g": 0.2,
+        "sodium_100g": 0.04
+      }
+    },
+    {
+      "code": "0000000000024",
+      "product_name": "Skyr vanilla",
+      "brands": "Examplefarm",
+      "nutriments": {
+        "energy_100g": 340,
+        "proteins_100g": 9,
+        "carbohydrates_100g": 9.5,
+        "fat_100g": 0.2
+      }
+    },
+    {
+      "code": "0000000000031",
+      "product_name": "Skyr drink",
+      "brands": "Examplefarm",
+      "serving_quantity": "250",
+      "serving_size": "1 bottle (250 ml)",
+      "nutriments": {
+        "energy-kcal_serving": 150,
+        "proteins_serving": 15,
+        "carbohydrates_serving": 18,
+        "fat_serving": 1.5
+      }
+    },
+    {
+      "code": "0000000000048",
+      "product_name": "Skyr mystery",
+      "nutriments": {}
+    },
+    {
+      "code": "0000000000055",
+      "nutriments": { "energy-kcal_100g": 70, "proteins_100g": 10, "carbohydrates_100g": 4, "fat_100g": 1 }
+    }
+  ]
+}

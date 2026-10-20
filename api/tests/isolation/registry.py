@@ -7,6 +7,7 @@ For each endpoint:
 - requires_session: without a session cookie it must answer 401.
 - body: what B sends. The harness also slips A's ids into every JSON body (user_id, id), which
   must be ignored: the user always comes from the session.
+- params: query string B sends (the harness always adds A's user_id too).
 - path_params: for endpoints that take an id in the path, the harness passes A's id and expects
   404 (not 403, so B cannot even learn that the id exists).
 """
@@ -42,6 +43,7 @@ class Endpoint:
     requires_session: bool
     body: Callable[[Ctx], Any] | None = None
     path_params: Callable[[Ctx], dict[str, str]] | None = None
+    params: Callable[[Ctx], dict[str, str]] | None = None
 
 
 BODY_STATS = {
@@ -152,5 +154,12 @@ ENDPOINTS: list[Endpoint] = [
         "/api/weights/{entry_id}/restore",
         requires_session=True,
         path_params=lambda c: {"entry_id": c.a_deleted_weight_ids[0]},
+    ),
+    # A has a custom food named "Overnight oats" (tests.helpers.seed_food_rows).
+    Endpoint(
+        "GET",
+        "/api/foods/search",
+        requires_session=True,
+        params=lambda c: {"q": "Overnight oats"},
     ),
 ]

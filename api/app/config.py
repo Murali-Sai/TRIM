@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Cloudflare's published test secret: always passes, and only accepts the dummy token.
 TURNSTILE_TEST_SECRET = "1x0000000000000000000000000000000AA"  # noqa: S105
+DEV_OFF_USER_AGENT = "TRIM/0.1 (development build)"
 
 
 class Settings(BaseSettings):
@@ -36,6 +37,11 @@ class Settings(BaseSettings):
     email_from: str = "TRIM <no-reply@localhost>"
     outbox_dir: str = ".outbox"
 
+    # Food search. No FDC key means search uses only personal foods, the cache and OFF.
+    fdc_api_key: SecretStr | None = None
+    # Open Food Facts asks every app to identify itself: "AppName/Version (contact)".
+    off_user_agent: str = DEV_OFF_USER_AGENT
+
     @model_validator(mode="after")
     def _no_dev_defaults_in_prod(self) -> "Settings":
         if self.env == "prod":
@@ -49,6 +55,10 @@ class Settings(BaseSettings):
                 raise ValueError("TRIM_COOKIE_SECURE must be true in prod")
             if self.proxy_secret is None or len(self.proxy_secret.get_secret_value()) < 32:
                 raise ValueError("TRIM_PROXY_SECRET must be set (32+ characters) in prod")
+            if self.fdc_api_key is None:
+                raise ValueError("TRIM_FDC_API_KEY must be set in prod")
+            if self.off_user_agent == DEV_OFF_USER_AGENT:
+                raise ValueError("TRIM_OFF_USER_AGENT must name the app and a contact in prod")
         return self
 
 

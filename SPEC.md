@@ -188,9 +188,9 @@ The server is the source of truth. TanStack Query gives instant screens and opti
 
 ### Food search waterfall (text)
 1. **Personal:** the user's custom foods, favourites and previously logged foods.
-2. **Cache:** shared `foods` rows from earlier lookups (refresh after 30 days).
+2. **Cache:** shared `foods` rows from earlier lookups (refresh after 30 days). FoodData Central is asked when tiers 1 and 2 return fewer than 10 results; each external source is asked at most once per query in 30 days (a hash of the normalized query is kept, never the text). The API writes the cache only through the `cache_food()` database function.
 3. **USDA FoodData Central:** CC0 public domain; data.gov key, default 1,000 requests per hour; the key must stay private **[V]**. Search Foundation, SR Legacy and Branded.
-4. **Open Food Facts:** ODbL licence; custom User-Agent required **[V]**; search is rate limited more tightly than product reads (about 10 per minute **[?]**), so it is queried only when tiers 1 to 3 return fewer than 5 results. Attribution shown on food detail. Because OFF-derived rows are now served to many users, the shared cache counts as a derived database under ODbL share-alike; keep OFF rows flagged and offer them as an ODbL dump if ever published **[?, legal check before public launch]**.
+4. **Open Food Facts:** ODbL licence; custom User-Agent required **[V]**; search is limited to 10 requests a minute per IP (product reads 15) and must not be used for search-as-you-type **[V, OFF API docs, checked 20 Oct 2026]**. Every user's search leaves from our IP, so the API keeps one shared budget of 8 OFF searches a minute and queries OFF only when tiers 1 to 3 return fewer than 5 results. Attribution shown on food detail. Because OFF-derived rows are now served to many users, the shared cache counts as a derived database under ODbL share-alike; keep OFF rows flagged and offer them as an ODbL dump if ever published **[?, legal check before public launch]**.
 5. **Manual entry**, saved as a private custom food.
 
 Normalization: store per 100 g (per 100 ml with density, default 1.0 g/ml); serving units as rows; per100 = per_serving / serving_g x 100. Flag foods where kcal differs from 4P + 4C + 9F by more than 15%. Users can override any shared food; the override is private to them.

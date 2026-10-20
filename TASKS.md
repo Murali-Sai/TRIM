@@ -24,7 +24,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 
 ## Milestone 3: Food logging, dashboard, charts
 - [x] **3.1 foods, serving_units, food_logs, targets schema**. AC: migrations up and down. (853c69e)
-- [ ] **3.2 Search waterfall (personal, cache, FDC, OFF)**. AC: recorded-fixture tests per tier.
+- [x] **3.2 Search waterfall (personal, cache, FDC, OFF)**. AC: recorded-fixture tests per tier. (978c78a; fixtures hand-written in the documented shapes until they can be re-recorded with api/tools/record_food_fixtures.py)
 - [ ] **3.3 Targets editor and TDEE calculator page**: custom edits, "Reset to formula", recalculate with latest trend weight, old vs new confirmation, TDEE table for all five levels. AC: editing calories recalculates carbs only; targets never change without the user tapping "Use these targets" or saving an edit.
 - [ ] **3.4 Time-based logging**: `eaten_at` on food_logs, time chip with Now, -30 min, -1 h and last-used, backdating to past days. AC: food logged at 19:00 for 16:00 lands in the 4 PM block and on the correct local date.
 - [ ] **3.5 Today timeline**: target strip with paging, time blocks with pill, "+" and subtotal chips, entry cards, empty state. AC: the reference fixture day (6 items at 4:00 PM) shows 1774 kcal, 148 P, 44 F, 193 C at 375 px and 1280 px.

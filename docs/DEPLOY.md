@@ -43,6 +43,8 @@ environment variables, keeping the secret ones in Secret Manager:
 | `TRIM_TURNSTILE_SECRET` | from the Turnstile widget |
 | `TRIM_RESEND_API_KEY` | from Resend, with your domain verified |
 | `TRIM_EMAIL_FROM` | for example `TRIM <no-reply@<domain>>` |
+| `TRIM_FDC_API_KEY` | a free data.gov key for USDA FoodData Central (1,000 requests an hour); server only |
+| `TRIM_OFF_USER_AGENT` | names the app and a contact, for example `TRIM/1.0 (you@<domain>)`, as Open Food Facts asks |
 
 On Neon, create the roles once (the Docker database does this in `db/init/01-roles.sql`):
 `trim_app` NOLOGIN NOBYPASSRLS, and a login role that is a member of it. Then run

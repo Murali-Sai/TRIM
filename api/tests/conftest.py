@@ -102,9 +102,12 @@ def fakes() -> Fakes:
 
 @pytest.fixture
 def client(owner_engine: Engine, fakes: Fakes) -> Iterator[CsrfClient]:
-    """App client on the test database with fakes; rate limits start empty for each test."""
+    """App client on the test database with fakes; rate limits and the food cache start empty
+    for each test."""
     with owner_engine.begin() as conn:
-        conn.execute(text("TRUNCATE rate_events, rate_locks"))
+        conn.execute(text("TRUNCATE rate_events, rate_locks, food_queries"))
+        # The shared food cache starts empty too; custom foods belong to their users.
+        conn.execute(text("DELETE FROM foods WHERE owner_id IS NULL"))
     from app.main import create_app
 
     with CsrfClient(create_app(fakes.services())) as c:
