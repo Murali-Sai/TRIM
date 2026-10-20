@@ -1,0 +1,417 @@
+{
+  "about": "Shared test vectors for the trend math (SPEC page 3, Algorithms). Both web/src/lib/trend.ts and api/app/trend.py must pass every case. Trend values and rates are checked to 0.01; gap alphas to 0.001.",
+  "gap_alpha": [
+    {
+      "name": "SPEC: one day at 0.1 is 0.1",
+      "alpha": 0.1,
+      "days": 1,
+      "expect": 0.1
+    },
+    {
+      "name": "SPEC: three days at 0.1 is 0.271",
+      "alpha": 0.1,
+      "days": 3,
+      "expect": 0.271
+    },
+    { "name": "a week at 0.1", "alpha": 0.1, "days": 7, "expect": 0.5217 },
+    {
+      "name": "measurements: two days at 0.25",
+      "alpha": 0.25,
+      "days": 2,
+      "expect": 0.4375
+    }
+  ],
+  "trend": [
+    {
+      "name": "SPEC worked example: 80.00, 79.50 next day, 79.20 three days later",
+      "readings": [
+        { "day": "2026-10-01", "at": "2026-10-01T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-02", "at": "2026-10-02T07:00:00Z", "value": 79.5 },
+        { "day": "2026-10-05", "at": "2026-10-05T07:00:00Z", "value": 79.2 }
+      ],
+      "expect": {
+        "points": [
+          {
+            "day": "2026-10-01",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-02",
+            "trend": 79.95,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-05",
+            "trend": 79.75,
+            "outlier": false,
+            "counted": true
+          }
+        ],
+        "visible": false,
+        "readings_needed": 2,
+        "days_needed": 2
+      }
+    },
+    {
+      "name": "measurements use alpha 0.25",
+      "alpha": 0.25,
+      "readings": [
+        { "day": "2026-10-01", "at": "2026-10-01T07:00:00Z", "value": 90.0 },
+        { "day": "2026-10-03", "at": "2026-10-03T07:00:00Z", "value": 89.0 }
+      ],
+      "expect": {
+        "points": [
+          {
+            "day": "2026-10-01",
+            "trend": 90.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-03",
+            "trend": 89.5625,
+            "outlier": false,
+            "counted": true
+          }
+        ],
+        "visible": false,
+        "readings_needed": 3,
+        "days_needed": 4
+      }
+    },
+    {
+      "name": "earliest reading of the day counts, whatever the input order",
+      "readings": [
+        { "day": "2026-10-01", "at": "2026-10-01T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-02", "at": "2026-10-02T19:00:00Z", "value": 81.0 },
+        { "day": "2026-10-02", "at": "2026-10-02T06:30:00Z", "value": 79.0 }
+      ],
+      "expect": {
+        "points": [
+          {
+            "day": "2026-10-01",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-02",
+            "trend": 79.9,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-02",
+            "trend": null,
+            "outlier": false,
+            "counted": false
+          }
+        ],
+        "visible": false,
+        "readings_needed": 3,
+        "days_needed": 5
+      }
+    },
+    {
+      "name": "outlier: more than 3% (2.4 kg at 80 kg) is excluded; the gap runs from the last counted day",
+      "readings": [
+        { "day": "2026-10-01", "at": "2026-10-01T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-02", "at": "2026-10-02T07:00:00Z", "value": 82.5 },
+        { "day": "2026-10-03", "at": "2026-10-03T07:00:00Z", "value": 80.2 }
+      ],
+      "expect": {
+        "points": [
+          {
+            "day": "2026-10-01",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-02",
+            "trend": null,
+            "outlier": true,
+            "counted": false
+          },
+          {
+            "day": "2026-10-03",
+            "trend": 80.038,
+            "outlier": false,
+            "counted": true
+          }
+        ],
+        "visible": false,
+        "readings_needed": 3,
+        "days_needed": 4
+      }
+    },
+    {
+      "name": "outlier boundary: exactly 3% is kept",
+      "readings": [
+        { "day": "2026-10-01", "at": "2026-10-01T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-02", "at": "2026-10-02T07:00:00Z", "value": 82.4 }
+      ],
+      "expect": {
+        "points": [
+          {
+            "day": "2026-10-01",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-02",
+            "trend": 80.24,
+            "outlier": false,
+            "counted": true
+          }
+        ],
+        "visible": false,
+        "readings_needed": 3,
+        "days_needed": 5
+      }
+    },
+    {
+      "name": "outlier: below 66.7 kg the 2.0 kg floor applies",
+      "readings": [
+        { "day": "2026-10-01", "at": "2026-10-01T07:00:00Z", "value": 50.0 },
+        { "day": "2026-10-02", "at": "2026-10-02T07:00:00Z", "value": 51.9 },
+        { "day": "2026-10-03", "at": "2026-10-03T07:00:00Z", "value": 47.9 }
+      ],
+      "expect": {
+        "points": [
+          {
+            "day": "2026-10-01",
+            "trend": 50.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-02",
+            "trend": 50.19,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-03",
+            "trend": null,
+            "outlier": true,
+            "counted": false
+          }
+        ],
+        "visible": false,
+        "readings_needed": 3,
+        "days_needed": 5
+      }
+    },
+    {
+      "name": "min points: 5 readings across 7 days (inclusive) shows the trend",
+      "readings": [
+        { "day": "2026-10-01", "at": "2026-10-01T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-02", "at": "2026-10-02T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-04", "at": "2026-10-04T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-05", "at": "2026-10-05T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-07", "at": "2026-10-07T07:00:00Z", "value": 80.0 }
+      ],
+      "expect": {
+        "points": [
+          {
+            "day": "2026-10-01",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-02",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-04",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-05",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-07",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          }
+        ],
+        "visible": true,
+        "readings_needed": 0,
+        "days_needed": 0
+      }
+    },
+    {
+      "name": "min points: 5 readings in 5 days is not enough",
+      "readings": [
+        { "day": "2026-10-01", "at": "2026-10-01T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-02", "at": "2026-10-02T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-03", "at": "2026-10-03T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-04", "at": "2026-10-04T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-05", "at": "2026-10-05T07:00:00Z", "value": 80.0 }
+      ],
+      "expect": {
+        "points": [
+          {
+            "day": "2026-10-01",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-02",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-03",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-04",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-05",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          }
+        ],
+        "visible": false,
+        "readings_needed": 0,
+        "days_needed": 2
+      }
+    },
+    {
+      "name": "min points: outliers and repeat readings in a day do not count",
+      "readings": [
+        { "day": "2026-10-01", "at": "2026-10-01T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-01", "at": "2026-10-01T20:00:00Z", "value": 80.5 },
+        { "day": "2026-10-03", "at": "2026-10-03T07:00:00Z", "value": 90.0 },
+        { "day": "2026-10-05", "at": "2026-10-05T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-07", "at": "2026-10-07T07:00:00Z", "value": 80.0 },
+        { "day": "2026-10-09", "at": "2026-10-09T07:00:00Z", "value": 80.0 }
+      ],
+      "expect": {
+        "points": [
+          {
+            "day": "2026-10-01",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-01",
+            "trend": null,
+            "outlier": false,
+            "counted": false
+          },
+          {
+            "day": "2026-10-03",
+            "trend": null,
+            "outlier": true,
+            "counted": false
+          },
+          {
+            "day": "2026-10-05",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-07",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          },
+          {
+            "day": "2026-10-09",
+            "trend": 80.0,
+            "outlier": false,
+            "counted": true
+          }
+        ],
+        "visible": false,
+        "readings_needed": 1,
+        "days_needed": 0
+      }
+    },
+    {
+      "name": "no readings",
+      "readings": [],
+      "expect": {
+        "points": [],
+        "visible": false,
+        "readings_needed": 5,
+        "days_needed": 7
+      }
+    }
+  ],
+  "weekly_rate": [
+    {
+      "name": "SPEC: -0.064 kg a day is -0.45 kg a week",
+      "points": [
+        { "day": "2026-10-04", "trend": 80.832 },
+        { "day": "2026-10-05", "trend": 80.768 },
+        { "day": "2026-10-06", "trend": 80.704 },
+        { "day": "2026-10-07", "trend": 80.64 },
+        { "day": "2026-10-08", "trend": 80.576 },
+        { "day": "2026-10-09", "trend": 80.512 },
+        { "day": "2026-10-10", "trend": 80.448 },
+        { "day": "2026-10-11", "trend": 80.384 },
+        { "day": "2026-10-12", "trend": 80.32 },
+        { "day": "2026-10-13", "trend": 80.256 },
+        { "day": "2026-10-14", "trend": 80.192 },
+        { "day": "2026-10-15", "trend": 80.128 },
+        { "day": "2026-10-16", "trend": 80.064 },
+        { "day": "2026-10-17", "trend": 80.0 }
+      ],
+      "expect": -0.448
+    },
+    {
+      "name": "only the last 14 days count; uneven gaps are fine",
+      "points": [
+        { "day": "2026-09-01", "trend": 95.0 },
+        { "day": "2026-10-03", "trend": 70.0 },
+        { "day": "2026-10-04", "trend": 80.0 },
+        { "day": "2026-10-08", "trend": 79.8 },
+        { "day": "2026-10-17", "trend": 79.35 }
+      ],
+      "expect": -0.35
+    },
+    {
+      "name": "points without a trend (outliers, repeat readings) are skipped",
+      "points": [
+        { "day": "2026-10-10", "trend": 80.0 },
+        { "day": "2026-10-11", "trend": null },
+        { "day": "2026-10-17", "trend": 79.3 }
+      ],
+      "expect": -0.7
+    },
+    {
+      "name": "one day of trend has no rate",
+      "points": [{ "day": "2026-10-17", "trend": 80.0 }],
+      "expect": null
+    },
+    { "name": "no points has no rate", "points": [], "expect": null }
+  ]
+}
