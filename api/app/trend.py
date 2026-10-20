@@ -3,9 +3,11 @@
 Mirrors web/src/lib/trend.ts; both pass shared/trend_vectors.json.
 """
 
+import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
+from typing import Literal
 
 WEIGHT_ALPHA = 0.1
 MEASUREMENT_ALPHA = 0.25
@@ -113,3 +115,37 @@ def weekly_rate(
     sxx = sum((x - mean_x) ** 2 for x, _ in recent)
     sxy = sum((x - mean_x) * (y - mean_y) for x, y in recent)
     return None if sxx == 0 else sxy / sxx * 7
+
+
+MIN_RATE_KG_PER_WEEK = 0.1
+MAX_WEEKS = 104
+
+
+@dataclass(frozen=True)
+class Projection:
+    """kind: "none" (no goal, or trend not visible), "no_projection" (flat, moving away or too
+    far), or "projection" with weeks and the local date (YYYY-MM-DD)."""
+
+    kind: Literal["none", "no_projection", "projection"]
+    weeks: float | None = None
+    date: str | None = None
+
+
+def project_goal(
+    trend_kg: float,
+    goal_kg: float | None,
+    weekly_rate_kg: float | None,
+    trend_visible: bool,
+    today: str,
+) -> Projection:
+    """Goal-date projection, exactly as in SPEC page 3. Mirrors web/src/lib/projection.ts."""
+    if goal_kg is None or not trend_visible:
+        return Projection("none")
+    if weekly_rate_kg is None or abs(weekly_rate_kg) < MIN_RATE_KG_PER_WEEK - EPSILON:
+        return Projection("no_projection")
+    weeks = (goal_kg - trend_kg) / weekly_rate_kg
+    if not weeks > 0 or weeks > MAX_WEEKS + EPSILON:
+        return Projection("no_projection")
+    # Half a day rounds up, as Math.round does in the TypeScript version.
+    on = date.fromordinal(day_number(today) + math.floor(weeks * 7 + 0.5))
+    return Projection("projection", weeks, on.isoformat())

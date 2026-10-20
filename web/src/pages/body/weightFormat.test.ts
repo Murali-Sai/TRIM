@@ -1,5 +1,13 @@
 import type { WeightEntry } from '../../api/weights';
-import { displayWeight, parseWeight, trendFor, trendSentence } from './weightFormat';
+import {
+  displayWeight,
+  formatLongDate,
+  parseWeight,
+  projectionFor,
+  projectionSentence,
+  trendFor,
+  trendSentence,
+} from './weightFormat';
 
 function entries(values: [string, number][]): WeightEntry[] {
   return values.map(([day, kg], i) => ({
@@ -83,5 +91,45 @@ describe('trendSentence', () => {
   test('flat is steady', () => {
     const t = trendFor(entries([1, 3, 5, 7, 9].map((d) => [`2026-10-0${d}`, 80])));
     expect(trendSentence(t, 'imperial')).toBe('Trend 176.4 lb, steady');
+  });
+});
+
+describe('projection sentence', () => {
+  // Five weigh-ins over 14 days that land the trend near 79.8 kg, falling.
+  const falling = trendFor(
+    entries(
+      Array.from({ length: 14 }, (_, i) => [
+        `2026-10-${String(4 + i).padStart(2, '0')}`,
+        80.6 - 0.064 * i,
+      ]),
+    ),
+  );
+
+  test('SPEC example wording and date', () => {
+    expect(
+      projectionSentence({ kind: 'projection', weeks: 10.67, date: '2026-12-31' }, 75, 'metric'),
+    ).toBe('75.0 kg goal around 31 Dec 2026 if your current rate continues.');
+  });
+
+  test('flat or wrong direction', () => {
+    expect(projectionSentence({ kind: 'no_projection' }, 75, 'metric')).toBe(
+      'No projection: your trend is flat or moving away from your goal.',
+    );
+  });
+
+  test('nothing without a goal', () => {
+    expect(projectionFor(falling, null, '2026-10-17')).toEqual({ kind: 'none' });
+    expect(projectionSentence({ kind: 'none' }, null, 'metric')).toBeNull();
+  });
+
+  test('projects from the latest trend and weekly rate', () => {
+    const p = projectionFor(falling, 75, '2026-10-17');
+    expect(p.kind).toBe('projection');
+    const away = projectionFor(falling, 90, '2026-10-17');
+    expect(away.kind).toBe('no_projection');
+  });
+
+  test('formatLongDate ignores the browser locale', () => {
+    expect(formatLongDate('2026-12-31')).toBe('31 Dec 2026');
   });
 });

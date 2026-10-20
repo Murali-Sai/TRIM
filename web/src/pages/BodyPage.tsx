@@ -18,7 +18,15 @@ import { Notice, secondaryButton, Section } from './account/Section';
 import { GoalWeight } from './body/GoalWeight';
 import { WeightEntryForm } from './body/WeightEntryForm';
 import { WeightHistory } from './body/WeightHistory';
-import { displayNumber, displayWeight, trendFor, trendSentence } from './body/weightFormat';
+import {
+  displayNumber,
+  displayWeight,
+  projectionFor,
+  projectionSentence,
+  trendFor,
+  trendSentence,
+} from './body/weightFormat';
+import { isoToZonedWall } from '../lib/zoned';
 
 // uPlot loads only when a chart is on screen, not with every page.
 const WeightChart = lazy(() =>
@@ -104,6 +112,9 @@ export function BodyPage() {
   const latest = entries.at(-1);
   const headline = trendSentence(trend, units);
   const goalKg = stats.data?.goal_weight_kg ?? null;
+  const today = isoToZonedWall(new Date().toISOString(), timeZone).slice(0, 10);
+  const projection = projectionFor(trend, goalKg, today);
+  const projectionText = projectionSentence(projection, goalKg, units);
 
   return (
     <section>
@@ -115,6 +126,11 @@ export function BodyPage() {
             {weights.isSuccess ? (
               <p className="mb-4 text-lg font-semibold" data-testid="trend-sentence">
                 {headline}
+              </p>
+            ) : null}
+            {weights.isSuccess && projectionText ? (
+              <p className="-mt-2 mb-4" data-testid="projection-sentence">
+                {projectionText}
               </p>
             ) : null}
             <WeightEntryForm
@@ -163,7 +179,8 @@ export function BodyPage() {
                   units={units}
                   timeZone={timeZone}
                   goalKg={goalKg}
-                  headline={headline}
+                  headline={projectionText ? `${headline}. ${projectionText}` : headline}
+                  projectionDate={projection.kind === 'projection' ? projection.date : null}
                 />
               </Suspense>
             </Section>
