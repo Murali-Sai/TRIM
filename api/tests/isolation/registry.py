@@ -342,4 +342,6 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         path_params=lambda c: {"water_id": c.a_water_ids[0]},
     ),
+    # A has a stored streak (tests.helpers.seed_food_rows); B gets only its own.
+    Endpoint("GET", "/api/streaks", requires_session=True, params=lambda c: {"month": "2026-10"}),
 ]
