@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { stubExternal } from './fixtures';
 import { COLOR_SCHEMES, VIEWPORTS } from './viewports';
 
-const ROUTES = ['/', '/log', '/body', '/charts', '/account'];
+const ROUTES = ['/', '/log', '/body', '/charts', '/charts/calories', '/charts/macros', '/account'];
 
 test.beforeEach(async ({ page }) => {
   await stubExternal(page);

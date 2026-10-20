@@ -181,6 +181,12 @@ ENDPOINTS: list[Endpoint] = [
     ),
     Endpoint("GET", "/api/logs/last-time", requires_session=True),
     Endpoint(
+        "GET",
+        "/api/logs/days",
+        requires_session=True,
+        params=lambda c: {"date_from": "2026-10-01", "date_to": "2026-10-31"},
+    ),
+    Endpoint(
         "PATCH",
         "/api/logs/{log_id}",
         requires_session=True,

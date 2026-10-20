@@ -1,3 +1,4 @@
+import type { DayTotal } from '../lib/nutritionSeries';
 import { deleteJson, getJson, patchJson, postJson } from './client';
 
 export interface LogEntry {
@@ -89,4 +90,9 @@ export function copyLogs(ids: string[], eaten_at: string) {
 /** Undo a whole add (such as a meal) in one step, by its log_group_id. */
 export function deleteGroup(groupId: string) {
   return deleteJson<null>(`/logs/groups/${groupId}`);
+}
+
+/** Totals per local day that has entries, oldest first (days with nothing logged are absent). */
+export function listDays(dateFrom: string, dateTo: string) {
+  return getJson<DayTotal[]>(`/logs/days?date_from=${dateFrom}&date_to=${dateTo}`);
 }

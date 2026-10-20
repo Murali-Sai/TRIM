@@ -1,0 +1,346 @@
+{
+  "_note": "Task 3.9 fixture month. Targets: 2,300 kcal from 1 Oct, 2,200 kcal from 16 Oct. On target means |kcal - target| / target at most 0.05 (SPEC page 3), so the bands are 2,185 to 2,415 and 2,090 to 2,310. Not logged: 6, 10, 20 and 26 Oct. Expected counts were made by hand, day by day.",
+  "targets": [
+    {
+      "effective_from": "2026-10-16",
+      "kcal": 2200,
+      "protein_g": 165,
+      "carbs_g": 220,
+      "fat_g": 73
+    },
+    {
+      "effective_from": "2026-10-01",
+      "kcal": 2300,
+      "protein_g": 172,
+      "carbs_g": 230,
+      "fat_g": 77
+    }
+  ],
+  "days": [
+    {
+      "date": "2026-10-01",
+      "entries": 3,
+      "kcal": 2300,
+      "protein_g": 172,
+      "carbs_g": 230,
+      "fat_g": 77,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-02",
+      "entries": 3,
+      "kcal": 2415,
+      "protein_g": 181,
+      "carbs_g": 242,
+      "fat_g": 80,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-03",
+      "entries": 3,
+      "kcal": 2416,
+      "protein_g": 181,
+      "carbs_g": 242,
+      "fat_g": 81,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-04",
+      "entries": 3,
+      "kcal": 2185,
+      "protein_g": 164,
+      "carbs_g": 218,
+      "fat_g": 73,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-05",
+      "entries": 3,
+      "kcal": 2184,
+      "protein_g": 164,
+      "carbs_g": 218,
+      "fat_g": 73,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-07",
+      "entries": 3,
+      "kcal": 1800,
+      "protein_g": 135,
+      "carbs_g": 180,
+      "fat_g": 60,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-08",
+      "entries": 3,
+      "kcal": 2250,
+      "protein_g": 169,
+      "carbs_g": 225,
+      "fat_g": 75,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-09",
+      "entries": 3,
+      "kcal": 2600,
+      "protein_g": 195,
+      "carbs_g": 260,
+      "fat_g": 87,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-11",
+      "entries": 3,
+      "kcal": 2350,
+      "protein_g": 176,
+      "carbs_g": 235,
+      "fat_g": 78,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-12",
+      "entries": 3,
+      "kcal": 2200,
+      "protein_g": 165,
+      "carbs_g": 220,
+      "fat_g": 73,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-13",
+      "entries": 3,
+      "kcal": 2000,
+      "protein_g": 150,
+      "carbs_g": 200,
+      "fat_g": 67,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-14",
+      "entries": 3,
+      "kcal": 2400,
+      "protein_g": 180,
+      "carbs_g": 240,
+      "fat_g": 80,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-15",
+      "entries": 3,
+      "kcal": 2310,
+      "protein_g": 173,
+      "carbs_g": 231,
+      "fat_g": 77,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-16",
+      "entries": 3,
+      "kcal": 2310,
+      "protein_g": 173,
+      "carbs_g": 231,
+      "fat_g": 77,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-17",
+      "entries": 3,
+      "kcal": 2311,
+      "protein_g": 173,
+      "carbs_g": 231,
+      "fat_g": 77,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-18",
+      "entries": 3,
+      "kcal": 2090,
+      "protein_g": 157,
+      "carbs_g": 209,
+      "fat_g": 70,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-19",
+      "entries": 3,
+      "kcal": 2089,
+      "protein_g": 157,
+      "carbs_g": 209,
+      "fat_g": 70,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-21",
+      "entries": 3,
+      "kcal": 2150,
+      "protein_g": 161,
+      "carbs_g": 215,
+      "fat_g": 72,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-22",
+      "entries": 3,
+      "kcal": 2500,
+      "protein_g": 188,
+      "carbs_g": 250,
+      "fat_g": 83,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-23",
+      "entries": 3,
+      "kcal": 1500,
+      "protein_g": 112,
+      "carbs_g": 150,
+      "fat_g": 50,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-24",
+      "entries": 3,
+      "kcal": 2200,
+      "protein_g": 165,
+      "carbs_g": 220,
+      "fat_g": 73,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-25",
+      "entries": 3,
+      "kcal": 2250,
+      "protein_g": 169,
+      "carbs_g": 225,
+      "fat_g": 75,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-27",
+      "entries": 3,
+      "kcal": 2100,
+      "protein_g": 158,
+      "carbs_g": 210,
+      "fat_g": 70,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-28",
+      "entries": 3,
+      "kcal": 2320,
+      "protein_g": 174,
+      "carbs_g": 232,
+      "fat_g": 77,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-29",
+      "entries": 3,
+      "kcal": 2205,
+      "protein_g": 165,
+      "carbs_g": 220,
+      "fat_g": 74,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-30",
+      "entries": 3,
+      "kcal": 1950,
+      "protein_g": 146,
+      "carbs_g": 195,
+      "fat_g": 65,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    },
+    {
+      "date": "2026-10-31",
+      "entries": 3,
+      "kcal": 2240,
+      "protein_g": 168,
+      "carbs_g": 224,
+      "fat_g": 75,
+      "fiber_g": 20,
+      "fiber_unknown": 0
+    }
+  ],
+  "expected": {
+    "logged_days": 27,
+    "on_target_days": 16,
+    "on_target_dates": [
+      "2026-10-01",
+      "2026-10-02",
+      "2026-10-04",
+      "2026-10-08",
+      "2026-10-11",
+      "2026-10-12",
+      "2026-10-14",
+      "2026-10-15",
+      "2026-10-16",
+      "2026-10-18",
+      "2026-10-21",
+      "2026-10-24",
+      "2026-10-25",
+      "2026-10-27",
+      "2026-10-29",
+      "2026-10-31"
+    ],
+    "weeks_monday_start": [
+      {
+        "start": "2026-09-28",
+        "on_target": 3,
+        "logged": 4
+      },
+      {
+        "start": "2026-10-05",
+        "on_target": 2,
+        "logged": 5
+      },
+      {
+        "start": "2026-10-12",
+        "on_target": 5,
+        "logged": 7
+      },
+      {
+        "start": "2026-10-19",
+        "on_target": 3,
+        "logged": 6
+      },
+      {
+        "start": "2026-10-26",
+        "on_target": 3,
+        "logged": 5
+      }
+    ],
+    "rolling_7_day": {
+      "2026-10-03": null,
+      "2026-10-04": 2329,
+      "2026-10-07": 2216.67
+    },
+    "average_kcal": 2208.33
+  }
+}
