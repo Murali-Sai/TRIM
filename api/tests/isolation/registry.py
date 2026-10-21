@@ -351,6 +351,17 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         path_params=lambda c: {"staple_id": c.a_staple_ids[0]},
     ),
+    # Suggestions use only B's own staples; A's staple ids are unknown to B (404 when locked).
+    Endpoint(
+        "POST",
+        "/api/suggestions",
+        requires_session=True,
+        body=lambda c: {
+            "excluded_staple_ids": c.a_staple_ids,
+            "exclude_sets": [c.a_staple_ids],
+            "locked": [{"staple_id": c.a_staple_ids[0]}],
+        },
+    ),
     # A tracks water and has one 250 ml add on 17 Oct (tests.helpers.seed_food_rows).
     Endpoint("GET", "/api/me/settings", requires_session=True),
     Endpoint(

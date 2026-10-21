@@ -235,7 +235,7 @@ def _add(
     return row.id
 
 
-def _list(s: Session, user_id: Any) -> list[StapleOut]:
+def staple_rows(s: Session, user_id: Any) -> list[StapleOut]:
     rows = s.execute(
         text(
             "SELECT st.*, f.name AS food_name, f.brand AS food_brand, f.kcal_100, f.protein_100, "
@@ -311,7 +311,7 @@ def _list(s: Session, user_id: Any) -> list[StapleOut]:
 
 
 def _all(s: Session, user_id: Any) -> StaplesOut:
-    staples = _list(s, user_id)
+    staples = staple_rows(s, user_id)
     return StaplesOut(staples=staples, count=len(staples), limit=rules.MAX_STAPLES)
 
 

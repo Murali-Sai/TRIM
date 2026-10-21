@@ -15,6 +15,7 @@ from app.routers import (
     setup,
     staples,
     streaks,
+    suggestions,
     tracking,
     weights,
 )
@@ -45,6 +46,7 @@ api.include_router(foods.router)
 api.include_router(my_foods.router)
 api.include_router(meals.router)
 api.include_router(staples.router)
+api.include_router(suggestions.router)
 api.include_router(logs.router)
 
 
