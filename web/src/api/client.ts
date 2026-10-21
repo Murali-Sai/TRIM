@@ -99,7 +99,8 @@ export async function postFileBody<T>(path: string, file: Blob): Promise<T> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await csrfToken() },
     credentials: 'same-origin',
-    body: file,
+    // As text, not the Blob: every browser then sends it the same way.
+    body: await file.text(),
   });
   return parse<T>(res);
 }

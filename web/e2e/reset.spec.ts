@@ -47,7 +47,8 @@ for (const vp of VIEWPORTS) {
         await route.fulfill({ json: { status: 'password_reset' } });
       });
       await page.goto('/reset#token=reset-abc');
-      expect(page.url()).not.toContain('reset-abc');
+      // The page reads the token, then takes it out of the address bar.
+      await expect.poll(() => page.url()).not.toContain('reset-abc');
       await noHorizontalScroll(page);
       await page.getByLabel('New password').fill('a brand new passphrase');
       await page.getByLabel('Type it again').fill('a brand new passphrase');
