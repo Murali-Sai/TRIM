@@ -56,7 +56,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 - [x] **4.2 Manage metrics UI (create, rename, reorder, enable, archive)**. AC: archived history still exports. Archived readings are kept and listed by the API (tests/test_measurements.py); the export itself is task 5.1, whose tests include an archived metric. (da9ab9c)
 - [x] **4.3 Quick-log, per-metric chart, L/R pairs, overlay, small multiples, baseline table**. AC: indexed change test (90.0 to 87.3 gives -3.0%). Outliers use the weight rule (2.0 or 3%), as SPEC sets none for measurements; zoom and pinch stay on the weight chart for now. (93a2ed8)
 - [x] **4.4 E2E: create metric and chart it on phone and desktop viewports**. AC: Playwright passes. (e2e/measurements.spec.ts, 2c3860e)
-- [ ] **4.5 Diet phases**: create, edit, delete, no overlaps, chart tints with toggle, phase summaries, optional explicit "Also update targets". AC: overlapping phase rejected; targets unchanged unless the button is pressed.
+- [x] **4.5 Diet phases**: create, edit, delete, no overlaps, chart tints with toggle, phase summaries, optional explicit "Also update targets". AC: overlapping phase rejected; targets unchanged unless the button is pressed. Done in a67050d.
 
 ## Milestone 5: Check-ins, data download, hardening, deploy
 - [ ] **5.1 Download my data**: format (xlsx, csv zip, json), date range, dataset picker; streamed; formula-injection escaping; audit row; 1 per minute limit. AC: seeded account export opened with openpyxl matches expected cells, types and units; a food named "=SUM(A1)" exports as text.
