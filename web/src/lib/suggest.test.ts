@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SuggestedItem } from '../api/suggestions';
-import { barFill, itemAmount, leavesLine, plateName } from './suggest';
+import { barFill, contextFor, itemAmount, leavesLine, plateName } from './suggest';
 
 const item = (over: Partial<SuggestedItem>): SuggestedItem => ({
   staple_id: 's',
@@ -64,5 +64,19 @@ describe('plateName', () => {
     expect(
       plateName(['A very long food name indeed', 'Another long food name', 'Third']),
     ).toHaveLength(60);
+  });
+});
+
+describe('contextFor', () => {
+  it.each([
+    ['2026-10-17T10:29', 'breakfast'],
+    ['2026-10-17T10:30', 'lunch'],
+    ['2026-10-17T14:59', 'lunch'],
+    ['2026-10-17T15:00', 'snack'],
+    ['2026-10-17T17:29', 'snack'],
+    ['2026-10-17T17:30', 'dinner'],
+    ['2026-10-17T00:05', 'breakfast'],
+  ])('%s is %s', (wall, ctx) => {
+    expect(contextFor(wall)).toBe(ctx);
   });
 });

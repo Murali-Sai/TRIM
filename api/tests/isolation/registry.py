@@ -40,6 +40,7 @@ class Ctx:
     a_meal_ids: list[str]  # A's saved meals
     a_water_ids: list[str]  # A's water adds
     a_staple_ids: list[str]  # A's staples
+    a_pair_ids: list[str]  # A's never pairs
 
 
 @dataclass(frozen=True)
@@ -376,6 +377,20 @@ ENDPOINTS: list[Endpoint] = [
         "/api/suggestions/save-meal",
         requires_session=True,
         body=lambda c: {"name": "B plate", "items": [{"staple_id": c.a_staple_ids[0], "units": 1}]},
+    ),
+    # A has a never pair between its two staples (tests.helpers.seed_food_rows).
+    Endpoint("GET", "/api/pair-preferences", requires_session=True),
+    Endpoint(
+        "POST",
+        "/api/pair-preferences",
+        requires_session=True,
+        body=lambda c: {"staple_ids": c.a_staple_ids[:2]},
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/pair-preferences/{pair_id}",
+        requires_session=True,
+        path_params=lambda c: {"pair_id": c.a_pair_ids[0]},
     ),
     # A tracks water and has one 250 ml add on 17 Oct (tests.helpers.seed_food_rows).
     Endpoint("GET", "/api/me/settings", requires_session=True),

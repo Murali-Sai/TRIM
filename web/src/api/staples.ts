@@ -41,6 +41,7 @@ export interface StaplePatch {
   min_units?: number;
   max_units?: number;
   is_available?: boolean;
+  food_group?: string | null;
 }
 
 export interface StaplePrompt {

@@ -10,6 +10,7 @@ from app.routers import (
     me,
     meals,
     my_foods,
+    pairs,
     password,
     push,
     setup,
@@ -47,6 +48,7 @@ api.include_router(my_foods.router)
 api.include_router(meals.router)
 api.include_router(staples.router)
 api.include_router(suggestions.router)
+api.include_router(pairs.router)
 api.include_router(logs.router)
 
 

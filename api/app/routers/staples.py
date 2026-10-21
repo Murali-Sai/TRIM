@@ -1,9 +1,9 @@
 """My staples (task 3.19, SPEC page 3 "My staples" and page 4 "My staples page").
 
-Up to 20 foods or saved meals the user eats often, each with a unit and the amounts a
-suggestion may use. The limit is enforced by a trigger (migration 0013); the check here only
-gives a friendlier message first. After 14 days of logging the app offers, once, to add the
-10 most-logged foods.
+Up to 20 foods or saved meals the user eats often, each with a unit, the amounts a suggestion
+may use, and a food group guessed from the name (editable). The limit is enforced by a trigger
+(migration 0013); the check here only gives a friendlier message first. After 14 days of
+logging the app offers, once, to add the 10 most-logged foods.
 """
 
 import uuid
@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app import staples as rules
 from app.db import user_session
 from app.deps import ServicesDep
+from app.food_groups import guess_group
 from app.models import FOOD_GROUPS, Staple
 from app.routers.meals import _items, _meal_out
 from app.security.sessions import ActiveUserDep
@@ -127,7 +128,7 @@ def _d(v: float | Decimal) -> Decimal:
 
 def _food(s: Session, food_id: uuid.UUID) -> Any:
     food = s.execute(
-        text("SELECT id FROM foods WHERE id = :f AND deleted_at IS NULL"), {"f": food_id}
+        text("SELECT id, name FROM foods WHERE id = :f AND deleted_at IS NULL"), {"f": food_id}
     ).first()
     if food is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Food not found")
@@ -193,19 +194,23 @@ def _add(
     unit_label: str | None = None,
 ) -> uuid.UUID:
     if food_id is not None:
-        _food(s, food_id)
+        food = _food(s, food_id)
         label, grams = _food_unit(s, food_id, unit_label)
         unit_grams: Decimal | None = grams
+        group = guess_group(food.name)
     else:
         meal = s.execute(
             text(
-                "SELECT id FROM saved_meals WHERE id = :m AND user_id = :u AND deleted_at IS NULL"
+                "SELECT id, name FROM saved_meals WHERE id = :m AND user_id = :u "
+                "AND deleted_at IS NULL"
             ),
             {"m": meal_id, "u": user_id},
         ).first()
         if meal is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Meal not found")
         label, unit_grams = rules.MEAL_UNIT, None
+        # A meal is a mixed dish unless its name says otherwise ("Overnight oats").
+        group = guess_group(meal.name) or "mixed_dishes"
     if _taken(s, user_id, food_id, meal_id):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That is already a staple.")
     if _count(s, user_id) >= rules.MAX_STAPLES:
@@ -219,6 +224,7 @@ def _add(
         user_id=user_id,
         food_id=food_id,
         saved_meal_id=meal_id,
+        food_group=group,
         unit_label=label,
         unit_grams=unit_grams,
         step_units=a.step,

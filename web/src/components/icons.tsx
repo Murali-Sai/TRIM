@@ -174,3 +174,13 @@ export function ShuffleIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** Thumbs down: "Don't suggest these together". */
+export function ThumbDownIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 14V4h9.2a2 2 0 0 1 2 1.6l1.2 6A2 2 0 0 1 18.4 14H14l.8 3.6a2 2 0 0 1-1.9 2.4L8 14Z" />
+      <path d="M4 4h4v10H4z" />
+    </Icon>
+  );
+}

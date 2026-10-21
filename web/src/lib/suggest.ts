@@ -1,4 +1,4 @@
-import type { Macros, SuggestedItem } from '../api/suggestions';
+import type { Context, Macros, SuggestedItem } from '../api/suggestions';
 import { formatUnits } from './staples';
 import { formatNumber } from './units';
 
@@ -53,4 +53,13 @@ export function plateName(names: readonly string[]): string {
       ? (lower[0] ?? '')
       : `${lower.slice(0, -1).join(', ')} and ${lower[lower.length - 1]}`;
   return text.length > 60 ? text.slice(0, 60) : text;
+}
+
+/** The time chip's context: before 10:30 breakfast, to 15:00 lunch, to 17:30 snack, then dinner. */
+export function contextFor(wall: string): Context {
+  const hm = wall.slice(11, 16);
+  if (hm < '10:30') return 'breakfast';
+  if (hm < '15:00') return 'lunch';
+  if (hm < '17:30') return 'snack';
+  return 'dinner';
 }

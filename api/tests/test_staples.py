@@ -215,7 +215,9 @@ def test_a_new_unit_resets_the_amounts_to_its_defaults(client: CsrfClient) -> No
 def test_food_group_is_one_of_the_23(client: CsrfClient) -> None:
     signed_in(client)
     s = add(client, food_id=food(client, "Rice")).json()["staples"][0]
-    assert s["food_group"] is None
+    assert s["food_group"] == "rice_grains"  # guessed from the name
+    res = client.patch(f"/api/staples/{s['id']}", json={"food_group": None})
+    assert res.json()["staples"][0]["food_group"] is None
     res = client.patch(f"/api/staples/{s['id']}", json={"food_group": "rice_grains"})
     assert res.json()["staples"][0]["food_group"] == "rice_grains"
     assert client.patch(f"/api/staples/{s['id']}", json={"food_group": "candy"}).status_code == 422

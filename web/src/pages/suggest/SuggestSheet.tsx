@@ -7,19 +7,22 @@ import { lastLogTime, LAST_TIME_KEY, LOGS_KEY, type LogEntry } from '../../api/l
 import { MEALS_KEY } from '../../api/meals';
 import { getStaples, STAPLES_KEY } from '../../api/staples';
 import {
+  allowTogether,
   getSuggestions,
   logSuggestion,
+  neverTogether,
   plateOf,
   saveSuggestion,
   type BudgetChoice,
+  type Context,
   type Lock,
   type Macros,
   type Suggestion,
 } from '../../api/suggestions';
-import { LockIcon, ShuffleIcon, UnlockIcon } from '../../components/icons';
+import { LockIcon, ShuffleIcon, ThumbDownIcon, UnlockIcon } from '../../components/icons';
 import { Sheet } from '../../components/Sheet';
 import { blockLabel, defaultLogTime } from '../../lib/logTime';
-import { barFill, itemAmount, leavesLine, plateName } from '../../lib/suggest';
+import { barFill, contextFor, itemAmount, leavesLine, plateName } from '../../lib/suggest';
 import { formatNumber, parseDecimal } from '../../lib/units';
 import { isoToZonedWall, zonedWallToIso } from '../../lib/zoned';
 import { Notice, primaryButton, secondaryButton } from '../account/Section';
@@ -87,6 +90,8 @@ function Card({
   logging,
   onSave,
   saving,
+  onNever,
+  neverBusy,
 }: {
   s: Suggestion;
   index: number;
@@ -98,8 +103,17 @@ function Card({
   logging: boolean;
   onSave: (name: string) => void;
   saving: boolean;
+  onNever: (pair: [string, string]) => void;
+  neverBusy: boolean;
 }) {
   const [naming, setNaming] = useState<string | null>(null);
+  // Thumbs-down on a plate of 3 or more: which two do not go together?
+  const [picking, setPicking] = useState<string[] | null>(null);
+  const thumbsDown = () => {
+    const [a, b] = s.items;
+    if (s.items.length === 2 && a && b) onNever([a.staple_id, b.staple_id]);
+    else setPicking([]);
+  };
   const id = useId();
   const g = (x: number) => formatNumber(Math.round(x));
   const t = s.totals;
@@ -117,6 +131,14 @@ function Card({
           {formatNumber(s.match_pct, 1)}% match
         </p>
       </div>
+      {s.label ? (
+        <p
+          className="mt-1 inline-block rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold"
+          data-testid="pair-label"
+        >
+          {s.label}
+        </p>
+      ) : null}
       <ul className="mt-2 flex flex-col divide-y divide-border" aria-label="Items">
         {s.items.map((i) => {
           const locked = locks.get(i.staple_id) === i.units;
@@ -151,7 +173,56 @@ function Card({
       <p className="mt-2 text-sm" data-testid="leaves">
         {leavesLine(s.leaves)}
       </p>
-      {naming === null ? (
+      {picking !== null ? (
+        <div className="mt-3" role="group" aria-label="Which two don't go together?">
+          <p className="text-sm font-semibold">Which two don&apos;t go together?</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {s.items.map((i) => {
+              const picked = picking.includes(i.staple_id);
+              return (
+                <button
+                  key={i.staple_id}
+                  type="button"
+                  aria-pressed={picked}
+                  disabled={!picked && picking.length >= 2}
+                  onClick={() =>
+                    setPicking((p) =>
+                      p === null
+                        ? p
+                        : picked
+                          ? p.filter((x) => x !== i.staple_id)
+                          : [...p, i.staple_id],
+                    )
+                  }
+                  className={`${chip} ${picked ? on : off} disabled:opacity-50`}
+                >
+                  {i.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={picking.length !== 2 || neverBusy}
+              onClick={() => {
+                const [a, b] = picking;
+                if (a && b) onNever([a, b]);
+              }}
+              className={`${primaryButton} cursor-pointer`}
+            >
+              Don&apos;t suggest these together
+            </button>
+            <button
+              type="button"
+              onClick={() => setPicking(null)}
+              className={`${secondaryButton} cursor-pointer`}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : naming === null ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
@@ -168,6 +239,18 @@ function Card({
           >
             Save as meal
           </button>
+          {s.items.length > 1 ? (
+            <button
+              type="button"
+              onClick={thumbsDown}
+              disabled={neverBusy}
+              aria-label="Don't suggest these together"
+              title="Don't suggest these together"
+              className="tap ml-auto flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border text-text-secondary transition-colors duration-200 hover:bg-surface-2"
+            >
+              <ThumbDownIcon width={18} height={18} />
+            </button>
+          ) : null}
         </div>
       ) : (
         <form
@@ -218,6 +301,8 @@ export function SuggestSheet({ timeZone, wall: startWall, onClose, onLogged }: P
   const queryClient = useQueryClient();
   const now = defaultLogTime(new Date().toISOString(), timeZone);
   const [wall, setWall] = useState(startWall);
+  const [context, setContext] = useState<Context>(() => contextFor(startWall));
+  const [undo, setUndo] = useState<{ id: string; names: [string, string] } | null>(null);
   const [budgetKey, setBudgetKey] = useState<BudgetKey>('rest');
   const [custom, setCustom] = useState('');
   const [maxItems, setMaxItems] = useState(3);
@@ -246,6 +331,7 @@ export function SuggestSheet({ timeZone, wall: startWall, onClose, onLogged }: P
     [...m].map(([staple_id, units]) => ({ staple_id, units }));
   const request = {
     date: wall.slice(0, 10),
+    context,
     budget,
     max_items: maxItems,
     excluded_staple_ids: [...excluded],
@@ -288,6 +374,23 @@ export function SuggestSheet({ timeZone, wall: startWall, onClose, onLogged }: P
     },
   });
 
+  const never = useMutation({
+    mutationFn: neverTogether,
+    onSuccess: (pair) => {
+      setUndo({ id: pair.id, names: pair.names });
+      restart();
+      void queryClient.invalidateQueries({ queryKey: ['suggestions'] });
+    },
+  });
+  const allow = useMutation({
+    mutationFn: allowTogether,
+    onSuccess: () => {
+      setUndo(null);
+      restart();
+      void queryClient.invalidateQueries({ queryKey: ['suggestions'] });
+    },
+  });
+
   const data = result.data;
   const list = data?.suggestions ?? [];
   const state = data?.state;
@@ -295,7 +398,41 @@ export function SuggestSheet({ timeZone, wall: startWall, onClose, onLogged }: P
   return (
     <Sheet title="What should I eat?" onClose={onClose} testId="suggest-sheet">
       <div className="flex flex-col gap-4">
-        <TimeChip wall={wall} now={now} lastUsed={lastUsed} onChange={setWall} />
+        <TimeChip
+          wall={wall}
+          now={now}
+          lastUsed={lastUsed}
+          onChange={(w) => {
+            setWall(w);
+            setContext(contextFor(w));
+            restart();
+          }}
+        />
+        <div>
+          <p className="font-semibold" id={`${customId}-context`}>
+            Meal
+          </p>
+          <div
+            className="mt-2 flex flex-wrap gap-2"
+            role="group"
+            aria-labelledby={`${customId}-context`}
+          >
+            {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-pressed={context === c}
+                onClick={() => {
+                  setContext(c);
+                  restart();
+                }}
+                className={`${chip} capitalize ${context === c ? on : off}`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
         <div>
           <p className="font-semibold" id={`${customId}-budget`}>
             Fit into
@@ -408,7 +545,9 @@ export function SuggestSheet({ timeZone, wall: startWall, onClose, onLogged }: P
         ) : null}
 
         <p className="text-sm text-text-secondary">
-          Suggestions combine your staples to fit your numbers. They are not dietary advice.
+          Suggestions combine your staples to fit your numbers. They are not dietary advice. Pairing
+          is based on what people commonly eat together and on your own history, so it can still
+          miss your taste; the thumbs-down teaches it.
         </p>
 
         {result.isError ? (
@@ -423,6 +562,22 @@ export function SuggestSheet({ timeZone, wall: startWall, onClose, onLogged }: P
           <Notice kind="error">{message(save.error, 'Could not save the meal. Try again.')}</Notice>
         ) : null}
         {saved ? <Notice kind="ok">{saved}</Notice> : null}
+        {undo ? (
+          <Notice kind="ok">
+            Won&apos;t suggest {undo.names[0]} and {undo.names[1]} together.{' '}
+            <button
+              type="button"
+              onClick={() => allow.mutate(undo.id)}
+              disabled={allow.isPending}
+              className="cursor-pointer font-semibold text-accent underline"
+            >
+              Undo
+            </button>
+          </Notice>
+        ) : null}
+        {never.isError || allow.isError ? (
+          <Notice kind="error">Could not save that. Try again.</Notice>
+        ) : null}
 
         {state && state !== 'ok' ? (
           <div
@@ -474,6 +629,8 @@ export function SuggestSheet({ timeZone, wall: startWall, onClose, onLogged }: P
                 logging={log.isPending && log.variables === s}
                 onSave={(name) => save.mutate({ s, name })}
                 saving={save.isPending && save.variables?.s === s}
+                onNever={(pair) => never.mutate(pair)}
+                neverBusy={never.isPending}
               />
             ))}
           </ol>

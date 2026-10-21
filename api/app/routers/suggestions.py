@@ -5,17 +5,20 @@ target; a suggestion is logged or saved only when the user taps Log or Save as m
 import datetime as dt
 import uuid
 from decimal import Decimal
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import pairing
 from app import suggest as engine
 from app.db import user_session
 from app.deps import ServicesDep
 from app.fit import MACROS
+from app.food_groups import guess_group
 from app.ids import uuid7
 from app.models import FoodLog, SavedMealItem
 from app.routers.logs import MAX_GRAMS, LogOut, _check_time, _nutrient, _out, _timezone
@@ -66,8 +69,13 @@ class Lock(BaseModel):
     units: Annotated[float, Field(gt=0, le=99)] | None = None
 
 
+Context = Literal["breakfast", "lunch", "dinner", "snack"]
+
+
 class SuggestIn(BaseModel):
     date: dt.date | None = None
+    # Preset from the time chip; the server uses the time now when it is missing.
+    context: Context | None = None
     budget: Budget = Budget()
     max_items: Annotated[int, Field(ge=1, le=engine.MAX_ITEMS)] = 3
     excluded_staple_ids: Annotated[list[uuid.UUID], Field(max_length=20)] = []
@@ -107,10 +115,13 @@ class SuggestionOut(BaseModel):
     # Budget minus totals ("Leaves 72 kcal, 1 g protein, ..."); negative when over.
     leaves: Macros
     match_pct: float
+    # "Often eaten together at dinner" when every pair on the card scores 0.5 or more.
+    label: str | None = None
 
 
 class SuggestOut(BaseModel):
     date: dt.date
+    context: Context
     state: State
     message: str | None
     budget: Macros | None
@@ -139,6 +150,33 @@ def _item(st: StapleOut, units: float) -> SuggestedItem:
     )
 
 
+def _history(s: Session, user_id: Any, staples: list[StapleOut], day: dt.date) -> list[set[str]]:
+    """The user's time blocks in the last 180 days, as the staples each one holds."""
+    by_food = {st.food_id: str(st.id) for st in staples if st.food_id}
+    by_meal = {st.saved_meal_id: str(st.id) for st in staples if st.saved_meal_id}
+    if len(by_food) + len(by_meal) < 2:
+        return []
+    blocks: dict[Any, set[str]] = {}
+    for r in s.execute(
+        text(
+            "SELECT log_group_id, food_id, saved_meal_id FROM food_logs WHERE user_id = :u "
+            "AND deleted_at IS NULL AND logged_on > :since AND logged_on <= :d "
+            "AND (food_id = ANY(:f) OR saved_meal_id = ANY(:m))"
+        ),
+        {
+            "u": user_id,
+            "since": day - dt.timedelta(days=pairing.HISTORY_DAYS),
+            "d": day,
+            "f": list(by_food),
+            "m": list(by_meal),
+        },
+    ):
+        sid = by_meal.get(r.saved_meal_id) or by_food.get(r.food_id)
+        if sid:
+            blocks.setdefault(r.log_group_id, set()).add(sid)
+    return [b for b in blocks.values() if len(b) > 1]
+
+
 @router.post("")
 def suggestions(body: SuggestIn, user: ActiveUserDep, services: ServicesDep) -> SuggestOut:
     """Up to three combinations of available staples, best match first, each a different set.
@@ -165,6 +203,30 @@ def suggestions(body: SuggestIn, user: ActiveUserDep, services: ServicesDep) -> 
             ),
             {"u": user.user_id, "d": day},
         ).one()
+        ctx: Context = body.context or cast(
+            Context, pairing.context_for(services.clock().astimezone(ZoneInfo(tz)).time())
+        )
+        generic = {
+            (r.group_a, r.group_b): float(r.score)
+            for r in s.execute(
+                text(
+                    "SELECT group_a, group_b, score FROM pairing_scores "
+                    "WHERE context = :c AND score <> 0"
+                ),
+                {"c": ctx},
+            )
+        }
+        blocks = _history(s, user.user_id, staples, day)
+        never = [
+            frozenset((str(r.staple_a_id), str(r.staple_b_id)))
+            for r in s.execute(
+                text(
+                    "SELECT staple_a_id, staple_b_id FROM pair_preferences "
+                    "WHERE user_id = :u AND deleted_at IS NULL"
+                ),
+                {"u": user.user_id},
+            )
+        ]
 
     mine = {st.id: st for st in staples}
     for lock in body.locked:
@@ -174,6 +236,7 @@ def suggestions(body: SuggestIn, user: ActiveUserDep, services: ServicesDep) -> 
     def answer(state: State, **kw: Any) -> SuggestOut:
         return SuggestOut(
             date=day,
+            context=ctx,
             state=state,
             message=MESSAGES.get(state),
             budget=kw.get("budget"),
@@ -218,6 +281,8 @@ def suggestions(body: SuggestIn, user: ActiveUserDep, services: ServicesDep) -> 
         )
         for st in usable
     ]
+    groups = {str(st.id): st.food_group or guess_group(st.name or "") for st in usable}
+    scores = pairing.pair_scores(groups, generic, pairing.personal_pairs(blocks))
     try:
         found = engine.suggest(
             pool,
@@ -226,6 +291,8 @@ def suggestions(body: SuggestIn, user: ActiveUserDep, services: ServicesDep) -> 
             max_items=body.max_items,
             locked={str(lock.staple_id): lock.units for lock in body.locked},
             exclude_sets=[[str(x) for x in shown] for shown in body.exclude_sets],
+            pair_scores=scores,
+            never=never,
         )
     except ValueError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from None
@@ -245,6 +312,7 @@ def suggestions(body: SuggestIn, user: ActiveUserDep, services: ServicesDep) -> 
                 totals=_macros(x.totals),
                 leaves=_macros(x.leaves),
                 match_pct=x.match_pct,
+                label=pairing.label([sid for sid, _ in x.items], scores, ctx),
             )
             for x in found
         ],

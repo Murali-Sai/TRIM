@@ -89,6 +89,8 @@ interface Calls {
   asked: Record<string, unknown>[];
   logged: Record<string, unknown>[];
   saved: Record<string, unknown>[];
+  never: unknown[];
+  undone: string[];
 }
 
 async function open(
@@ -96,7 +98,7 @@ async function open(
   path: string,
   answer?: (body: Record<string, unknown>) => Record<string, unknown>,
 ): Promise<Calls> {
-  const calls: Calls = { asked: [], logged: [], saved: [] };
+  const calls: Calls = { asked: [], logged: [], saved: [], never: [], undone: [] };
   await page.clock.setFixedTime(NOW);
   await stubExternal(page, ME);
   await page.route('**/api/targets', (r) => r.fulfill({ json: [TARGET] }));
@@ -112,6 +114,24 @@ async function open(
   await page.route('**/api/staples', (r) =>
     r.fulfill({ json: { staples: STAPLES, count: STAPLES.length, limit: 20 } }),
   );
+  await page.route('**/api/pair-preferences**', async (r) => {
+    if (r.request().method() === 'DELETE') {
+      calls.undone.push(new URL(r.request().url()).pathname.split('/').pop() ?? '');
+      return r.fulfill({ status: 204 });
+    }
+    const body = r.request().postDataJSON() as { staple_ids: string[] };
+    calls.never.push(body);
+    const name = (id: string) => STAPLES.find((st) => st.id === id)?.name ?? '';
+    return r.fulfill({
+      status: 201,
+      json: {
+        id: 'pair-1',
+        staple_ids: body.staple_ids,
+        names: body.staple_ids.map(name),
+        created_at: '2026-10-17T23:07:00Z',
+      },
+    });
+  });
   await page.route('**/api/suggestions**', async (r) => {
     const path = new URL(r.request().url()).pathname;
     const body = r.request().postDataJSON() as Record<string, unknown>;
@@ -277,6 +297,71 @@ for (const vp of [
         'href',
         '/?highlight=g-sugg',
       );
+    });
+
+    test('the meal chip starts from the time and the label shows good pairs', async ({ page }) => {
+      const calls = await open(page, '/', (body) => ({
+        date: '2026-10-17',
+        context: body.context,
+        state: 'ok',
+        message: null,
+        budget: BUDGET,
+        left_today: BUDGET,
+        suggestions: [
+          { ...FIRST[2], label: 'Often eaten together at dinner' },
+          { ...FIRST[0], label: null },
+        ],
+      }));
+      await page.getByRole('button', { name: 'What should I eat?' }).click();
+      const sheet = page.getByTestId('suggest-sheet');
+      // 7:05 PM is dinner.
+      await expect(sheet.getByRole('button', { name: 'dinner' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(calls.asked[0]).toMatchObject({ context: 'dinner' });
+      await expect(sheet.getByTestId('pair-label')).toHaveText(['Often eaten together at dinner']);
+      await expect(sheet).toContainText('the thumbs-down teaches it');
+      await sheet.getByRole('button', { name: 'lunch' }).click();
+      await expect.poll(() => calls.asked.at(-1)).toMatchObject({ context: 'lunch' });
+    });
+
+    test("thumbs-down asks which two don't go together, with Undo", async ({ page }) => {
+      const calls = await open(page, '/');
+      await page.getByRole('button', { name: 'What should I eat?' }).click();
+      const sheet = page.getByTestId('suggest-sheet');
+      const card = sheet.getByTestId('suggestion').nth(0);
+      await card.getByRole('button', { name: "Don't suggest these together" }).click();
+      const pick = card.getByRole('group', { name: "Which two don't go together?" });
+      await pick.getByRole('button', { name: 'Rice' }).click();
+      await pick.getByRole('button', { name: 'Greek yogurt' }).click();
+      // Only two can be picked.
+      await expect(pick.getByRole('button', { name: 'Egg' })).toBeDisabled();
+      const before = calls.asked.length;
+      await pick.getByRole('button', { name: "Don't suggest these together" }).click();
+      await expect.poll(() => calls.never).toEqual([{ staple_ids: ['rice', 'yog'] }]);
+      await expect(sheet.getByText("Won't suggest Rice and Greek yogurt together.")).toBeVisible();
+      // The suggestions are asked for again without them together.
+      await expect.poll(() => calls.asked.length).toBeGreaterThan(before);
+      await sheet.getByRole('button', { name: 'Undo' }).click();
+      await expect.poll(() => calls.undone).toEqual(['pair-1']);
+      await expect(sheet.getByText("Won't suggest Rice and Greek yogurt together.")).toBeHidden();
+      await noSideScroll(page);
+    });
+
+    test('thumbs-down on a plate of two needs no picking', async ({ page }) => {
+      const calls = await open(page, '/', () => ({
+        date: '2026-10-17',
+        context: 'dinner',
+        state: 'ok',
+        message: null,
+        budget: BUDGET,
+        left_today: BUDGET,
+        suggestions: [{ ...FIRST[0], items: [RICE, EGG], label: null }],
+      }));
+      await page.getByRole('button', { name: 'What should I eat?' }).click();
+      await page.getByRole('button', { name: "Don't suggest these together" }).click();
+      await expect.poll(() => calls.never).toEqual([{ staple_ids: ['rice', 'egg'] }]);
     });
 
     for (const [state, text, link] of [

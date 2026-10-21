@@ -583,6 +583,28 @@ class Staple(Timestamps, Base):
     sort_order: Mapped[int] = mapped_column(Integer, server_default="0")
 
 
+class PairPreference(Timestamps, Base):
+    """Two staples the user does not want together ("Don't suggest these together"); never on
+    one suggestion (task 3.23). Stored with staple_a_id < staple_b_id, once per pair."""
+
+    __tablename__ = "pair_preferences"
+    __table_args__ = (
+        CheckConstraint("kind = 'never'", name="kind"),
+        CheckConstraint("staple_a_id < staple_b_id", name="ordered"),
+        Index("uq_pair_preferences_pair", "user_id", "staple_a_id", "staple_b_id", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    staple_a_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("staples.id", ondelete="CASCADE")
+    )
+    staple_b_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("staples.id", ondelete="CASCADE")
+    )
+    kind: Mapped[str] = mapped_column(Text, server_default="never")
+
+
 PAIRING_CONTEXTS = ("breakfast", "lunch", "dinner", "snack")
 
 
@@ -662,6 +684,7 @@ RLS_TABLES: dict[str, str] = {
     "user_badges": "user_id",
     "push_subscriptions": "user_id",
     "staples": "user_id",
+    "pair_preferences": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column
