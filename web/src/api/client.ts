@@ -75,3 +75,20 @@ async function sendJson<T>(method: string, path: string, body?: unknown): Promis
   });
   return parse<T>(res);
 }
+
+/** A POST whose answer is a file: resolves to the blob and the server's file name. */
+export async function postForFile(
+  path: string,
+  body: unknown,
+): Promise<{ blob: Blob; name: string | null }> {
+  const res = await fetch(`/api${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await csrfToken() },
+    credentials: 'same-origin',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) await parse<never>(res);
+  const disposition = res.headers.get('Content-Disposition') ?? '';
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? null;
+  return { blob: await res.blob(), name };
+}

@@ -4,6 +4,7 @@ from app.config import get_settings
 from app.routers import (
     account,
     auth,
+    export,
     foods,
     goals,
     logs,
@@ -43,6 +44,7 @@ api.include_router(setup.router)
 api.include_router(weights.router)
 api.include_router(measurements.router)
 api.include_router(phases.router)
+api.include_router(export.router)
 api.include_router(tracking.router)
 api.include_router(streaks.router)
 api.include_router(goals.router)

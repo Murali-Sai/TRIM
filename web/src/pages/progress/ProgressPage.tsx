@@ -22,6 +22,7 @@ import { usePageTitle } from '../../usePageTitle';
 import { trendFor, trendSentence, unitLabel } from '../body/weightFormat';
 import { useDaySeries } from '../charts/useDaySeries';
 import { TargetStrip } from '../today/TargetStrip';
+import { DownloadIcon } from '../../components/icons';
 import { DashCard } from './DashCard';
 import { MeasurementsCard } from './MeasurementsCard';
 import { StreakCard } from './StreakCard';
@@ -315,6 +316,14 @@ function Progress({ timeZone, units }: { timeZone: string; units: UnitSystem }) 
         <h2 className="flex-1 text-2xl font-bold">Progress</h2>
         <Link to="/phases" className="tap text-sm font-semibold text-accent underline">
           Diet phases
+        </Link>
+        <Link
+          to="/account/export"
+          aria-label="Download my data"
+          title="Download my data"
+          className="tap flex h-11 w-11 items-center justify-center rounded-full transition-colors duration-200 hover:bg-surface-2"
+        >
+          <DownloadIcon />
         </Link>
       </div>
       {/* Phone: one column. Desktop: a three-column grid. */}

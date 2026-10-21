@@ -58,6 +58,22 @@ function StaplesSection() {
   );
 }
 
+function DownloadSection() {
+  return (
+    <Section
+      title="Download my data"
+      description="Everything you have logged, as Excel, CSV or JSON, whenever you like."
+    >
+      <Link
+        to="/account/export"
+        className="tap inline-block rounded-lg border border-border bg-surface px-4 py-2.5 font-semibold"
+      >
+        Download my data
+      </Link>
+    </Section>
+  );
+}
+
 function AppearanceSection() {
   const [theme, setTheme] = useState<ThemeChoice>(getThemeChoice);
   const save = useMutation({ mutationFn: updateProfile });
@@ -108,6 +124,7 @@ export function AccountPage() {
         </div>
         <div className="flex flex-col gap-4 lg:gap-6">
           <PasswordSection />
+          <DownloadSection />
           <DeleteSection />
           <div>
             <button

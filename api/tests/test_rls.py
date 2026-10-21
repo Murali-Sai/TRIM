@@ -18,6 +18,7 @@ from app.models import (
     AuditLog,
     AuthToken,
     DietPhase,
+    Export,
     Food,
     FoodFavourite,
     FoodLog,
@@ -156,6 +157,7 @@ def seed_user(label: str) -> Seeded:
                 user_id=user_id, kind="cut", start_date=date(2026, 9, 1), end_date=date(2026, 9, 28)
             )
         )
+        s.add(Export(user_id=user_id, format="xlsx", datasets=["weight"], row_count=0))
         s.add(UserSettings(user_id=user_id, track_water=True))
         s.add(UserStreak(user_id=user_id, current_days=3, longest_days=3))
         s.add(StreakEvent(user_id=user_id, on_date=date(2026, 10, 17), kind="counted"))
