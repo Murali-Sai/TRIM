@@ -48,7 +48,7 @@ files = ["app", "tests", "migrations", "tools"]
 
 [[tool.mypy.overrides]]
 # pywebpush ships no type information.
-module = ["pywebpush", "scipy.*"]
+module = ["pywebpush", "scipy.*", "pandas"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
