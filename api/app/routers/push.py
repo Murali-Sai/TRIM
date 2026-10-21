@@ -76,6 +76,8 @@ class JobOut(BaseModel):
     reminders_sent: int
     checkins_created: int = 0
     checkin_emails_sent: int = 0
+    # Free-tier limits that crossed 70% this run (task 5.7).
+    usage_alerts: list[str] = []
 
 
 def _due(now: datetime, tz: str, reminder: str, last: Any) -> bool:
@@ -135,10 +137,12 @@ def hourly_job(
     services: ServicesDep, x_job_token: Annotated[str | None, Header()] = None
 ) -> JobOut:
     """Cloud Scheduler calls this every hour with X-Job-Token. Streaks themselves are
-    evaluated lazily; this sends the due reminders and makes the due weekly check-ins."""
+    evaluated lazily; this sends the due reminders, makes the due weekly check-ins and checks
+    free-tier usage."""
     expected = services.job_token
     if not expected or not x_job_token or not hmac.compare_digest(x_job_token, expected):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not allowed")
+    from app import usage
     from app.routers.checkins import run_job
 
     done = run_job(services)
@@ -146,4 +150,5 @@ def hourly_job(
         reminders_sent=send_reminders(services),
         checkins_created=done.checkins_created,
         checkin_emails_sent=done.checkin_emails_sent,
+        usage_alerts=usage.check(services),
     )

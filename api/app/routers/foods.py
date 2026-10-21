@@ -22,6 +22,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import usage
 from app.config import get_settings
 from app.db import user_session
 from app.deps import ServicesDep
@@ -223,6 +224,8 @@ def _external(
 ) -> tuple[list[FoodCandidate], bool]:
     """(results, failed). A successful answer, even an empty one, is remembered for 30 days;
     its results are in the cache by then."""
+    if name == "fdc":
+        usage.record("fdc", now)
     try:
         found = source.search(query, MAX_RESULTS)
     except FoodSourceError:

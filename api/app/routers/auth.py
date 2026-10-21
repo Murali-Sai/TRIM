@@ -10,6 +10,7 @@ from pydantic import AfterValidator, BaseModel, EmailStr, Field, StringConstrain
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
+from app import usage
 from app.config import Settings
 from app.db import anonymous_session, user_session
 from app.deps import ClientIpDep, ServicesDep, SettingsDep
@@ -68,7 +69,7 @@ def _send_verify_link(
         )
     link = f"{settings.app_base_url}/verify#token={raw}"
     try:
-        services.email.send(email, verify_email(display_name, link))
+        usage.send_email(services, email, verify_email(display_name, link))
     except EmailSendError:
         # The account exists; the user can ask for a new link after logging in.
         log.exception("Verification email failed for user %s", user_id)

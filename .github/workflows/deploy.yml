@@ -78,6 +78,7 @@ jobs:
             TRIM_OFF_USER_AGENT=${{ vars.OFF_USER_AGENT }}
             TRIM_VAPID_PUBLIC_KEY=${{ vars.VAPID_PUBLIC_KEY }}
             TRIM_VAPID_SUBJECT=${{ vars.VAPID_SUBJECT }}
+            TRIM_ALERT_EMAIL=${{ vars.ALERT_EMAIL }}
           secrets: |
             TRIM_DATABASE_URL=trim-database-url:latest
             TRIM_MIGRATION_DATABASE_URL=trim-migration-database-url:latest

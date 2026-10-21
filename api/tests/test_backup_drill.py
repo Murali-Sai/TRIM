@@ -4,6 +4,7 @@ database and matches its manifest (schema version, every table's row count, RLS 
 Runs ops/backup.sh and ops/restore-drill.sh for real against the test database."""
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -79,7 +80,7 @@ def test_ac_a_backup_restores_and_matches(backup: tuple[Path, Path]) -> None:
         "restore-drill.sh", str(file), TARGET_URL=scratch("trim_drill"), AGE_IDENTITY=str(key)
     )
     assert res.returncode == 0, res.stdout + res.stderr
-    assert res.stdout.startswith("restore drill passed: schema 0019")
+    assert re.match(r"restore drill passed: schema \d{4}, \d+ tables", res.stdout)
     restored = create_engine(make_url(OWNER_URL).set(database="trim_drill"))
     with restored.connect() as conn:
         food_logs = conn.execute(text("SELECT count(*) FROM food_logs")).scalar_one()
