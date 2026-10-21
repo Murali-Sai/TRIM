@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     # Open Food Facts asks every app to identify itself: "AppName/Version (contact)".
     off_user_agent: str = DEV_OFF_USER_AGENT
 
+    # Web Push (streak reminders). Without keys, reminders are off and the app says so.
+    vapid_public_key: str | None = None
+    vapid_private_key: SecretStr | None = None
+    vapid_subject: str = "mailto:admin@localhost"
+    # The hourly job (Cloud Scheduler) sends this in X-Job-Token. Unset: the job is refused.
+    job_token: SecretStr | None = None
+
     @model_validator(mode="after")
     def _no_dev_defaults_in_prod(self) -> "Settings":
         if self.env == "prod":

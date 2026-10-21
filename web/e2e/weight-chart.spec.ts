@@ -4,12 +4,18 @@ import { stubWeights, type Entry } from './weights-stub';
 
 const DAY = 86_400_000;
 
-/** One weigh-in a day for `days` days up to this morning, drifting down with daily swings. */
+/**
+ * One weigh-in a day for `days` days at 11:00 UTC, drifting down with daily swings. The last
+ * one is the latest 11:00 UTC that has passed, so it is never in the future (before 11:00 UTC
+ * it is yesterday's).
+ */
 function seed(days: number): Entry[] {
   const out: Entry[] = [];
+  const last = new Date();
+  last.setUTCHours(11, 0, 0, 0);
+  if (last.getTime() > Date.now()) last.setTime(last.getTime() - DAY);
   for (let i = days - 1; i >= 0; i--) {
-    const at = new Date(Date.now() - i * DAY);
-    at.setUTCHours(11, 0, 0, 0);
+    const at = new Date(last.getTime() - i * DAY);
     const iso = at.toISOString();
     const kg = 82 - (days - i) * 0.02 + Math.sin(i * 1.7) * 0.5;
     out.push({

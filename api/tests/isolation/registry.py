@@ -347,4 +347,23 @@ ENDPOINTS: list[Endpoint] = [
     # A has a weekly goal and a badge (tests.helpers.seed_food_rows).
     Endpoint("GET", "/api/goals", requires_session=True),
     Endpoint("GET", "/api/badges", requires_session=True),
+    # A has a push subscription (tests.helpers.seed_food_rows); B may only add or remove its own.
+    Endpoint("GET", "/api/push/config", requires_session=True),
+    Endpoint(
+        "POST",
+        "/api/push/subscriptions",
+        requires_session=True,
+        body=lambda c: {
+            "endpoint": "https://push.example.com/b-browser",
+            "keys": {"p256dh": "k", "auth": "a"},
+        },
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/push/subscriptions",
+        requires_session=True,
+        params=lambda c: {"endpoint": "https://push.example.com/a-browser"},
+    ),
+    # The hourly job takes no session; without the job token it is refused.
+    Endpoint("POST", "/api/internal/jobs/hourly", requires_session=False),
 ]

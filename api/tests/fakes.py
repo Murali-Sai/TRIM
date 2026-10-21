@@ -14,7 +14,25 @@ from app.services.fooddata import (
     parse_fdc_food,
     parse_off_product,
 )
+from app.services.push import Outcome, PushMessage, Subscription
 from app.services.registry import Services
+
+FAKE_VAPID_PUBLIC = "BFakePublicKeyForTestsOnly"
+FAKE_JOB_TOKEN = "job-token-for-tests"
+
+
+@dataclass
+class FakePush:
+    """Records messages; endpoints in `gone` answer as dropped subscriptions."""
+
+    sent: list[tuple[str, str]] = field(default_factory=list)
+    gone: set[str] = field(default_factory=set)
+
+    def send(self, sub: Subscription, message: PushMessage) -> Outcome:
+        if sub.endpoint in self.gone:
+            return "gone"
+        self.sent.append((sub.endpoint, message.body))
+        return "sent"
 
 
 class FakeHumanCheck:
@@ -111,6 +129,7 @@ class Fakes:
     # Empty by default, so tests that do not search never see external foods.
     fdc: FakeFoodSource = field(default_factory=lambda: FakeFoodSource())
     off: FakeFoodSource = field(default_factory=lambda: FakeFoodSource())
+    push: "FakePush" = field(default_factory=lambda: FakePush())
 
     def services(self) -> Services:
         return Services(
@@ -120,4 +139,7 @@ class Fakes:
             clock=self.clock,
             fdc=self.fdc,
             off=self.off,
+            push=self.push,
+            vapid_public_key=FAKE_VAPID_PUBLIC,
+            job_token=FAKE_JOB_TOKEN,
         )

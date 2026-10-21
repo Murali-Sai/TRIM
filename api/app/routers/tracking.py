@@ -33,6 +33,8 @@ class SettingsOut(BaseModel):
     water_unit: WaterUnit
     # Streaks, goals and badges shown (they are always kept, so turning back on restores them).
     gamification: bool
+    # Local time for the streak reminder ("20:00"), or None when off.
+    streak_reminder: str | None
 
 
 class SettingsPatch(BaseModel):
@@ -40,15 +42,24 @@ class SettingsPatch(BaseModel):
     track_fiber: bool | None = None
     water_unit: WaterUnit | None = None
     gamification: bool | None = None
+    # Send null to turn the reminder off.
+    streak_reminder: Annotated[str, Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")] | None = None
 
 
-DEFAULTS = SettingsOut(track_water=False, track_fiber=True, water_unit="ml", gamification=True)
+DEFAULTS = SettingsOut(
+    track_water=False,
+    track_fiber=True,
+    water_unit="ml",
+    gamification=True,
+    streak_reminder=None,
+)
 
 
 def _settings(s: Any, user_id: Any) -> SettingsOut:
     row = s.execute(
         text(
-            "SELECT track_water, track_fiber, water_unit, gamification FROM user_settings "
+            "SELECT track_water, track_fiber, water_unit, gamification, streak_reminder "
+            "FROM user_settings "
             "WHERE user_id = :u"
         ),
         {"u": user_id},
@@ -60,6 +71,7 @@ def _settings(s: Any, user_id: Any) -> SettingsOut:
         track_fiber=row.track_fiber,
         water_unit=row.water_unit,
         gamification=row.gamification,
+        streak_reminder=row.streak_reminder,
     )
 
 
@@ -72,13 +84,16 @@ def get_settings(user: ActiveUserDep) -> SettingsOut:
 @router.patch("/me/settings")
 def patch_settings(body: SettingsPatch, user: ActiveUserDep) -> SettingsOut:
     with user_session(user.user_id) as s:
-        merged = _settings(s, user.user_id).model_copy(update=body.model_dump(exclude_none=True))
+        change = body.model_dump(exclude_none=True)
+        if "streak_reminder" in body.model_fields_set:
+            change["streak_reminder"] = body.streak_reminder
+        merged = _settings(s, user.user_id).model_copy(update=change)
         s.execute(
             text(
                 "INSERT INTO user_settings (user_id, track_water, track_fiber, water_unit, "
-                "gamification) VALUES (:u, :w, :f, :unit, :g) ON CONFLICT (user_id) DO UPDATE SET "
-                "track_water = :w, track_fiber = :f, water_unit = :unit, gamification = :g, "
-                "updated_at = now()"
+                "gamification, streak_reminder) VALUES (:u, :w, :f, :unit, :g, :r) "
+                "ON CONFLICT (user_id) DO UPDATE SET track_water = :w, track_fiber = :f, "
+                "water_unit = :unit, gamification = :g, streak_reminder = :r, updated_at = now()"
             ),
             {
                 "u": user.user_id,
@@ -86,6 +101,7 @@ def patch_settings(body: SettingsPatch, user: ActiveUserDep) -> SettingsOut:
                 "f": merged.track_fiber,
                 "unit": merged.water_unit,
                 "g": merged.gamification,
+                "r": merged.streak_reminder,
             },
         )
         return merged

@@ -7,6 +7,8 @@ export interface TrackingSettings {
   water_unit: WaterUnit;
   /** Streaks, goals and badges shown. */
   gamification: boolean;
+  /** Local "HH:MM" for the streak reminder, or null when off. */
+  streak_reminder: string | null;
 }
 
 export const SETTINGS_KEY = ['settings'] as const;

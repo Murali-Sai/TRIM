@@ -496,6 +496,26 @@ class UserSettings(Timestamps, Base):
     water_unit: Mapped[str] = mapped_column(Text, server_default="ml")
     # Streaks and badges (SPEC: off switch). Off hides them everywhere; data keeps being kept.
     gamification: Mapped[bool] = mapped_column(Boolean, server_default=true())
+    # Streak reminder at this local time ("20:00"), or None for off (SPEC: opt-in).
+    streak_reminder: Mapped[str | None] = mapped_column(Text)
+    # The local day the last reminder went out: at most one a day.
+    last_reminded_on: Mapped[date | None] = mapped_column(Date)
+
+
+class PushSubscription(Timestamps, Base):
+    """A browser's Web Push subscription. The keys are what the browser handed out for
+    encrypting messages to it; they are needed as they are to send."""
+
+    __tablename__ = "push_subscriptions"
+    __table_args__ = (
+        Index("uq_push_subscriptions_user_endpoint", "user_id", "endpoint", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    endpoint: Mapped[str] = mapped_column(Text)
+    p256dh: Mapped[str] = mapped_column(Text)
+    auth: Mapped[str] = mapped_column(Text)
 
 
 class WaterLog(Timestamps, Base):
@@ -546,6 +566,7 @@ RLS_TABLES: dict[str, str] = {
     "streak_events": "user_id",
     "weekly_goals": "user_id",
     "user_badges": "user_id",
+    "push_subscriptions": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column

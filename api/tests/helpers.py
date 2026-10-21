@@ -134,6 +134,13 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
             ),
             {"u": user_id},
         )
+        conn.execute(
+            text(
+                "INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth) VALUES "
+                "(gen_random_uuid(), :u, 'https://push.example.com/a-browser', 'p256dh', 'auth')"
+            ),
+            {"u": user_id},
+        )
         water_id = conn.execute(
             text(
                 "INSERT INTO water_logs (id, user_id, logged_at, logged_on, ml) VALUES "
