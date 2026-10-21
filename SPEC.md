@@ -623,7 +623,7 @@ Available anytime from Account, and from a download icon on the Progress and His
 - **Real devices:** iPhone Safari, Android Chrome, desktop Chrome, Safari, Firefox.
 
 ### Non-functional
-Privacy: no third-party trackers, and no user data sent to any AI provider. Security: HTTPS only, HSTS, strict Content Security Policy, dependency scanning. Before opening to the public: privacy policy, terms, and a check of US state consumer health data laws such as Washington's My Health My Data Act **[?]**. Performance: initial JS at most 200 KB gzip. Accessibility: WCAG 2.2 AA.
+Privacy: no third-party trackers, and no user data sent to any AI provider. Security: HTTPS only, HSTS, strict Content Security Policy, dependency scanning. The site's headers live in `web/public/_headers`: HSTS for two years with preload, and a CSP that allows only the app's own files plus Cloudflare Turnstile (no inline scripts, styles only from the app's stylesheet, no framing). The API sends its own headers, with a CSP that loads nothing. CI grades both the way securityheaders.com does, runs every end-to-end test under the real policy, runs `npm audit` and `pip-audit`, and Dependabot proposes updates weekly. Before opening to the public: privacy policy, terms, and a check of US state consumer health data laws such as Washington's My Health My Data Act **[?]**. Performance: initial JS at most 200 KB gzip. Accessibility: WCAG 2.2 AA.
 
 ---
 
