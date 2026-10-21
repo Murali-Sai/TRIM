@@ -16,6 +16,7 @@ import {
 import { usePageTitle } from '../usePageTitle';
 import { Notice, secondaryButton, Section } from './account/Section';
 import { GoalWeight } from './body/GoalWeight';
+import { MeasurementsSection } from './body/MeasurementsSection';
 import { WeightEntryForm } from './body/WeightEntryForm';
 import { WeightHistory } from './body/WeightHistory';
 import {
@@ -201,6 +202,9 @@ export function BodyPage() {
               />
             )}
           </Section>
+        </div>
+        <div className="lg:col-start-1 lg:row-start-3">
+          <MeasurementsSection />
         </div>
       </div>
     </section>
