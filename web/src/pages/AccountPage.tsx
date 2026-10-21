@@ -36,6 +36,22 @@ function TargetsSection() {
   );
 }
 
+function StaplesSection() {
+  return (
+    <Section
+      title="My staples"
+      description="Up to 20 foods and meals you eat often, for suggestions."
+    >
+      <Link
+        to="/staples"
+        className="tap inline-block rounded-lg border border-border bg-surface px-4 py-2.5 font-semibold"
+      >
+        Manage staples
+      </Link>
+    </Section>
+  );
+}
+
 function AppearanceSection() {
   const [theme, setTheme] = useState<ThemeChoice>(getThemeChoice);
   const save = useMutation({ mutationFn: updateProfile });
@@ -79,6 +95,7 @@ export function AccountPage() {
         <div className="flex flex-col gap-4 lg:gap-6">
           <ProfileSection me={me.data} />
           <TargetsSection />
+          <StaplesSection />
           <TrackingSection />
           <AppearanceSection />
           <DevicesSection />

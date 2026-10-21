@@ -44,7 +44,7 @@ export function Switch({
           }`}
         >
           <span
-            className={`absolute top-1 h-5 w-5 rounded-full bg-surface shadow transition-transform duration-200 motion-reduce:transition-none ${
+            className={`absolute left-0 top-1 h-5 w-5 rounded-full bg-surface shadow transition-transform duration-200 motion-reduce:transition-none ${
               checked ? 'translate-x-6' : 'translate-x-1'
             }`}
           />

@@ -42,6 +42,8 @@ import { QuickAddForm } from './log/QuickAddForm';
 import { QuickLists } from './log/QuickLists';
 import { TimeChip } from './log/TimeChip';
 import { useMealSheets } from './log/useMealSheets';
+import { StaplesManager } from './staples/StaplesManager';
+import { StapleToggle } from './staples/StapleToggle';
 
 function perServing(food: Food): string {
   const serving = food.servings.find((s) => s.is_default) ?? food.servings[0];
@@ -52,7 +54,7 @@ function perServing(food: Food): string {
   return `${formatNumber(Math.round(food.kcal_100))} kcal per 100 g`;
 }
 
-type Tab = 'search' | 'meals' | 'quick';
+type Tab = 'search' | 'meals' | 'staples' | 'quick';
 
 /** What was just logged: a link to see it, and Undo for the whole add. */
 interface Done {
@@ -190,7 +192,7 @@ function LogFood({ timeZone }: { timeZone: string }) {
   const results = search.data?.results ?? [];
   const searching = q.length >= 2;
   const tabClass = (t: Tab) =>
-    `tap flex-1 cursor-pointer rounded-md px-3 py-2 font-semibold transition-colors duration-200 ${
+    `tap flex-1 cursor-pointer rounded-md px-1 py-2 text-sm font-semibold whitespace-nowrap transition-colors duration-200 sm:px-3 sm:text-base ${
       tab === t ? 'bg-surface text-text shadow-sm' : 'text-text-secondary'
     }`;
 
@@ -232,12 +234,13 @@ function LogFood({ timeZone }: { timeZone: string }) {
           <div
             role="tablist"
             aria-label="Ways to log"
-            className="grid grid-cols-3 gap-1 rounded-lg bg-surface-2 p-1"
+            className="grid grid-cols-4 gap-1 rounded-lg bg-surface-2 p-1"
           >
             {(
               [
                 ['search', 'Search'],
                 ['meals', 'Meals'],
+                ['staples', 'Staples'],
                 ['quick', 'Quick add'],
               ] as const
             ).map(([key, label]) => (
@@ -268,6 +271,10 @@ function LogFood({ timeZone }: { timeZone: string }) {
                 }}
                 onEdit={meals.edit}
               />
+            </div>
+          ) : tab === 'staples' ? (
+            <div className="mt-4" role="tabpanel" aria-label="Staples">
+              <StaplesManager />
             </div>
           ) : tab === 'quick' ? (
             <div className="mt-4" role="tabpanel" aria-label="Quick add">
@@ -387,6 +394,7 @@ function LogFood({ timeZone }: { timeZone: string }) {
                 favourite={favouriteIds.has(selected.food.id)}
                 onFavourite={(on) => favourite.mutate({ food: selected.food, on })}
                 onAdd={add}
+                footer={<StapleToggle foodId={selected.food.id} name={selected.food.name} />}
               />
             </Section>
           ) : null}

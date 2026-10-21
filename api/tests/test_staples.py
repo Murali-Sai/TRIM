@@ -61,9 +61,7 @@ def test_ac_the_21st_staple_is_rejected(client: CsrfClient) -> None:
         assert add(client, food_id=food(client, f"Food {i}")).status_code == 201
     res = add(client, food_id=food(client, "One too many"))
     assert res.status_code == 422
-    assert res.json()["detail"] == (
-        "You can keep up to 20 staples. Remove one to add another."
-    )
+    assert res.json()["detail"] == ("You can keep up to 20 staples. Remove one to add another.")
     body = client.get("/api/staples").json()
     assert (body["count"], body["limit"]) == (20, 20)
     # Removing one makes room again.
@@ -209,7 +207,9 @@ def test_a_new_unit_resets_the_amounts_to_its_defaults(client: CsrfClient) -> No
         json={"name": "Toast", "items": [{"food_id": s["food_id"], "grams": 60}]},
     ).json()
     m = add(client, saved_meal_id=meal["id"]).json()["staples"][1]
-    assert client.patch(f"/api/staples/{m['id']}", json={"unit_label": "1 slice"}).status_code == 422
+    assert (
+        client.patch(f"/api/staples/{m['id']}", json={"unit_label": "1 slice"}).status_code == 422
+    )
 
 
 def test_food_group_is_one_of_the_23(client: CsrfClient) -> None:
@@ -245,11 +245,12 @@ def test_new_staples_go_last(client: CsrfClient) -> None:
     assert [s["name"] for s in staples(client)] == ["Eggs", "Rice", "Milk"]
 
 
-def test_a_deleted_food_leaves_a_missing_staple(client: CsrfClient) -> None:
+def test_a_deleted_food_leaves_a_missing_staple(client: CsrfClient, owner_engine: Engine) -> None:
     signed_in(client)
     rice = food(client, "Rice")
     add(client, food_id=rice)
-    assert client.delete(f"/api/foods/{rice}").status_code == 204
+    with owner_engine.begin() as conn:
+        conn.execute(text("UPDATE foods SET deleted_at = now() WHERE id = :f"), {"f": rice})
     (s,) = staples(client)
     assert (s["missing"], s["name"], s["per_unit"]["kcal"]) == (True, None, 0)
 
@@ -260,7 +261,8 @@ def test_deleting_a_staple_keeps_the_food(client: CsrfClient) -> None:
     sid = add(client, food_id=rice).json()["staples"][0]["id"]
     assert client.delete(f"/api/staples/{sid}").status_code == 204
     assert client.delete(f"/api/staples/{sid}").status_code == 404
-    assert client.get(f"/api/foods/{rice}").status_code == 200
+    # The food is still there: it can become a staple again.
+    assert add(client, food_id=rice).status_code == 201
 
 
 # --- "Add your 10 most-logged foods as staples?" ------------------------------------------

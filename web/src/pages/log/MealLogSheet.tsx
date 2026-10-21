@@ -17,6 +17,7 @@ import {
 } from '../../lib/mealPortion';
 import { formatNumber } from '../../lib/units';
 import { Notice, primaryButton, secondaryButton } from '../account/Section';
+import { StapleToggle } from '../staples/StapleToggle';
 import { TimeChip } from './TimeChip';
 
 export interface MealLogChoice {
@@ -289,6 +290,7 @@ export function MealLogSheet({
         >
           Edit meal
         </button>
+        <StapleToggle mealId={meal.id} name={meal.name} />
       </form>
     </Sheet>
   );

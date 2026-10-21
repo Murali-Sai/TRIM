@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import type { Food } from '../../api/foods';
 import { Field } from '../../components/Field';
 import {
@@ -22,6 +22,8 @@ interface Props {
   onFavourite: (on: boolean) => void;
   onAdd: (picked: Picked) => void;
   addLabel?: string;
+  /** Shown under the add button, such as "Add as staple". */
+  footer?: ReactNode;
 }
 
 /** The amount picker for one food, with a live preview of what it adds. */
@@ -32,6 +34,7 @@ export function FoodDetail({
   onFavourite,
   onAdd,
   addLabel = 'Add to list',
+  footer,
 }: Props) {
   const options = amountOptions(food);
   const first = options.find((o) => o.label === start.unit) ?? options[0] ?? GRAMS;
@@ -118,6 +121,7 @@ export function FoodDetail({
       <button type="submit" className={`${primaryButton} mt-4`}>
         {addLabel}
       </button>
+      {footer}
     </form>
   );
 }
