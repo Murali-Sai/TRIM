@@ -23,6 +23,7 @@ import { trendFor, trendSentence, unitLabel } from '../body/weightFormat';
 import { useDaySeries } from '../charts/useDaySeries';
 import { TargetStrip } from '../today/TargetStrip';
 import { DownloadIcon } from '../../components/icons';
+import { CheckinCard } from './CheckinCard';
 import { DashCard } from './DashCard';
 import { MeasurementsCard } from './MeasurementsCard';
 import { StreakCard } from './StreakCard';
@@ -346,15 +347,7 @@ function Progress({ timeZone, units }: { timeZone: string; units: UnitSystem }) 
         <WeightCard today={today} units={units} />
         <MeasurementsCard timeZone={timeZone} />
         <StreakCard />
-        <DashCard
-          title="This week's check-in"
-          headline="Your first check-in comes after a week of logging"
-          testId="card-checkin"
-        >
-          <p className="text-sm text-text-secondary">
-            Each week, a short summary of how the week went: average calories and days on target.
-          </p>
-        </DashCard>
+        <CheckinCard />
       </div>
     </section>
   );

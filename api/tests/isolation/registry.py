@@ -523,6 +523,15 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         params=lambda c: {"endpoint": "https://push.example.com/a-browser"},
     ),
+    # A has a check-in for the week of 12 Oct 2026 (tests.helpers.seed_food_rows).
+    Endpoint("GET", "/api/checkins", requires_session=True),
+    Endpoint(
+        "GET",
+        "/api/checkins/{week}",
+        requires_session=True,
+        path_params=lambda c: {"week": "2026-10-12"},
+    ),
     # The hourly job takes no session; without the job token it is refused.
     Endpoint("POST", "/api/internal/jobs/hourly", requires_session=False),
+    Endpoint("POST", "/api/internal/checkins", requires_session=False),
 ]

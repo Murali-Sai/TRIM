@@ -9,11 +9,20 @@ interface Props {
   to?: string;
   children?: ReactNode;
   testId: string;
+  /** What opening the card does, for screen readers. */
+  action?: string;
 }
 
 /** A dashboard card: question, answer, evidence. The whole card is one link when it has a
  * full chart, so there is a single tab stop and nothing inside competes with it. */
-export function DashCard({ title, headline, to, children, testId }: Props) {
+export function DashCard({
+  title,
+  headline,
+  to,
+  children,
+  testId,
+  action = 'Open the full chart.',
+}: Props) {
   return (
     <section
       className={`relative flex flex-col rounded-xl border border-border bg-surface p-4 ${
@@ -26,7 +35,7 @@ export function DashCard({ title, headline, to, children, testId }: Props) {
         {to ? (
           <Link
             to={to}
-            aria-label={`${title}: ${headline}. Open the full chart.`}
+            aria-label={`${title}: ${headline}. ${action}`}
             className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-accent"
           >
             {title}

@@ -327,6 +327,11 @@ Example, with 300 kcal, 40 P, 25 C, 8 F left: chicken breast 120 g (198 kcal, 37
 - **Wording.** No guilt or shame: no "You failed", no sad mascots, no countdown pressure beyond the single reminder.
 
 **Weekly check-in.** Generated for each user for the previous Monday to Sunday in their timezone. Contents, as plain sentences: average calories vs target and days on target; average protein vs target; weight trend start, end and change; fastest-changing measurement; average water and fiber if tracked; days logged; current phase and day number; goal-date projection; current streak, weekly goals completed and badges earned that week (if gamification is on). Weeks with fewer than 4 logged days say "Only 3 days logged, so averages may be off." No advice or recommendations. A Cloud Scheduler job **[?, free-tier job count]** calls `/internal/checkins` hourly and generates any check-in whose local Monday 06:00 has passed. Email is off by default; when on, emails are queued at 90 a day to stay under Resend's 100-a-day free limit, so delivery can slip by a day once more than 90 users opt in.
+- A week's check-in is due from its following Monday 06:00 local time, and each job run makes only the latest due week. A missed run catches up on the next one, but older weeks are not backfilled. A week that ended before the account was created gets none.
+- The numbers are stored with the check-in; the sentences are written when it is read, in the units the user has then. The streak is the one stored when the check-in is made. Weekly goals count only if that week had goals set.
+- Emails go only to confirmed addresses. The 90 a day are counted per UTC day across all users. A send that fails stops the run, and the rest wait for the next hour.
+- `/internal/checkins` uses the same `X-Job-Token` as the hourly job, which runs check-ins too, so one Cloud Scheduler job covers both.
+- The Progress card shows the latest check-in's headline and first three sentences. Showing it there does not mark it read; opening it does.
 
 ### Energy, TDEE and macro rules
 **Energy per gram (used everywhere):** protein 4 kcal, carbs 4 kcal, fat 9 kcal.
@@ -595,7 +600,7 @@ Available anytime from Account, and from a download icon on the Progress and His
 - JSON is `{"format": "trim-export", "version": 1, "exported_at", "timezone", "date_from", "date_to", "datasets": {...}}`. It holds the stored rows with their ids, without `user_id`, and is never escaped.
 - When the chosen datasets hold nothing (the profile aside, and the profile is not picked), the answer is "No data in this range." A refused export does not use up the minute.
 - Any signed-in account can export, including one past the email-confirmation deadline; its "Confirm your email" screen offers a one-tap Excel download.
-- The Weekly check-ins sheet has its header only until check-ins exist (task 5.3).
+- The Weekly check-ins sheet has one row per check-in: days logged, calories, protein, the weight trend, the fastest-changing measurement, water, fiber and phase.
 
 **Import (`/import`).** Account, "Import from a TRIM file", takes the JSON export.
 - It goes into an empty account only: no food, weigh-ins, measurements, water, meals, custom foods, staples or phases yet. Otherwise the answer is 409 and nothing changes.
