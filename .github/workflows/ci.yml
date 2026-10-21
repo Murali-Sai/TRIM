@@ -167,6 +167,8 @@ jobs:
           enable-cache: true
           cache-dependency-glob: api/uv.lock
       - run: uv sync --locked
+      # For the backup and restore drill tests (tests/test_backup_drill.py).
+      - run: sudo apt-get update -q && sudo apt-get install -yq age
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy

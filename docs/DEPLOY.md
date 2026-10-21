@@ -174,6 +174,45 @@ cloud or service key, a long value assigned to a secret-looking name, or an `.en
 the built site, it also fails on the name of any server-only setting. A documented test value
 can be allowed with a `secret-grep: allow` comment on its line.
 
+## 8. Nightly backups and the restore drill (task 5.6)
+
+`.github/workflows/backup.yml` runs every night at 07:17 UTC (and by hand). It has two steps:
+
+1. **Backup.** `ops/backup.sh` dumps Neon (`pg_dump`, custom format, no owners) together with a
+   manifest: schema version, exact row counts and the tables with RLS on. It encrypts both with
+   [age](https://age-encryption.org) and uploads the file to a private bucket.
+2. **Drill.** The same file is downloaded and decrypted with the drill key. `ops/restore-drill.sh`
+   then restores it into an empty Postgres and fails unless the schema version, every table's
+   row count and RLS all match the manifest.
+
+GitHub emails the repository's admins when a scheduled run fails.
+
+One-time setup:
+
+1. Make two age keys with `age-keygen -o owner.key` and `age-keygen -o drill.key`.
+   - Keep `owner.key` offline, in your password manager: it is the one you restore with.
+   - Put the whole of `drill.key` in the GitHub secret `BACKUP_DRILL_IDENTITY`.
+   - Set the variable `BACKUP_AGE_RECIPIENTS` to both public keys, space separated (from
+     `age-keygen -y owner.key` and `age-keygen -y drill.key`).
+2. Create a private Cloud Storage bucket in `us-central1` with uniform access and a lifecycle
+   rule that deletes objects after 30 days. Set its name as the variable `BACKUP_BUCKET`.
+3. Create a service account `trim-backup`, then give it access to only what it needs:
+   - On that bucket: **Storage Object Creator** and **Storage Object Viewer**.
+   - On `trim-migration-database-url`: **Secret Manager Secret Accessor**.
+   - Let the GitHub principal from section 7 impersonate it (**Workload Identity User**).
+   - Set the variable `GCP_BACKUP_SA` to its email.
+4. Run **Backup** from the Actions tab once and check both jobs pass.
+
+To restore for real:
+
+1. Download a file with `gcloud storage cp gs://<bucket>/daily/<file> .`.
+2. Restore it into an empty database, such as a new Neon branch:
+   `TARGET_URL=postgresql://<owner>@<host>/<db> AGE_IDENTITY=owner.key ops/restore-drill.sh <file>`.
+   It creates the roles, restores and checks the result.
+3. Point `trim-database-url` and `trim-migration-database-url` at that database.
+
+The same drill runs in the API tests (`tests/test_backup_drill.py`) against the test database.
+
 ## Local development
 
 No proxy is needed locally: the Vite dev server forwards `/api` to `http://127.0.0.1:8000`, so
