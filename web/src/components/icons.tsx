@@ -144,3 +144,33 @@ export function GripIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** Closed padlock: this item stays when shuffling. */
+export function LockIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
+      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+    </Icon>
+  );
+}
+
+/** Open padlock: shuffling may change this item. */
+export function UnlockIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
+      <path d="M8 10.5V8a4 4 0 0 1 7.7-1.5" />
+    </Icon>
+  );
+}
+
+export function ShuffleIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7h3c2.5 0 3.5 1.5 5 5s2.5 5 5 5H20" />
+      <path d="M4 17h3c1.2 0 2-.4 2.8-1.2M14.2 8.2c.8-.8 1.6-1.2 2.8-1.2H20" />
+      <path d="m17.5 4.5 2.5 2.5-2.5 2.5M17.5 14.5l2.5 2.5-2.5 2.5" />
+    </Icon>
+  );
+}

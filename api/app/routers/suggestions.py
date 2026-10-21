@@ -1,19 +1,25 @@
-"""What should I eat? (task 3.20, SPEC page 3). Combines the user's available staples to fit
-what is left of a day, with the optimizer in app/suggest.py. Display only: nothing here logs
-food or changes a target."""
+"""What should I eat? (tasks 3.20 and 3.21, SPEC page 3). Combines the user's available staples
+to fit what is left of a day, with the optimizer in app/suggest.py. Suggesting never changes a
+target; a suggestion is logged or saved only when the user taps Log or Save as meal."""
 
 import datetime as dt
 import uuid
+from decimal import Decimal
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, Field, model_validator
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app import suggest as engine
 from app.db import user_session
 from app.deps import ServicesDep
 from app.fit import MACROS
+from app.ids import uuid7
+from app.models import FoodLog, SavedMealItem
+from app.routers.logs import MAX_GRAMS, LogOut, _check_time, _nutrient, _out, _timezone
+from app.routers.meals import NUTRIENTS, PER_100, MealOut, _create, _items, _one, _q
 from app.routers.staples import StapleOut, staple_rows
 from app.security.sessions import ActiveUserDep
 from app.timeutil import local_date
@@ -243,3 +249,174 @@ def suggestions(body: SuggestIn, user: ActiveUserDep, services: ServicesDep) -> 
             for x in found
         ],
     )
+
+
+# --- acting on a suggestion (task 3.21) ---------------------------------------------------
+
+
+class PlateItem(BaseModel):
+    staple_id: uuid.UUID
+    units: Annotated[float, Field(gt=0, le=99)]
+
+
+Plate = Annotated[list[PlateItem], Field(min_length=1, max_length=engine.MAX_ITEMS)]
+
+
+class LogPlateIn(BaseModel):
+    eaten_at: AwareDatetime
+    items: Plate
+
+
+class SavePlateIn(BaseModel):
+    name: Annotated[str, Field(min_length=1, max_length=80)]
+    items: Plate
+
+
+def _plate(s: Session, user_id: Any, items: list[PlateItem]) -> list[tuple[Any, Decimal]]:
+    """Each staple row with its units; another user's staple, or a repeat, is refused."""
+    ids = [i.staple_id for i in items]
+    if len(set(ids)) != len(ids):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Each staple once")
+    rows = {
+        r.id: r
+        for r in s.execute(
+            text(
+                "SELECT * FROM staples WHERE user_id = :u AND deleted_at IS NULL AND id = ANY(:ids)"
+            ),
+            {"u": user_id, "ids": ids},
+        ).all()
+    }
+    if len(rows) != len(ids):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Staple not found")
+    return [(rows[i.staple_id], Decimal(str(i.units))) for i in items]
+
+
+def _food_row(s: Session, food_id: Any) -> Any:
+    food = s.execute(
+        text("SELECT * FROM foods WHERE id = :f AND deleted_at IS NULL"), {"f": food_id}
+    ).one_or_none()
+    if food is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "A staple's food is gone")
+    return food
+
+
+def _meal_items(s: Session, user_id: Any, meal_id: Any) -> tuple[Any, list[Any]]:
+    meal = s.execute(
+        text("SELECT * FROM saved_meals WHERE id = :m AND user_id = :u AND deleted_at IS NULL"),
+        {"m": meal_id, "u": user_id},
+    ).one_or_none()
+    if meal is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "A staple's meal is gone")
+    return meal, [r for r in _items(s, [meal.id])[meal.id] if r.food_name is not None]
+
+
+def _by_unit(st: Any, units: Decimal) -> tuple[Decimal, Decimal | None, str | None]:
+    """Grams, and the quantity and unit when the staple's unit is a serving ("2 x 1 egg")."""
+    grams = _q(st.unit_grams * units)
+    if st.unit_label == "100 g":
+        return grams, None, None
+    return grams, units, st.unit_label
+
+
+@router.post("/log", status_code=status.HTTP_201_CREATED)
+def log_plate(body: LogPlateIn, user: ActiveUserDep, services: ServicesDep) -> list[LogOut]:
+    """Log a suggestion as one time block (a shared log_group_id), source `suggestion`. A saved
+    meal staple adds its items, scaled by the units; every entry keeps its own snapshot."""
+    now = services.clock()
+    with user_session(user.user_id) as s:
+        tz = _timezone(s, user.user_id)
+        at = _check_time(body.eaten_at, now, tz)
+        group = uuid7()
+        rows: list[FoodLog] = []
+
+        def add(food: Any, per: Any, grams: Decimal, **extra: Any) -> None:
+            if grams <= 0 or grams > MAX_GRAMS:
+                raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Amount out of range")
+            row = FoodLog(
+                user_id=user.user_id,
+                food_id=food.id if food is not None else per.food_id,
+                log_group_id=group,
+                eaten_at=at,
+                logged_on=local_date(at, tz),
+                name=per.food_name if food is None else food.name,
+                brand=per.food_brand if food is None else food.brand,
+                grams=grams,
+                **{n: _nutrient(getattr(per, PER_100[n]), grams) for n in NUTRIENTS},
+                source="suggestion",
+                created_at=now,
+                **extra,
+            )
+            s.add(row)
+            rows.append(row)
+
+        for st, units in _plate(s, user.user_id, body.items):
+            if st.food_id is not None:
+                food = _food_row(s, st.food_id)
+                grams, quantity, unit_label = _by_unit(st, units)
+                add(food, food, grams, quantity=quantity, unit_label=unit_label)
+            else:
+                meal, items = _meal_items(s, user.user_id, st.saved_meal_id)
+                for r in items:
+                    add(
+                        None,
+                        r,
+                        _q(r.grams * units),
+                        quantity=None
+                        if r.quantity is None
+                        else (r.quantity * units).quantize(Decimal("0.001")),
+                        unit_label=r.unit_label,
+                        saved_meal_id=meal.id,
+                    )
+                s.execute(
+                    text(
+                        "UPDATE saved_meals SET use_count = use_count + 1, last_used_at = :now "
+                        "WHERE id = :m"
+                    ),
+                    {"now": now, "m": meal.id},
+                )
+        if not rows:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Nothing left to log")
+        s.flush()
+        return [_out(r) for r in rows]
+
+
+@router.post("/save-meal", status_code=status.HTTP_201_CREATED)
+def save_plate(body: SavePlateIn, user: ActiveUserDep) -> MealOut:
+    """Save a suggestion as a meal at its amounts; a saved meal staple adds its items."""
+    with user_session(user.user_id) as s:
+        plate = _plate(s, user.user_id, body.items)
+        meal_id = _create(s, user.user_id, body.name, None)
+        order = 0
+        for st, units in plate:
+            if st.food_id is not None:
+                _food_row(s, st.food_id)
+                grams, quantity, unit_label = _by_unit(st, units)
+                parts = [(st.food_id, grams, quantity, unit_label)]
+            else:
+                _, items = _meal_items(s, user.user_id, st.saved_meal_id)
+                parts = [
+                    (
+                        r.food_id,
+                        _q(r.grams * units),
+                        None if r.quantity is None else r.quantity * units,
+                        r.unit_label,
+                    )
+                    for r in items
+                ]
+            for food_id, grams, quantity, unit_label in parts:
+                s.add(
+                    SavedMealItem(
+                        user_id=user.user_id,
+                        saved_meal_id=meal_id,
+                        food_id=food_id,
+                        grams=grams,
+                        quantity=quantity,
+                        unit_label=unit_label,
+                        sort_order=order,
+                    )
+                )
+                order += 1
+        if order == 0:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Nothing to save")
+        s.flush()
+        return _one(s, user.user_id, meal_id)

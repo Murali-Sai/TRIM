@@ -43,6 +43,7 @@ import { QuickLists } from './log/QuickLists';
 import { TimeChip } from './log/TimeChip';
 import { useMealSheets } from './log/useMealSheets';
 import { StaplesManager } from './staples/StaplesManager';
+import { SuggestButton } from './suggest/SuggestButton';
 import { StapleToggle } from './staples/StapleToggle';
 
 function perServing(food: Food): string {
@@ -202,6 +203,16 @@ function LogFood({ timeZone }: { timeZone: string }) {
       <div className="mt-4">
         <TimeChip wall={wall} now={now} lastUsed={lastUsed} onChange={setWall} />
       </div>
+      <SuggestButton
+        className="mt-3"
+        timeZone={timeZone}
+        wall={wall}
+        onLogged={(entries, at) => {
+          const items = loggedMessage(entries.length, at, now.slice(0, 10));
+          logged(items, at, entries[0]?.log_group_id ?? '');
+          void queryClient.invalidateQueries({ queryKey: QUICK_FOODS_KEY });
+        }}
+      />
       {done ? (
         <Notice kind="ok">
           {done.message}{' '}
