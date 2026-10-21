@@ -49,8 +49,8 @@ def log_in(client: TestClient, email: str, password: str = PASSWORD, **extra: An
 
 
 def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
-    """A custom food with a serving unit, one food log, a favourite, a saved meal, a staple,
-    settings and a water add for `user_id`, written as the owner.
+    """A custom food with a serving unit, one food log, a favourite, a saved meal, two staples
+    and a never pair, settings and a water add for `user_id`, written as the owner.
 
     Stands in until the food logging API exists (tasks 3.2 to 3.5), so account deletion and
     the isolation harness already cover these tables.
@@ -110,6 +110,22 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
             ),
             {"u": user_id, "f": food_id},
         ).scalar_one()
+        meal_staple_id = conn.execute(
+            text(
+                "INSERT INTO staples (id, user_id, saved_meal_id, unit_label, step_units, "
+                "min_units, max_units) VALUES (gen_random_uuid(), :u, :m, '1 meal', 0.5, 0.5, 3) "
+                "RETURNING id"
+            ),
+            {"u": user_id, "m": meal_id},
+        ).scalar_one()
+        first, second = sorted([staple_id, meal_staple_id])
+        pair_id = conn.execute(
+            text(
+                "INSERT INTO pair_preferences (id, user_id, staple_a_id, staple_b_id) "
+                "VALUES (gen_random_uuid(), :u, :a, :b) RETURNING id"
+            ),
+            {"u": user_id, "a": first, "b": second},
+        ).scalar_one()
         conn.execute(
             text("INSERT INTO user_settings (user_id, track_water) VALUES (:u, true)"),
             {"u": user_id},
@@ -162,4 +178,5 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
         "meal_id": meal_id,
         "water_id": water_id,
         "staple_id": staple_id,
+        "pair_id": pair_id,
     }

@@ -136,6 +136,12 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
                 text("SELECT id FROM staples WHERE user_id = :u"), {"u": a_id}
             ).scalars()
         ]
+        pair_ids = [
+            str(x)
+            for x in conn.execute(
+                text("SELECT id FROM pair_preferences WHERE user_id = :u"), {"u": a_id}
+            ).scalars()
+        ]
         meal_ids = [
             str(m)
             for m in conn.execute(
@@ -154,6 +160,7 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
         a_meal_ids=meal_ids,
         a_water_ids=water_ids,
         a_staple_ids=staple_ids,
+        a_pair_ids=pair_ids,
     )
     res = call(b, ep, ctx)
     name = f"{ep.method} {ep.path}"
@@ -166,7 +173,7 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
     secrets += [*ctx.a_weight_ids, *ctx.a_deleted_weight_ids]
     secrets += ctx.a_food_ids
     secrets += [*ctx.a_log_ids, *ctx.a_group_ids, *ctx.a_meal_ids, *ctx.a_water_ids]
-    secrets += ctx.a_staple_ids
+    secrets += [*ctx.a_staple_ids, *ctx.a_pair_ids]
     for secret in secrets:
         assert secret.lower() not in res.text.lower(), f"{name} showed A's data to B"
 
@@ -188,6 +195,7 @@ def check_needs_session(app: FastAPI, ep: Endpoint) -> None:
         a_meal_ids=some,
         a_water_ids=some,
         a_staple_ids=some,
+        a_pair_ids=some,
     )
     res = call(anon, ep, ctx)
     assert res.status_code == 401, f"{ep.method} {ep.path} without a session: {res.status_code}"

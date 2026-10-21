@@ -221,12 +221,20 @@ for (const vp of [
       );
       await expect(sheet.getByRole('button', { name: 'Save' })).toBeDisabled();
       await sheet.getByLabel('To').fill('3');
+      await expect(sheet.getByLabel('Food group')).toHaveValue('');
+      await sheet.getByLabel('Food group').selectOption('Bread and tortillas');
       await sheet.getByRole('button', { name: 'Save' }).click();
       await expect(sheet).toBeHidden();
       expect(calls.patches).toEqual([
         {
           id: 's-bread',
-          body: { unit_label: '1 slice', min_units: 1, max_units: 3, step_units: 1 },
+          body: {
+            unit_label: '1 slice',
+            food_group: 'bread_tortillas',
+            min_units: 1,
+            max_units: 3,
+            step_units: 1,
+          },
         },
       ]);
       await noSideScroll(page);

@@ -20,6 +20,7 @@ from app.models import (
     Food,
     FoodFavourite,
     FoodLog,
+    PairPreference,
     PushSubscription,
     SavedMeal,
     SavedMealItem,
@@ -115,17 +116,27 @@ def seed_user(label: str) -> Seeded:
                 user_id=user_id, saved_meal_id=meal.id, food_id=food.id, grams=Decimal("250")
             )
         )
-        s.add(
-            Staple(
-                user_id=user_id,
-                food_id=food.id,
-                unit_label="100 g",
-                unit_grams=Decimal("100"),
-                step_units=Decimal("0.5"),
-                min_units=Decimal("0.5"),
-                max_units=Decimal("3"),
-            )
+        oats = Staple(
+            user_id=user_id,
+            food_id=food.id,
+            unit_label="100 g",
+            unit_grams=Decimal("100"),
+            step_units=Decimal("0.5"),
+            min_units=Decimal("0.5"),
+            max_units=Decimal("3"),
         )
+        bowl = Staple(
+            user_id=user_id,
+            saved_meal_id=meal.id,
+            unit_label="1 meal",
+            step_units=Decimal("0.5"),
+            min_units=Decimal("0.5"),
+            max_units=Decimal("3"),
+        )
+        s.add_all([oats, bowl])
+        s.flush()
+        a, b = sorted([oats.id, bowl.id])
+        s.add(PairPreference(user_id=user_id, staple_a_id=a, staple_b_id=b))
         s.add(UserSettings(user_id=user_id, track_water=True))
         s.add(UserStreak(user_id=user_id, current_days=3, longest_days=3))
         s.add(StreakEvent(user_id=user_id, on_date=date(2026, 10, 17), kind="counted"))

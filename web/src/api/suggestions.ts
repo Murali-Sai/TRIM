@@ -1,6 +1,6 @@
 import type { LogEntry } from './logs';
 import type { Meal } from './meals';
-import { postJson } from './client';
+import { deleteJson, postJson } from './client';
 
 export interface Macros {
   kcal: number;
@@ -18,8 +18,11 @@ export interface Lock {
   units?: number;
 }
 
+export type Context = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
 export interface SuggestRequest {
   date: string;
+  context: Context;
   budget: BudgetChoice;
   max_items: number;
   excluded_staple_ids: string[];
@@ -48,6 +51,8 @@ export interface Suggestion {
   /** Budget minus totals; negative when a suggestion goes over. */
   leaves: Macros;
   match_pct: number;
+  /** "Often eaten together at dinner" when every pair on the card scores well. */
+  label: string | null;
 }
 
 export type SuggestState =
@@ -55,6 +60,7 @@ export type SuggestState =
 
 export interface Suggestions {
   date: string;
+  context: Context;
   state: SuggestState;
   message: string | null;
   budget: Macros | null;
@@ -79,3 +85,19 @@ export function saveSuggestion(name: string, items: PlateItem[]) {
 
 export const plateOf = (s: Suggestion): PlateItem[] =>
   s.items.map((i) => ({ staple_id: i.staple_id, units: i.units }));
+
+export interface PairPreference {
+  id: string;
+  staple_ids: [string, string];
+  names: [string, string];
+  created_at: string;
+}
+
+/** "Don't suggest these together": the two staples are never on one suggestion again. */
+export function neverTogether(stapleIds: [string, string]) {
+  return postJson<PairPreference>('/pair-preferences', { staple_ids: stapleIds });
+}
+
+export function allowTogether(id: string) {
+  return deleteJson<null>(`/pair-preferences/${id}`);
+}

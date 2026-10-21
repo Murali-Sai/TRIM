@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import type { Staple, StaplePatch } from '../../api/staples';
 import { Sheet } from '../../components/Sheet';
 import { parseAmount } from '../../lib/foodAmount';
+import { FOOD_GROUPS } from '../../lib/foodGroups';
 import { allowedAmounts, amountsError, defaultAmounts, formatUnits } from '../../lib/staples';
 import { formatNumber } from '../../lib/units';
 import { Notice, primaryButton } from '../account/Section';
@@ -32,6 +33,7 @@ function defaultsFor(staple: Staple, label: string): { min: string; max: string;
 export function StapleSheet({ staple, busy, error, onClose, onSave, onRemove }: Props) {
   const id = useId();
   const [unit, setUnit] = useState(staple.unit_label);
+  const [group, setGroup] = useState(staple.food_group ?? '');
   const [fields, setFields] = useState(() => defaultsFor(staple, staple.unit_label));
   const name = staple.name ?? 'Deleted food';
   const min = parseAmount(fields.min) ?? Number.NaN;
@@ -69,6 +71,7 @@ export function StapleSheet({ staple, busy, error, onClose, onSave, onRemove }: 
           if (problem) return;
           onSave({
             ...(unit !== staple.unit_label ? { unit_label: unit } : {}),
+            ...(group !== (staple.food_group ?? '') ? { food_group: group || null } : {}),
             min_units: min,
             max_units: max,
             step_units: step,
@@ -101,6 +104,28 @@ export function StapleSheet({ staple, busy, error, onClose, onSave, onRemove }: 
             A saved meal counts as one unit: the whole meal at its saved amounts.
           </p>
         )}
+        <div>
+          <label htmlFor={`${id}-group`} className="block font-semibold">
+            Food group
+          </label>
+          <select
+            id={`${id}-group`}
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+            aria-describedby={`${id}-group-hint`}
+            className="tap mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2.5"
+          >
+            <option value="">Not set</option>
+            {FOOD_GROUPS.map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <p id={`${id}-group-hint`} className="mt-1 text-sm text-text-secondary">
+            Pairs foods in suggestions. Guessed from the name; change it if it is wrong.
+          </p>
+        </div>
         <fieldset>
           <legend className="font-semibold">Amounts a suggestion can use</legend>
           <p className="text-sm text-text-secondary">
