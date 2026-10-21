@@ -204,7 +204,7 @@ export function BodyPage() {
           </Section>
         </div>
         <div className="lg:col-start-1 lg:row-start-3">
-          <MeasurementsSection />
+          <MeasurementsSection timeZone={timeZone} />
         </div>
       </div>
     </section>

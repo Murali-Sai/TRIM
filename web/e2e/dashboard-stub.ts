@@ -138,5 +138,43 @@ export async function openDashboard(page: Page, opts: { metric?: boolean } = {})
       },
     }),
   );
+  // A waist measured every week of the month, and a body fat reading.
+  const metric = (id: string, name: string, unit: string) => ({
+    id,
+    name,
+    unit,
+    precision: 1,
+    side: null,
+    pair_id: null,
+    is_preset: true,
+    is_active: true,
+    sort_order: 0,
+    archived_at: null,
+    entries: 0,
+    latest: null,
+  });
+  await page.route('**/api/measurement-types**', (r) =>
+    r.fulfill({ json: [metric('waist', 'Waist', 'cm'), metric('fat', 'Body fat', '%')] }),
+  );
+  await page.route('**/api/measurements**', (r) =>
+    r.fulfill({
+      json: [
+        ['waist', '2026-10-03', 90.0],
+        ['waist', '2026-10-10', 89.2],
+        ['waist', '2026-10-17', 88.4],
+        ['waist', '2026-10-24', 88.0],
+        ['waist', '2026-10-31', 87.3],
+        ['fat', '2026-10-03', 24.0],
+        ['fat', '2026-10-31', 23.4],
+      ].map(([type_id, day, value]) => ({
+        id: `${type_id}-${day}`,
+        type_id,
+        value,
+        value_text: null,
+        measured_at: `${day}T11:30:00Z`,
+        note: null,
+      })),
+    }),
+  );
   await page.goto('/charts');
 }

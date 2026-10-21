@@ -67,6 +67,7 @@ async function open(page: Page, path = '/body/metrics'): Promise<Calls> {
       },
     }),
   );
+  await page.route('**/api/measurements**', (r) => r.fulfill({ json: [] }));
   await page.route('**/api/measurement-types**', async (r) => {
     const url = new URL(r.request().url());
     const method = r.request().method();
@@ -140,7 +141,7 @@ for (const vp of [
     test('Body links to Manage metrics, which lists pairs as one', async ({ page }) => {
       await open(page, '/body');
       const section = page.getByTestId('measurements-section');
-      await expect(section).toContainText('Tracking Waist.');
+      await expect(section.getByLabel('Waist (cm)')).toBeVisible();
       await section.getByRole('link', { name: 'Manage metrics' }).click();
       await expect(page.getByRole('heading', { name: 'Manage metrics' })).toBeVisible();
       const rows = page.getByTestId('metric-row');
