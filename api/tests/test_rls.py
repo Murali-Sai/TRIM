@@ -24,6 +24,7 @@ from app.models import (
     SavedMeal,
     SavedMealItem,
     SessionRow,
+    Staple,
     StreakEvent,
     Target,
     User,
@@ -112,6 +113,17 @@ def seed_user(label: str) -> Seeded:
         s.add(
             SavedMealItem(
                 user_id=user_id, saved_meal_id=meal.id, food_id=food.id, grams=Decimal("250")
+            )
+        )
+        s.add(
+            Staple(
+                user_id=user_id,
+                food_id=food.id,
+                unit_label="100 g",
+                unit_grams=Decimal("100"),
+                step_units=Decimal("0.5"),
+                min_units=Decimal("0.5"),
+                max_units=Decimal("3"),
             )
         )
         s.add(UserSettings(user_id=user_id, track_water=True))

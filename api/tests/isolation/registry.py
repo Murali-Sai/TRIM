@@ -39,6 +39,7 @@ class Ctx:
     a_group_ids: list[str]  # the log_group_id of A's entries
     a_meal_ids: list[str]  # A's saved meals
     a_water_ids: list[str]  # A's water adds
+    a_staple_ids: list[str]  # A's staples
 
 
 @dataclass(frozen=True)
@@ -317,6 +318,38 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         body=lambda c: {"eaten_at": "2026-10-17T12:00:00Z"},
         path_params=lambda c: {"meal_id": c.a_meal_ids[0]},
+    ),
+    # A has a staple "Overnight oats", 1 jar (tests.helpers.seed_food_rows).
+    Endpoint("GET", "/api/staples", requires_session=True),
+    Endpoint(
+        "POST",
+        "/api/staples",
+        requires_session=True,
+        body=lambda c: {"food_id": c.a_food_ids[0]},
+    ),
+    Endpoint(
+        "POST",
+        "/api/staples",
+        requires_session=True,
+        body=lambda c: {"saved_meal_id": c.a_meal_ids[0]},
+    ),
+    Endpoint(
+        "PUT", "/api/staples/order", requires_session=True, body=lambda c: {"ids": c.a_staple_ids}
+    ),
+    Endpoint("GET", "/api/staples/prompt", requires_session=True),
+    Endpoint("POST", "/api/staples/prompt", requires_session=True, body=lambda c: {"accept": True}),
+    Endpoint(
+        "PATCH",
+        "/api/staples/{staple_id}",
+        requires_session=True,
+        body=lambda c: {"is_available": False, "max_units": 2},
+        path_params=lambda c: {"staple_id": c.a_staple_ids[0]},
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/staples/{staple_id}",
+        requires_session=True,
+        path_params=lambda c: {"staple_id": c.a_staple_ids[0]},
     ),
     # A tracks water and has one 250 ml add on 17 Oct (tests.helpers.seed_food_rows).
     Endpoint("GET", "/api/me/settings", requires_session=True),

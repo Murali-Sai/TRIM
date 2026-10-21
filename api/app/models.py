@@ -500,6 +500,8 @@ class UserSettings(Timestamps, Base):
     streak_reminder: Mapped[str | None] = mapped_column(Text)
     # The local day the last reminder went out: at most one a day.
     last_reminded_on: Mapped[date | None] = mapped_column(Date)
+    # When "Add your 10 most-logged foods as staples?" was answered: it is offered once.
+    staples_offered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class PushSubscription(Timestamps, Base):
@@ -516,6 +518,69 @@ class PushSubscription(Timestamps, Base):
     endpoint: Mapped[str] = mapped_column(Text)
     p256dh: Mapped[str] = mapped_column(Text)
     auth: Mapped[str] = mapped_column(Text)
+
+
+FOOD_GROUPS = (
+    "poultry",
+    "red_meat",
+    "fish_seafood",
+    "eggs",
+    "rice_grains",
+    "bread_tortillas",
+    "pasta",
+    "cereal_oats",
+    "vegetables",
+    "fruit",
+    "yogurt",
+    "milk",
+    "cheese",
+    "nuts_butters",
+    "beans_legumes",
+    "tofu_plant_protein",
+    "potatoes",
+    "sweets_desserts",
+    "savory_snacks",
+    "shakes_bars",
+    "sauces_condiments",
+    "fats_oils",
+    "mixed_dishes",
+)
+
+
+class Staple(Timestamps, Base):
+    """A food or saved meal the user eats often, with the amounts a suggestion may use:
+    min_units to max_units in steps of step_units of the unit (SPEC page 3, My staples).
+    At most 20 per user, enforced by a trigger."""
+
+    __tablename__ = "staples"
+    __table_args__ = (
+        CheckConstraint("(food_id IS NULL) <> (saved_meal_id IS NULL)", name="one_source"),
+        CheckConstraint(
+            f"food_group IS NULL OR {_in('food_group', FOOD_GROUPS)}", name="food_group"
+        ),
+        CheckConstraint(
+            "step_units > 0 AND min_units > 0 AND max_units >= min_units", name="amounts"
+        ),
+        CheckConstraint("unit_grams IS NULL OR unit_grams > 0", name="unit_grams_positive"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    food_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("foods.id", ondelete="CASCADE"), index=True
+    )
+    saved_meal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("saved_meals.id", ondelete="CASCADE"), index=True
+    )
+    food_group: Mapped[str | None] = mapped_column(Text)
+    unit_label: Mapped[str] = mapped_column(Text)
+    # Grams in one unit; None for a saved meal, whose unit is the whole meal.
+    unit_grams: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
+    step_units: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+    min_units: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+    max_units: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+    is_available: Mapped[bool] = mapped_column(Boolean, server_default=true())
+    sort_order: Mapped[int] = mapped_column(Integer, server_default="0")
 
 
 class WaterLog(Timestamps, Base):
@@ -567,6 +632,7 @@ RLS_TABLES: dict[str, str] = {
     "weekly_goals": "user_id",
     "user_badges": "user_id",
     "push_subscriptions": "user_id",
+    "staples": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column
