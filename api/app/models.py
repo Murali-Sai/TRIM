@@ -635,6 +635,30 @@ class MeasurementEntry(Timestamps, Base):
     note: Mapped[str | None] = mapped_column(Text)
 
 
+PHASE_KINDS = ("cut", "maintain", "bulk", "custom")
+
+
+class DietPhase(Timestamps, Base):
+    """A date range the user calls a cut, maintain, bulk or their own label (task 4.5). No two
+    of a user's phases overlap (a trigger checks it). Creating one never changes targets."""
+
+    __tablename__ = "diet_phases"
+    __table_args__ = (
+        CheckConstraint(_in("kind", PHASE_KINDS), name="kind"),
+        CheckConstraint("end_date IS NULL OR end_date >= start_date", name="dates"),
+        CheckConstraint("kind <> 'custom' OR label IS NOT NULL", name="custom_has_label"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    kind: Mapped[str] = mapped_column(Text)
+    label: Mapped[str | None] = mapped_column(Text)
+    start_date: Mapped[date] = mapped_column(Date)
+    # Null while the phase is ongoing.
+    end_date: Mapped[date | None] = mapped_column(Date)
+    note: Mapped[str | None] = mapped_column(Text)
+
+
 class PairPreference(Timestamps, Base):
     """Two staples the user does not want together ("Don't suggest these together"); never on
     one suggestion (task 3.23). Stored with staple_a_id < staple_b_id, once per pair."""
@@ -739,6 +763,7 @@ RLS_TABLES: dict[str, str] = {
     "pair_preferences": "user_id",
     "measurement_types": "user_id",
     "measurement_entries": "user_id",
+    "diet_phases": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column

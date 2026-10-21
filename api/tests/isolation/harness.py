@@ -149,6 +149,12 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
                 text("SELECT id FROM measurement_entries WHERE user_id = :u"), {"u": a_id}
             ).scalars()
         ]
+        phase_ids = [
+            str(x)
+            for x in conn.execute(
+                text("SELECT id FROM diet_phases WHERE user_id = :u"), {"u": a_id}
+            ).scalars()
+        ]
         pair_ids = [
             str(x)
             for x in conn.execute(
@@ -176,6 +182,7 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
         a_pair_ids=pair_ids,
         a_measurement_type_ids=measurement_type_ids,
         a_measurement_ids=measurement_ids,
+        a_phase_ids=phase_ids,
     )
     res = call(b, ep, ctx)
     name = f"{ep.method} {ep.path}"
@@ -189,7 +196,7 @@ def check_endpoint(app: FastAPI, owner_engine: Engine, ep: Endpoint) -> None:
     secrets += ctx.a_food_ids
     secrets += [*ctx.a_log_ids, *ctx.a_group_ids, *ctx.a_meal_ids, *ctx.a_water_ids]
     secrets += [*ctx.a_staple_ids, *ctx.a_pair_ids]
-    secrets += [*ctx.a_measurement_type_ids, *ctx.a_measurement_ids]
+    secrets += [*ctx.a_measurement_type_ids, *ctx.a_measurement_ids, *ctx.a_phase_ids]
     for secret in secrets:
         assert secret.lower() not in res.text.lower(), f"{name} showed A's data to B"
 
@@ -214,6 +221,7 @@ def check_needs_session(app: FastAPI, ep: Endpoint) -> None:
         a_pair_ids=some,
         a_measurement_type_ids=some,
         a_measurement_ids=some,
+        a_phase_ids=some,
     )
     res = call(anon, ep, ctx)
     assert res.status_code == 401, f"{ep.method} {ep.path} without a session: {res.status_code}"

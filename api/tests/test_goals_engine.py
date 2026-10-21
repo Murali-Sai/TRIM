@@ -118,3 +118,9 @@ def test_measurement_badge_needs_4_weeks_in_a_row() -> None:
     base = {"longest_days": 0, "longest_weeks": 0, "saved_meals": 0, "entries": 0}
     assert "measurements_4" not in earned_badges(**base, perfect_weeks=0, measurement_weeks=3)
     assert "measurements_4" in earned_badges(**base, perfect_weeks=0, measurement_weeks=4)
+
+
+def test_first_phase_badge_needs_an_ended_phase() -> None:
+    base = {"longest_days": 0, "longest_weeks": 0, "saved_meals": 0, "entries": 0}
+    assert "first_phase" not in earned_badges(**base, perfect_weeks=0, phases_ended=0)
+    assert "first_phase" in earned_badges(**base, perfect_weeks=0, phases_ended=1)

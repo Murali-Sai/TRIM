@@ -183,15 +183,19 @@ def award_badges(
     counts = s.execute(
         text(
             "SELECT (SELECT count(*) FROM saved_meals WHERE user_id = :u) AS meals, "
-            "(SELECT count(*) FROM food_logs WHERE user_id = :u AND deleted_at IS NULL) AS entries"
+            "(SELECT count(*) FROM food_logs WHERE user_id = :u AND deleted_at IS NULL) "
+            "AS entries, "
+            "(SELECT count(*) FROM diet_phases WHERE user_id = :u AND deleted_at IS NULL "
+            "AND end_date < :today) AS phases_ended"
         ),
-        {"u": user_id},
+        {"u": user_id, "today": local_date(now, tz)},
     ).one()
     earned = g.earned_badges(
         longest_days=longest_days,
         longest_weeks=longest_weeks,
         saved_meals=int(counts.meals),
         entries=int(counts.entries),
+        phases_ended=int(counts.phases_ended),
         perfect_weeks=perfect_weeks(s, user_id),
         measurement_weeks=g.longest_week_run(
             s.execute(
