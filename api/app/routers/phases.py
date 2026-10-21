@@ -160,7 +160,7 @@ def _tz(s: Session, user_id: Any) -> str:
     return tz
 
 
-def _summary(s: Session, user_id: Any, tz: str, start: date, end: date) -> Summary:
+def summarize(s: Session, user_id: Any, tz: str, start: date, end: date) -> Summary:
     days = s.execute(
         text(
             "SELECT logged_on, sum(kcal) AS kcal FROM food_logs WHERE user_id = :u "
@@ -266,7 +266,7 @@ def _out(s: Session, user_id: Any, tz: str, r: Any, today: date, with_summary: b
     summary = None
     if with_summary and state != "upcoming":
         last = min(r.end_date, today) if r.end_date else today
-        summary = _summary(s, user_id, tz, r.start_date, last)
+        summary = summarize(s, user_id, tz, r.start_date, last)
     return PhaseOut(
         id=r.id,
         kind=r.kind,

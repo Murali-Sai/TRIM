@@ -463,6 +463,13 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         path_params=lambda c: {"phase_id": c.a_phase_ids[0]},
     ),
+    # JSON, so the harness can search the file for A's ids, names and email. B gets only its own.
+    Endpoint(
+        "POST",
+        "/api/export",
+        requires_session=True,
+        body=lambda c: {"format": "json"},
+    ),
     # A tracks water and has one 250 ml add on 17 Oct (tests.helpers.seed_food_rows).
     Endpoint("GET", "/api/me/settings", requires_session=True),
     Endpoint(

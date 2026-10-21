@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router';
 import { AppShell } from './components/AppShell';
 import { AccountPage } from './pages/AccountPage';
 import { BadgesPage } from './pages/BadgesPage';
+import { ExportPage } from './pages/export/ExportPage';
 import { PhasesPage } from './pages/phases/PhasesPage';
 import { StaplesPage } from './pages/StaplesPage';
 import { MetricsPage } from './pages/body/MetricsPage';
@@ -63,6 +64,7 @@ export function App() {
         <Route path="targets/calculator" element={<CalculatorPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="account/badges" element={<BadgesPage />} />
+        <Route path="account/export" element={<ExportPage />} />
         <Route path="staples" element={<StaplesPage />} />
         <Route path="phases" element={<PhasesPage />} />
       </Route>

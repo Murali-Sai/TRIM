@@ -1,6 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { resendVerify, type Me } from '../api/auth';
 import { ApiError } from '../api/client';
+import { DATASETS, downloadExport } from '../api/export';
+import { isoToZonedWall } from '../lib/zoned';
 
 function formatDeadline(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -54,6 +56,41 @@ export function VerifyBanner({ me }: { me: Me }) {
 }
 
 /** Shown instead of the app once the grace period has passed. */
+/** People can always take their data, confirmed or not: everything as Excel, in one tap. */
+function DownloadAll({ me }: { me: Me }) {
+  const today = isoToZonedWall(new Date().toISOString(), me.timezone).slice(0, 10);
+  const download = useMutation({
+    mutationFn: () =>
+      downloadExport(
+        {
+          format: 'xlsx',
+          date_from: null,
+          date_to: null,
+          datasets: DATASETS.map(([k]) => k),
+        },
+        today,
+      ),
+  });
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => download.mutate()}
+        disabled={download.isPending}
+        className="tap text-sm text-accent underline disabled:opacity-60"
+      >
+        {download.isPending ? 'Preparing your file' : 'Download my data'}
+      </button>
+      {download.isError ? (
+        <p className="text-sm font-medium" role="alert">
+          {(download.error instanceof ApiError && download.error.userMessage) ||
+            'Could not prepare your file. Try again.'}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export function VerifyRequired({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const resend = useResend();
   const message = resendMessage(resend);
@@ -71,6 +108,7 @@ export function VerifyRequired({ me, onLogout }: { me: Me; onLogout: () => void 
       ) : null}
       <div className="mt-6 flex flex-col gap-3">
         <ResendButton resend={resend} />
+        <DownloadAll me={me} />
         <button type="button" onClick={onLogout} className="tap text-sm text-accent underline">
           Log out
         </button>

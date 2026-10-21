@@ -589,6 +589,14 @@ Available anytime from Account, and from a download icon on the Progress and His
 
 **Safety.** Text cells starting with `=`, `+`, `-` or `@` are prefixed with an apostrophe to block spreadsheet formula injection from food names or notes. Rate limit: 1 export per minute per user. Each export writes an `exports` audit row. File name: `trim-export-2026-10-17.xlsx`. On iPhone the file opens the share sheet so it can be saved to Files.
 
+**Details.**
+- The date range limits the dated datasets. Saved meals, staples, custom foods and the profile always come whole. Targets history also includes the target already in effect when the range starts. Phases include any phase that overlaps the range.
+- Measurements include archived metrics, each in its own unit. Daily totals cover every day with food or water logged; On target uses the target's tolerance (5% by default).
+- JSON is `{"format": "trim-export", "version": 1, "exported_at", "timezone", "date_from", "date_to", "datasets": {...}}`. It holds the stored rows with their ids, without `user_id`, and is never escaped.
+- When the chosen datasets hold nothing (the profile aside, and the profile is not picked), the answer is "No data in this range." A refused export does not use up the minute.
+- Any signed-in account can export, including one past the email-confirmation deadline; its "Confirm your email" screen offers a one-tap Excel download.
+- The Weekly check-ins sheet has its header only until check-ins exist (task 5.3).
+
 ### Testing
 - **Unit (Vitest, pytest):** TDEE and macro rules with all worked examples, BMI boundaries (24.9, 25.0, 29.9, 30.0), deficit chips, calorie floor, imperial conversion, carbs clamp at 0, input ranges; all trend math with the worked numbers, unit conversion, timezone day boundaries.
 - **Auth (pytest):** password hashing, token expiry and single use, lockout, session revocation, CSRF rejection.

@@ -25,7 +25,7 @@ from sqlalchemy import (
     text,
     true,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -659,6 +659,25 @@ class DietPhase(Timestamps, Base):
     note: Mapped[str | None] = mapped_column(Text)
 
 
+EXPORT_FORMATS = ("xlsx", "csv", "json")
+
+
+class Export(Timestamps, Base):
+    """One "Download my data" request, for the audit trail and the 1 a minute limit (task
+    5.1). The file itself is streamed and never stored."""
+
+    __tablename__ = "exports"
+    __table_args__ = (CheckConstraint(_in("format", EXPORT_FORMATS), name="format"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    format: Mapped[str] = mapped_column(Text)
+    date_from: Mapped[date | None] = mapped_column(Date)
+    date_to: Mapped[date | None] = mapped_column(Date)
+    datasets: Mapped[list[str]] = mapped_column(ARRAY(Text))
+    row_count: Mapped[int] = mapped_column(Integer)
+
+
 class PairPreference(Timestamps, Base):
     """Two staples the user does not want together ("Don't suggest these together"); never on
     one suggestion (task 3.23). Stored with staple_a_id < staple_b_id, once per pair."""
@@ -764,6 +783,7 @@ RLS_TABLES: dict[str, str] = {
     "measurement_types": "user_id",
     "measurement_entries": "user_id",
     "diet_phases": "user_id",
+    "exports": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column
