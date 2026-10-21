@@ -36,6 +36,8 @@ export async function stubExternal(page: Page, me: MeState | (() => MeState) = M
     .context()
     .addCookies([{ name: 'trim_csrf', value: 'csrf-test-token', domain: '127.0.0.1', path: '/' }]);
   await page.route('**/api/health', (route) => route.fulfill({ json: { status: 'ok' } }));
+  // No diet phases unless a test adds its own route (later routes win).
+  await page.route('**/api/phases**', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/me', (route) => {
     const current = typeof me === 'function' ? me() : me;
     return current

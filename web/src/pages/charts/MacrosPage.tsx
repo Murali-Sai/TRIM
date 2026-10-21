@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { useMe } from '../../api/auth';
 import { ChartFrame, RangeChips } from '../../components/chart/ChartFrame';
 import { DailyBars } from '../../components/chart/DailyBars';
+import { PhasesToggle } from '../../components/chart/PhasesToggle';
 import {
   chartLabel,
   dayTooltip,
@@ -186,8 +187,11 @@ function Macros({ timeZone }: { timeZone: string }) {
       {isError ? (
         <Notice kind="error">Could not load your days. Try again in a moment.</Notice>
       ) : null}
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <RangeChips value={range} options={RANGES} onChange={setRange} />
+        <div className="ml-auto">
+          <PhasesToggle />
+        </div>
       </div>
 
       <section

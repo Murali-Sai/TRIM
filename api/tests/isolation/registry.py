@@ -43,6 +43,7 @@ class Ctx:
     a_pair_ids: list[str]  # A's never pairs
     a_measurement_type_ids: list[str]  # A's metrics (the presets and any of its own)
     a_measurement_ids: list[str]  # A's readings
+    a_phase_ids: list[str]  # A's diet phases
 
 
 @dataclass(frozen=True)
@@ -439,6 +440,28 @@ ENDPOINTS: list[Endpoint] = [
         "/api/measurements/{entry_id}",
         requires_session=True,
         path_params=lambda c: {"entry_id": c.a_measurement_ids[0]},
+    ),
+    # A has a cut from 1 to 28 Sep 2026 (tests.helpers.seed_food_rows). B's phases on the
+    # same dates are fine: phases only clash with the owner's own.
+    Endpoint("GET", "/api/phases", requires_session=True),
+    Endpoint(
+        "POST",
+        "/api/phases",
+        requires_session=True,
+        body=lambda c: {"kind": "cut", "start_date": "2026-09-01", "end_date": "2026-09-28"},
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/phases/{phase_id}",
+        requires_session=True,
+        body=lambda c: {"note": "Changed by B"},
+        path_params=lambda c: {"phase_id": c.a_phase_ids[0]},
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/phases/{phase_id}",
+        requires_session=True,
+        path_params=lambda c: {"phase_id": c.a_phase_ids[0]},
     ),
     # A tracks water and has one 250 ml add on 17 Oct (tests.helpers.seed_food_rows).
     Endpoint("GET", "/api/me/settings", requires_session=True),

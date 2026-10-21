@@ -116,6 +116,7 @@ def test_ctx_carries_only_ids() -> None:
         "a_pair_ids",
         "a_measurement_type_ids",
         "a_measurement_ids",
+        "a_phase_ids",
     }
 
 

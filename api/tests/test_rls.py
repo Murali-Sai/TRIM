@@ -17,6 +17,7 @@ from app.models import (
     RLS_TABLES,
     AuditLog,
     AuthToken,
+    DietPhase,
     Food,
     FoodFavourite,
     FoodLog,
@@ -148,6 +149,11 @@ def seed_user(label: str) -> Seeded:
                 type_id=waist.id,
                 value=Decimal("90"),
                 measured_at=datetime(2026, 10, 17, 12, 0, tzinfo=UTC),
+            )
+        )
+        s.add(
+            DietPhase(
+                user_id=user_id, kind="cut", start_date=date(2026, 9, 1), end_date=date(2026, 9, 28)
             )
         )
         s.add(UserSettings(user_id=user_id, track_water=True))

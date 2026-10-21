@@ -23,13 +23,19 @@ function TargetsSection() {
   const link =
     'tap inline-block rounded-lg border border-border bg-surface px-4 py-2.5 font-semibold';
   return (
-    <Section title="Targets" description="Your calorie and macro targets, and the TDEE calculator.">
+    <Section
+      title="Targets"
+      description="Your calorie and macro targets, the TDEE calculator and diet phases."
+    >
       <div className="flex flex-wrap gap-3">
         <Link to="/targets" className={link}>
           Edit targets
         </Link>
         <Link to="/targets/calculator" className={link}>
           TDEE calculator
+        </Link>
+        <Link to="/phases" className={link}>
+          Diet phases
         </Link>
       </div>
     </Section>

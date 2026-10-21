@@ -238,6 +238,53 @@ for (const vp of [
       await expect(page.getByTestId('card-measurements').getByTestId('change-row')).toHaveCount(3);
     });
 
+    test('phases tint the charts and the toggle hides them everywhere', async ({ page }) => {
+      await open(page, '/charts/measurements');
+      // After open(), so it wins over the fixtures' empty list.
+      await page.route('**/api/phases**', (r) =>
+        r.fulfill({
+          json: [
+            {
+              id: 'p1',
+              kind: 'cut',
+              label: null,
+              name: 'Cut',
+              start_date: '2026-09-25',
+              end_date: null,
+              note: null,
+              status: 'ongoing',
+              summary: null,
+            },
+          ],
+        }),
+      );
+      await page.reload();
+      const host = page.getByTestId('metric-chart').first().locator('.uplot');
+      await expect(host).toHaveAttribute('data-phases', 'Cut');
+      const toggle = page.getByRole('button', { name: 'Phases' });
+      await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+      await expect(host).toHaveAttribute('data-phases', '');
+      await page.getByRole('tab', { name: 'Compare' }).click();
+      await expect(page.getByTestId('overlay-chart').locator('.uplot')).toHaveAttribute(
+        'data-phases',
+        '',
+      );
+      // Remembered on this device.
+      await page.reload();
+      await expect(page.getByRole('button', { name: 'Phases' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+      await page.getByRole('button', { name: 'Phases' }).click();
+      await expect(page.getByTestId('metric-chart').first().locator('.uplot')).toHaveAttribute(
+        'data-phases',
+        'Cut',
+      );
+      await noSideScroll(page);
+    });
+
     test('AC 4.4: create a metric and chart it', async ({ page }) => {
       const state = { types: [] as Type[], entries: [] as Entry[] };
       await open(page, '/charts/measurements', state);
