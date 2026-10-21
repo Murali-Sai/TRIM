@@ -106,6 +106,21 @@ When all five pass on both devices, mark 1.8 `[x]` in TASKS.md.
    wait for the reminder; log something, and check no second reminder arrives that day. When both
    pass, mark 3.18 `[x]` in TASKS.md.
 
+## 6. Food pairing table (task 3.22)
+
+Suggestions use pairing scores built from What We Eat in America. Until the table is loaded
+every pair scores 0, so suggestions match the numbers only.
+
+1. Download the most recent cycle's day-1 and day-2 Individual Foods files (`DR1IFF_*.xpt`,
+   `DR2IFF_*.xpt`) from the CDC NHANES site, and the FNDDS "Foods and Beverages" table for the
+   same cycle from USDA ARS, saved as CSV.
+2. Build: `uv run --with pandas python tools/build_pairing.py --day1 ... --day2 ... --fndds ...
+   --version "NHANES 2021-2023 ...; FNDDS 2021-2023" --out data/`. It stops on any eating
+   occasion code or WWEIA category it does not know.
+3. Check `data/pairing_categories.csv` (every WWEIA category and its group), then commit both
+   CSV files.
+4. Load: `TRIM_OWNER_URL=... uv run python tools/load_pairing.py data/pairing_scores.csv`.
+
 ## Local development
 
 No proxy is needed locally: the Vite dev server forwards `/api` to `http://127.0.0.1:8000`, so

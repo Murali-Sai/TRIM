@@ -33,6 +33,7 @@ def test_upgrade_downgrade_upgrade() -> None:
             "user_badges",
             "push_subscriptions",
             "staples",
+            "pairing_scores",
         } <= set(inspect(engine).get_table_names())
         migrate(url, "base", down=True)
         assert set(inspect(engine).get_table_names()) == {"alembic_version"}

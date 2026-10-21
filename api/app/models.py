@@ -583,6 +583,35 @@ class Staple(Timestamps, Base):
     sort_order: Mapped[int] = mapped_column(Integer, server_default="0")
 
 
+PAIRING_CONTEXTS = ("breakfast", "lunch", "dinner", "snack")
+
+
+class PairingScore(Timestamps, Base):
+    """How often two food groups share a plate in What We Eat in America, per context: score =
+    log2(lift) clipped to -2 to +2, 0 when seen on fewer than 30 plates (task 3.22). Shared
+    reference data built by tools/build_pairing.py: no owner, read by everyone, written only
+    by the owner role."""
+
+    __tablename__ = "pairing_scores"
+    __table_args__ = (
+        CheckConstraint(_in("context", PAIRING_CONTEXTS), name="context"),
+        CheckConstraint(
+            f"{_in('group_a', FOOD_GROUPS)} AND {_in('group_b', FOOD_GROUPS)} "
+            "AND group_a < group_b",
+            name="groups",
+        ),
+        CheckConstraint("score BETWEEN -2 AND 2", name="score_range"),
+    )
+
+    context: Mapped[str] = mapped_column(Text, primary_key=True)
+    group_a: Mapped[str] = mapped_column(Text, primary_key=True)
+    group_b: Mapped[str] = mapped_column(Text, primary_key=True)
+    plates: Mapped[int] = mapped_column(Integer)
+    lift: Mapped[Decimal | None] = mapped_column(Numeric(10, 4))
+    score: Mapped[Decimal] = mapped_column(Numeric(6, 4))
+    data_version: Mapped[str] = mapped_column(Text)
+
+
 class WaterLog(Timestamps, Base):
     """One water add, stored in ml; fl oz is only for display."""
 
