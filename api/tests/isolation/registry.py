@@ -470,6 +470,13 @@ ENDPOINTS: list[Endpoint] = [
         requires_session=True,
         body=lambda c: {"format": "json"},
     ),
+    # B imports into its own (empty) account; nothing reaches A.
+    Endpoint(
+        "POST",
+        "/api/import",
+        requires_session=True,
+        body=lambda c: {"format": "trim-export", "version": 1, "datasets": {}},
+    ),
     # A tracks water and has one 250 ml add on 17 Oct (tests.helpers.seed_food_rows).
     Endpoint("GET", "/api/me/settings", requires_session=True),
     Endpoint(

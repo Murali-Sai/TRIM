@@ -1,4 +1,4 @@
-import { postForFile } from './client';
+import { postFileBody, postForFile } from './client';
 
 export type ExportFormat = 'xlsx' | 'csv' | 'json';
 
@@ -59,4 +59,9 @@ export async function downloadExport(req: ExportRequest, today: string): Promise
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
   return name;
+}
+
+/** Restores an account from a JSON export; the server takes it only into an empty account. */
+export function importExport(file: File) {
+  return postFileBody<{ imported: Partial<Record<DatasetKey, number>> }>('/import', file);
 }

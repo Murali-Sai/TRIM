@@ -159,8 +159,8 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
         ).scalar_one()
         conn.execute(
             text(
-                "INSERT INTO exports (id, user_id, format, datasets, row_count) VALUES "
-                "(gen_random_uuid(), :u, 'xlsx', ARRAY['weight'], 0)"
+                "INSERT INTO exports (id, user_id, format, datasets, row_count, created_at) "
+                "VALUES (gen_random_uuid(), :u, 'xlsx', ARRAY['weight'], 0, '2026-01-01')"
             ),
             {"u": user_id},
         )

@@ -92,3 +92,14 @@ export async function postForFile(
   const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? null;
   return { blob: await res.blob(), name };
 }
+
+/** Sends a file as the request body (a JSON export to import) and reads the JSON answer. */
+export async function postFileBody<T>(path: string, file: Blob): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await csrfToken() },
+    credentials: 'same-origin',
+    body: file,
+  });
+  return parse<T>(res);
+}
