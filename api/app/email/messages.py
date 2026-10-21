@@ -38,3 +38,15 @@ def checkin_email(display_name: str, week: str, lines: list[str], link: str) -> 
             "You get this because weekly check-in emails are on. Turn them off in Account.",
         ],
     )
+
+
+def usage_alert_email(name: str, value: float, limit: float, unit: str) -> RenderedEmail:
+    pct = round(100 * value / limit)
+    return render_email(
+        f"TRIM usage alert: {name} at {pct}%",
+        [
+            f"{name}: {round(value):,} of {round(limit):,} {unit} ({pct}%).",
+            "This is the free-tier warning at 70%. Nothing has stopped yet. Check the provider's "
+            "dashboard, and the steps in docs/DEPLOY.md, section 9.",
+        ],
+    )

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 
 from app import checkins as engine
+from app import usage
 from app.config import get_settings
 from app.db import anonymous_session, user_session
 from app.deps import ServicesDep
@@ -166,7 +167,7 @@ def send_emails(services: Any) -> int:
                 row.display_name, week, out.lines, f"{base}/checkins/{row.week_start}"
             )
             try:
-                services.email.send(row.email, message)
+                usage.send_email(services, row.email, message)
             except EmailSendError:
                 # Try again next hour; the rest wait too, so the cap is never overrun.
                 break

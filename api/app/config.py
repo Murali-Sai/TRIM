@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     vapid_subject: str = "mailto:admin@localhost"
     # The hourly job (Cloud Scheduler) sends this in X-Job-Token. Unset: the job is refused.
     job_token: SecretStr | None = None
+    # Where free-tier usage alerts go (task 5.7). Unset: they are only logged.
+    alert_email: str | None = None
 
     @model_validator(mode="after")
     def _no_dev_defaults_in_prod(self) -> "Settings":

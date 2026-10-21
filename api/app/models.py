@@ -12,6 +12,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Identity,
     Index,
@@ -696,6 +697,27 @@ class WeeklyCheckin(Timestamps, Base):
     stats: Mapped[dict[str, Any]] = mapped_column(JSONB)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     emailed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class UsageCounter(Base):
+    """App-wide calls per hour to a metered free tier (task 5.7). Not user data."""
+
+    __tablename__ = "usage_counters"
+
+    metric: Mapped[str] = mapped_column(Text, primary_key=True)
+    hour: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    count: Mapped[int] = mapped_column(Integer)
+
+
+class UsageAlert(Base):
+    """A free-tier alert sent, once per limit and period (task 5.7)."""
+
+    __tablename__ = "usage_alerts"
+
+    limit_key: Mapped[str] = mapped_column(Text, primary_key=True)
+    period: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[float] = mapped_column(Float)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class PairPreference(Timestamps, Base):

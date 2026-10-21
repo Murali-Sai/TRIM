@@ -9,7 +9,8 @@ from app.db import Base
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Keep loggers that already exist: migrations also run inside the API test process.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Tests pass their own URL through config attributes; otherwise use the owner role from settings.
 url = config.attributes.get("url") or get_settings().migration_database_url

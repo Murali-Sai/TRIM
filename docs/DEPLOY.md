@@ -213,6 +213,30 @@ To restore for real:
 
 The same drill runs in the API tests (`tests/test_backup_drill.py`) against the test database.
 
+## 9. Usage alerts at 70% of each free tier (task 5.7)
+
+**From the API.** Set `TRIM_ALERT_EMAIL` on Cloud Run as a plain variable (repository variable
+`ALERT_EMAIL`). The hourly job emails it once per period when one of these reaches 70%. Without
+an address the alert is only logged.
+
+| Limit | Free tier | Alert at |
+|---|---|---|
+| Resend emails today | 100 | 70 |
+| Resend emails this month | 3,000 | 2,100 |
+| FoodData Central requests this hour | 1,000 | 700 |
+| Neon database size | 0.5 GB | 358 MB |
+
+The counts live in `usage_counters` (per hour, kept 40 days); each alert sent is in `usage_alerts`.
+
+**From the clouds.** Run `ops/alerts.sh` once with `PROJECT`, `BILLING_ACCOUNT` and
+`ALERT_EMAIL` set. It sets up alert policies for Cloud Run requests and CPU and for backup
+storage, each at 70%, plus a $1 budget that warns on any spend.
+
+**By hand**, in the dashboards:
+- Neon: under Billing, turn on the usage email for compute hours.
+- Cloudflare: under Notifications, add **Usage Based Billing** for Workers. The free plan allows
+  100,000 Function requests a day; check Pages, Functions, Metrics after launch.
+
 ## Local development
 
 No proxy is needed locally: the Vite dev server forwards `/api` to `http://127.0.0.1:8000`, so

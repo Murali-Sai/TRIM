@@ -9,6 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import text
 
+from app import usage
 from app.config import Settings
 from app.db import anonymous_session, user_session
 from app.deps import ClientIpDep, ServicesDep, SettingsDep
@@ -66,7 +67,7 @@ def _send_reset(user_id: uuid.UUID, email: str, services: Services, settings: Se
         )
     link = f"{settings.app_base_url}/reset#token={raw}"
     try:
-        services.email.send(email, reset_email(name, link))
+        usage.send_email(services, email, reset_email(name, link))
     except EmailSendError:
         log.exception("Reset email failed for user %s", user_id)
 
