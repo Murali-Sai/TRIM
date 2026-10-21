@@ -55,21 +55,17 @@ On Neon, create the roles once (the Docker database does this in `db/init/01-rol
 
 ## 3. Cloudflare Pages (website and proxy)
 
-Create a Pages project from the GitHub repository:
+GitHub Actions uploads each build (section 7), so create the Pages project as **Direct
+Upload**, named `trim` (or set `CF_PAGES_PROJECT`), not connected to Git. In its settings:
 
 | Setting | Value |
 |---|---|
-| Root directory | `web` |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-| Environment variable `NODE_VERSION` | `22` |
-| Environment variable `VITE_TURNSTILE_SITE_KEY` | the Turnstile site key (public by design) |
 | Variable `API_ORIGIN` (Functions) | the Cloud Run URL, for example `https://trim-api-xyz-uc.a.run.app` |
 | Secret `PROXY_SECRET` (Functions) | the value from step 1 |
 
 `web/public/_routes.json` limits the Function to `/api/*`; everything else is served as static
-files, and unknown paths fall back to `index.html` for the app's own routes. Add the custom
-domain `app.<domain>` to the project.
+files, and unknown paths fall back to `index.html` for the app's own routes. `web/public/_headers`
+sets the security headers (task 5.4). Add the custom domain `app.<domain>` to the project.
 
 ## 4. The Safari check (task 1.8 acceptance)
 
@@ -120,6 +116,63 @@ every pair scores 0, so suggestions match the numbers only.
 3. Check `data/pairing_categories.csv` (every WWEIA category and its group), then commit both
    CSV files.
 4. Load: `TRIM_OWNER_URL=... uv run python tools/load_pairing.py data/pairing_scores.csv`.
+
+## 7. Automatic deploys (task 5.5)
+
+`.github/workflows/deploy.yml` runs when CI passes on `main` (or by hand from the Actions tab):
+
+1. **API:** builds `api/Dockerfile`, pushes it to Artifact Registry, runs
+   `alembic upgrade head` against Neon, then deploys the image to Cloud Run with the settings from
+   step 2. Secrets come from Secret Manager by name; plain settings come from repository
+   variables.
+2. **Site:** builds `web/`, runs the secret grep on the bundle, and uploads `dist` (with the
+   Pages Function) to Cloudflare Pages.
+3. **Smoke check:** `/api/health` answers through the proxy, and the page and the API both send
+   the six security headers.
+
+One-time setup:
+
+1. **Neon.** Create the project and the roles from step 2. Use the pooled connection string
+   (host with `-pooler`) for the app login, and the direct one for the owner.
+2. **Google Cloud.** In the project:
+   - Create an Artifact Registry Docker repository `trim` in `us-central1`.
+   - Create a runtime service account for Cloud Run with **Secret Manager Secret Accessor**.
+   - Create a deploy service account, `trim-deploy`, with these roles: **Cloud Run Admin**,
+     **Artifact Registry Writer**, **Secret Manager Secret Accessor** (it reads the migration
+     URL) and **Service Account User** on the runtime account.
+   - Set up Workload Identity Federation for GitHub: a pool and an OIDC provider for
+     `https://token.actions.githubusercontent.com`, with the attribute condition
+     `assertion.repository == "Murali-Sai/TRIM" && assertion.ref == "refs/heads/main"`. Let
+     that principal impersonate `trim-deploy` (**Workload Identity User**). No JSON key is ever
+     created.
+3. **Secret Manager.** Create one secret for each sensitive setting:
+   - `trim-database-url`
+   - `trim-migration-database-url`
+   - `trim-proxy-secret`
+   - `trim-ip-hash-pepper`
+   - `trim-turnstile-secret`
+   - `trim-resend-api-key`
+   - `trim-fdc-api-key`
+   - `trim-vapid-private-key`
+   - `trim-job-token`
+4. **GitHub**, in Settings, Secrets and variables, Actions:
+   - Variables:
+     - `GCP_PROJECT_ID`, `GCP_REGION` (`us-central1`)
+     - `GCP_WIF_PROVIDER` (`projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>`)
+     - `GCP_DEPLOY_SA` (the `trim-deploy` email), `CLOUD_RUN_SERVICE` (`trim-api`), `ARTIFACT_REPO` (`trim`)
+     - `APP_URL` (`https://app.<domain>`), `EMAIL_FROM`, `OFF_USER_AGENT`
+     - `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`
+     - `TURNSTILE_SITE_KEY`, `CF_PAGES_PROJECT`
+   - Secrets: `CLOUDFLARE_API_TOKEN` (a token with **Cloudflare Pages: Edit** only) and
+     `CLOUDFLARE_ACCOUNT_ID`.
+   - Optionally, add required reviewers to the `production` environment so each deploy waits
+     for a click.
+5. Push to `main`, or run **Deploy** from the Actions tab, and watch the three jobs.
+
+**Secret grep.** `api/tools/secret_grep.py` fails CI if any tracked file holds a private key, a
+cloud or service key, a long value assigned to a secret-looking name, or an `.env` file. On
+the built site, it also fails on the name of any server-only setting. A documented test value
+can be allowed with a `secret-grep: allow` comment on its line.
 
 ## Local development
 

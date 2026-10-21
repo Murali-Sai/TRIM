@@ -4,7 +4,7 @@ from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Cloudflare's published test secret: always passes, and only accepts the dummy token.
-TURNSTILE_TEST_SECRET = "1x0000000000000000000000000000000AA"  # noqa: S105
+TURNSTILE_TEST_SECRET = "1x0000000000000000000000000000000AA"  # noqa: S105  secret-grep: allow
 DEV_OFF_USER_AGENT = "TRIM/0.1 (development build)"
 
 
