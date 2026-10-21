@@ -20,6 +20,7 @@ import { TargetStrip } from './today/TargetStrip';
 import { Timeline } from './today/Timeline';
 import { useLogActions } from './today/useLogActions';
 import { WaterRow } from './today/WaterRow';
+import { SuggestButton } from './suggest/SuggestButton';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const HIGHLIGHT_MS = 2500;
@@ -202,6 +203,19 @@ function Today({ timeZone }: { timeZone: string }) {
               unit={settings.data.water_unit}
               targetMl={target?.water_ml ?? null}
               onToast={actions.say}
+            />
+          ) : null}
+          {target ? (
+            <SuggestButton
+              className="mt-4 w-full"
+              timeZone={timeZone}
+              wall={isToday ? defaultLogTime(new Date().toISOString(), timeZone) : `${day}T12:00`}
+              onLogged={(entries) => {
+                setHighlight(entries[0]?.log_group_id ?? null);
+                actions.say(
+                  entries.length === 1 ? 'Logged 1 item.' : `Logged ${entries.length} items.`,
+                );
+              }}
             />
           ) : null}
         </div>

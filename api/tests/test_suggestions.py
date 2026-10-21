@@ -267,3 +267,100 @@ def test_nothing_fits_within_5_percent(client: CsrfClient, owner_engine: Engine)
 
 def test_needs_a_session(client: CsrfClient) -> None:
     assert client.post("/api/suggestions", json={}).status_code == 401
+
+
+# --- logging and saving a suggestion (task 3.21) ------------------------------------------
+
+AT = "2026-10-17T19:30:00-04:00"
+
+
+def first_plate(client: CsrfClient) -> list[dict[str, Any]]:
+    out = ask(client)
+    return [
+        {"staple_id": i["staple_id"], "units": i["units"]} for i in out["suggestions"][0]["items"]
+    ]
+
+
+def test_ac_logging_a_suggestion_is_one_time_block(
+    client: CsrfClient, owner_engine: Engine
+) -> None:
+    worked_example(client, owner_engine)
+    res = client.post("/api/suggestions/log", json={"eaten_at": AT, "items": first_plate(client)})
+    assert res.status_code == 201, res.text
+    rows = res.json()
+    assert len(rows) == 3
+    assert {r["log_group_id"] for r in rows} == {rows[0]["log_group_id"]}
+    assert {r["source"] for r in rows} == {"suggestion"}
+    assert [r["name"] for r in rows] == ["Rice", "Egg", "Yogurt"]
+    assert round(sum(r["kcal"] for r in rows)) == 828
+    rice, egg, yogurt = rows
+    assert (rice["grams"], rice["quantity"], rice["unit_label"]) == (300, None, None)
+    assert (egg["grams"], egg["quantity"], egg["unit_label"]) == (200, 4, "1 egg")
+    assert (yogurt["grams"], yogurt["quantity"]) == (150, 1.5)
+    # It is on the day, at 7:30 PM, like any other block.
+    day = client.get("/api/logs", params={"date_from": "2026-10-17"}).json()
+    assert sum(1 for r in day if r["source"] == "suggestion") == 3
+
+
+def test_a_meal_staple_logs_its_items(client: CsrfClient, owner_engine: Engine) -> None:
+    ids, _ = worked_example(client, owner_engine)
+    oats = food(client, "Oats", (150, 5, 27, 3), ("100 g", 100))
+    meal = client.post(
+        "/api/meals", json={"name": "Oat bowl", "items": [{"food_id": oats, "grams": 80}]}
+    ).json()
+    res = client.post("/api/staples", json={"saved_meal_id": meal["id"]})
+    bowl = next(s["id"] for s in res.json()["staples"] if s["saved_meal_id"] == meal["id"])
+    res = client.post(
+        "/api/suggestions/log",
+        json={
+            "eaten_at": AT,
+            "items": [{"staple_id": bowl, "units": 1.5}, {"staple_id": ids["egg"], "units": 2}],
+        },
+    )
+    assert res.status_code == 201, res.text
+    oat, egg = res.json()
+    assert (oat["name"], oat["grams"], oat["saved_meal_id"]) == ("Oats", 120, meal["id"])
+    assert oat["kcal"] == 180
+    assert egg["saved_meal_id"] is None
+    assert client.get(f"/api/meals/{meal['id']}").json()["use_count"] == 1
+
+
+def test_save_a_suggestion_as_a_meal(client: CsrfClient, owner_engine: Engine) -> None:
+    worked_example(client, owner_engine)
+    res = client.post(
+        "/api/suggestions/save-meal", json={"name": "Rice plate", "items": first_plate(client)}
+    )
+    assert res.status_code == 201, res.text
+    meal = res.json()
+    assert [(i["name"], i["grams"]) for i in meal["items"]] == [
+        ("Rice", 300),
+        ("Egg", 200),
+        ("Yogurt", 150),
+    ]
+    assert round(meal["totals"]["kcal"]) == 828
+    again = client.post(
+        "/api/suggestions/save-meal", json={"name": "rice plate", "items": first_plate(client)}
+    )
+    assert again.status_code == 422
+
+
+def test_logging_needs_your_own_staples_once(client: CsrfClient, owner_engine: Engine) -> None:
+    ids, _ = worked_example(client, owner_engine)
+    other = client.post(
+        "/api/suggestions/log",
+        json={"eaten_at": AT, "items": [{"staple_id": NOBODY, "units": 1}]},
+    )
+    assert other.status_code == 404
+    twice = client.post(
+        "/api/suggestions/log",
+        json={
+            "eaten_at": AT,
+            "items": [{"staple_id": ids["egg"], "units": 1}, {"staple_id": ids["egg"], "units": 2}],
+        },
+    )
+    assert twice.status_code == 422
+    later = client.post(
+        "/api/suggestions/log",
+        json={"eaten_at": "2026-10-19T12:00:00Z", "items": [{"staple_id": ids["egg"], "units": 1}]},
+    )
+    assert later.status_code == 422

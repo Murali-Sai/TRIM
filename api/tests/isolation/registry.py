@@ -362,6 +362,21 @@ ENDPOINTS: list[Endpoint] = [
             "locked": [{"staple_id": c.a_staple_ids[0]}],
         },
     ),
+    Endpoint(
+        "POST",
+        "/api/suggestions/log",
+        requires_session=True,
+        body=lambda c: {
+            "eaten_at": "2026-10-17T12:00:00Z",
+            "items": [{"staple_id": c.a_staple_ids[0], "units": 1}],
+        },
+    ),
+    Endpoint(
+        "POST",
+        "/api/suggestions/save-meal",
+        requires_session=True,
+        body=lambda c: {"name": "B plate", "items": [{"staple_id": c.a_staple_ids[0], "units": 1}]},
+    ),
     # A tracks water and has one 250 ml add on 17 Oct (tests.helpers.seed_food_rows).
     Endpoint("GET", "/api/me/settings", requires_session=True),
     Endpoint(
