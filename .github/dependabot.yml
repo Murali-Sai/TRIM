@@ -1,0 +1,22 @@
+# Dependency updates (task 5.4). Security updates open on their own; these are the weekly
+# version bumps, grouped so they arrive as a few PRs rather than dozens.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    groups:
+      web:
+        patterns: ['*']
+  - package-ecosystem: uv
+    directory: /api
+    schedule:
+      interval: weekly
+    groups:
+      api:
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

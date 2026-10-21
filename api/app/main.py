@@ -26,6 +26,7 @@ from app.routers import (
     weights,
 )
 from app.security.csrf import install_csrf
+from app.security.headers import install_security_headers
 from app.security.proxy_guard import install_proxy_guard
 from app.services.registry import Services, build_services
 
@@ -68,6 +69,8 @@ def create_app(services: Services | None = None) -> FastAPI:
     install_csrf(app)
     # Added last so it runs first: requests that skipped the proxy never reach anything else.
     install_proxy_guard(app)
+    # Outermost, so even the proxy guard's refusals carry them.
+    install_security_headers(app)
     app.include_router(api)
     return app
 

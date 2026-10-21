@@ -77,6 +77,22 @@ jobs:
           path: web/test-results
           retention-days: 14
 
+  # Known vulnerabilities in what ships (task 5.4): fails on high or critical npm advisories in
+  # the web app's runtime dependencies and on any advisory in the API's locked dependencies.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm audit --omit=dev --audit-level=high
+        working-directory: web
+      - uses: astral-sh/setup-uv@v6
+      - run: uv export --frozen --no-dev --no-hashes --no-emit-project -o "$RUNNER_TEMP/requirements.txt"
+        working-directory: api
+      - run: uvx pip-audit -r "$RUNNER_TEMP/requirements.txt" --no-deps --disable-pip
+
   api:
     runs-on: ubuntu-latest
     defaults:
