@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router';
 import { getSettings, saveSettings, SETTINGS_KEY, type TrackingSettings } from '../../api/tracking';
 import { Switch } from '../../components/Switch';
 import { Notice, Section } from './Section';
@@ -47,6 +48,22 @@ export function TrackingSection() {
                 <option value="ml">Milliliters (ml)</option>
                 <option value="fl_oz">Fluid ounces (fl oz)</option>
               </select>
+            </div>
+          ) : null}
+          <Switch
+            label="Streaks and badges"
+            hint="A flame for days you log, weekly goals and badges. Off hides them everywhere; your history is kept."
+            checked={s.gamification}
+            onChange={(on) => save.mutate({ gamification: on })}
+          />
+          {s.gamification ? (
+            <div className="py-2">
+              <Link
+                to="/account/badges"
+                className="tap text-sm font-semibold text-accent underline"
+              >
+                See your badges
+              </Link>
             </div>
           ) : null}
           <Switch

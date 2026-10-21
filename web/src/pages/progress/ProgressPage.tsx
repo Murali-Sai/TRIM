@@ -22,6 +22,7 @@ import { trendFor, trendSentence, unitLabel } from '../body/weightFormat';
 import { useDaySeries } from '../charts/useDaySeries';
 import { TargetStrip } from '../today/TargetStrip';
 import { DashCard } from './DashCard';
+import { StreakCard } from './StreakCard';
 
 export function ProgressPage() {
   usePageTitle('Progress');
@@ -337,15 +338,7 @@ function Progress({ timeZone, units }: { timeZone: string; units: UnitSystem }) 
             started.
           </p>
         </DashCard>
-        <DashCard
-          title="Streak and goals"
-          headline="Your logging streak will show here"
-          testId="card-streak"
-        >
-          <p className="text-sm text-text-secondary">
-            Streaks count the days you log, whatever you eat.
-          </p>
-        </DashCard>
+        <StreakCard />
         <DashCard
           title="This week's check-in"
           headline="Your first check-in comes after a week of logging"

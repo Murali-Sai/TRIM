@@ -35,9 +35,10 @@ export interface Streaks {
   calendar: { date: string; state: 'logged' | 'freeze' | 'none' | 'future' }[];
 }
 
-export const GOALS_KEY = ['goals'] as const;
-export const BADGES_KEY = ['badges'] as const;
-export const STREAKS_KEY = ['streaks'] as const;
+// Under ['logs'], so every add, edit or delete refreshes them.
+export const GOALS_KEY = ['logs', 'goals'] as const;
+export const BADGES_KEY = ['logs', 'badges'] as const;
+export const STREAKS_KEY = ['logs', 'streaks'] as const;
 
 export function getGoals() {
   return getJson<WeekGoals>('/goals');

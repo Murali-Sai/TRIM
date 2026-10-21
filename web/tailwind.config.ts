@@ -18,6 +18,7 @@ export default {
         protein: 'var(--color-protein)',
         fat: 'var(--color-fat)',
         carbs: 'var(--color-carbs)',
+        streak: 'var(--color-streak)',
         'kcal-text': 'var(--color-kcal-text)',
         'protein-text': 'var(--color-protein-text)',
         'fat-text': 'var(--color-fat-text)',

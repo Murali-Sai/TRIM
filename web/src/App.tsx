@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { Route, Routes } from 'react-router';
 import { AppShell } from './components/AppShell';
 import { AccountPage } from './pages/AccountPage';
+import { BadgesPage } from './pages/BadgesPage';
 import { BodyPage } from './pages/BodyPage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { ForgotPage } from './pages/ForgotPage';
@@ -55,6 +56,7 @@ export function App() {
         <Route path="targets" element={<TargetsPage />} />
         <Route path="targets/calculator" element={<CalculatorPage />} />
         <Route path="account" element={<AccountPage />} />
+        <Route path="account/badges" element={<BadgesPage />} />
       </Route>
       <Route path="setup" element={<SetupPage />} />
       <Route path="welcome" element={<LandingPage />} />

@@ -80,11 +80,13 @@ def test_settings_default_and_change(client: CsrfClient) -> None:
         "track_water": False,
         "track_fiber": True,
         "water_unit": "ml",
+        "gamification": True,
     }
     res = client.patch("/api/me/settings", json={"track_water": True, "water_unit": "fl_oz"})
-    assert res.json() == {"track_water": True, "track_fiber": True, "water_unit": "fl_oz"}
-    res = client.patch("/api/me/settings", json={"track_fiber": False})
-    assert res.json() == {"track_water": True, "track_fiber": False, "water_unit": "fl_oz"}
+    on = {"track_water": True, "track_fiber": True, "water_unit": "fl_oz", "gamification": True}
+    assert res.json() == on
+    res = client.patch("/api/me/settings", json={"track_fiber": False, "gamification": False})
+    assert res.json() == {**on, "track_fiber": False, "gamification": False}
     assert client.get("/api/me/settings").json()["track_fiber"] is False
     assert client.patch("/api/me/settings", json={"water_unit": "cups"}).status_code == 422
 

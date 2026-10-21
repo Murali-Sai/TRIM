@@ -30,6 +30,38 @@ export const WEIGHTS = Array.from({ length: 30 }, (_, i) => {
   };
 });
 
+/** A 23-day streak with 1 freeze; two of this week's three goals done. */
+export const STREAKS = {
+  today: '2026-10-31',
+  current_days: 23,
+  longest_days: 23,
+  freezes_held: 1,
+  today_logged: true,
+  message: null,
+  weigh_in: { current_weeks: 4, longest_weeks: 4, this_week: 2 },
+  month: '2026-10',
+  calendar: Array.from({ length: 31 }, (_, i) => {
+    const date = `2026-10-${String(i + 1).padStart(2, '0')}`;
+    return { date, state: i < 8 ? 'none' : i === 19 ? 'freeze' : 'logged' };
+  }),
+};
+export const GOALS = {
+  week_start: '2026-10-26',
+  goals: [
+    { kind: 'log_food', text: 'Log food on 5 of 7 days', done: 5, needed: 5, complete: true },
+    {
+      kind: 'protein',
+      text: 'Protein at 95% of target or more on 4 days',
+      done: 4,
+      needed: 4,
+      complete: true,
+    },
+    { kind: 'weigh_in', text: 'Weigh in 3 times', done: 2, needed: 3, complete: false },
+  ],
+  perfect: false,
+  perfect_weeks: 2,
+};
+
 export async function openDashboard(page: Page, opts: { metric?: boolean } = {}) {
   await page.clock.setFixedTime(NOW);
   await stubExternal(page, { ...ME, unit_system: opts.metric ? 'metric' : 'imperial' });
@@ -86,6 +118,13 @@ export async function openDashboard(page: Page, opts: { metric?: boolean } = {})
       }),
   );
   await page.route('**/api/weights', (r) => r.fulfill({ json: WEIGHTS }));
+  await page.route('**/api/me/settings', (r) =>
+    r.fulfill({
+      json: { track_water: false, track_fiber: true, water_unit: 'ml', gamification: true },
+    }),
+  );
+  await page.route('**/api/streaks**', (r) => r.fulfill({ json: STREAKS }));
+  await page.route('**/api/goals', (r) => r.fulfill({ json: GOALS }));
   await page.route('**/api/me/body-stats', (r) =>
     r.fulfill({
       json: {

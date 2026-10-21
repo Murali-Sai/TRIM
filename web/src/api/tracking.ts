@@ -5,6 +5,8 @@ export interface TrackingSettings {
   track_water: boolean;
   track_fiber: boolean;
   water_unit: WaterUnit;
+  /** Streaks, goals and badges shown. */
+  gamification: boolean;
 }
 
 export const SETTINGS_KEY = ['settings'] as const;
