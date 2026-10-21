@@ -9,6 +9,7 @@ from app.routers import (
     logs,
     me,
     meals,
+    measurements,
     my_foods,
     pairs,
     password,
@@ -39,6 +40,7 @@ api.include_router(me.router)
 api.include_router(account.router)
 api.include_router(setup.router)
 api.include_router(weights.router)
+api.include_router(measurements.router)
 api.include_router(tracking.router)
 api.include_router(streaks.router)
 api.include_router(goals.router)

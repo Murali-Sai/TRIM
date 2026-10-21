@@ -20,6 +20,8 @@ from app.models import (
     Food,
     FoodFavourite,
     FoodLog,
+    MeasurementEntry,
+    MeasurementType,
     PairPreference,
     PushSubscription,
     SavedMeal,
@@ -137,6 +139,17 @@ def seed_user(label: str) -> Seeded:
         s.flush()
         a, b = sorted([oats.id, bowl.id])
         s.add(PairPreference(user_id=user_id, staple_a_id=a, staple_b_id=b))
+        waist = MeasurementType(user_id=user_id, name="Waist", unit="cm")
+        s.add(waist)
+        s.flush()
+        s.add(
+            MeasurementEntry(
+                user_id=user_id,
+                type_id=waist.id,
+                value=Decimal("90"),
+                measured_at=datetime(2026, 10, 17, 12, 0, tzinfo=UTC),
+            )
+        )
         s.add(UserSettings(user_id=user_id, track_water=True))
         s.add(UserStreak(user_id=user_id, current_days=3, longest_days=3))
         s.add(StreakEvent(user_id=user_id, on_date=date(2026, 10, 17), kind="counted"))

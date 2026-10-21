@@ -51,7 +51,7 @@ export function BodyStatsStep({ initial, onSaved }: Props) {
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <p className="text-sm text-text-secondary">Step 2 of 3</p>
+      <p className="text-sm text-text-secondary">Step 2 of 4</p>
       <h2 className="mt-1 text-2xl font-bold">About you</h2>
       <p className="mt-2 text-text-secondary">
         These give you starting targets from a standard formula.

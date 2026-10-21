@@ -40,7 +40,35 @@ interface State {
   stats: Record<string, unknown>;
   patched: Record<string, unknown>[];
   applied: Record<string, unknown>[];
+  presets: { id: string; body: unknown }[];
 }
+
+const PRESET = (
+  id: string,
+  name: string,
+  side: string | null = null,
+  pair: string | null = null,
+) => ({
+  id,
+  name,
+  unit: name === 'Body fat' ? '%' : 'cm',
+  precision: 1,
+  side,
+  pair_id: pair,
+  is_preset: true,
+  is_active: false,
+  sort_order: 0,
+  archived_at: null,
+  entries: 0,
+  latest: null,
+});
+const PRESETS = [
+  PRESET('t-waist', 'Waist'),
+  PRESET('t-hips', 'Hips'),
+  PRESET('t-thigh-l', 'Thigh', 'left', 'p-thigh'),
+  PRESET('t-thigh-r', 'Thigh', 'right', 'p-thigh'),
+  PRESET('t-fat', 'Body fat'),
+];
 
 /** A stateful stand-in for the API's setup endpoints. */
 async function stubSetupApi(page: Page, unitSystem: 'metric' | 'imperial' = 'metric') {
@@ -56,6 +84,7 @@ async function stubSetupApi(page: Page, unitSystem: 'metric' | 'imperial' = 'met
     },
     patched: [],
     applied: [],
+    presets: [],
   };
   await stubExternal(page, () => ({ ...ME, unit_system: unitSystem, setup: state.setup }));
   await page.route('**/api/me/body-stats', async (route) => {
@@ -66,6 +95,13 @@ async function stubSetupApi(page: Page, unitSystem: 'metric' | 'imperial' = 'met
       state.setup = 'targets';
     }
     await route.fulfill({ json: state.stats });
+  });
+  await page.route('**/api/measurement-types**', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      const id = new URL(route.request().url()).pathname.split('/').pop() ?? '';
+      state.presets.push({ id, body: route.request().postDataJSON() });
+    }
+    await route.fulfill({ json: PRESETS });
   });
   await page.route('**/api/targets/apply-calculation', async (route) => {
     state.applied.push(route.request().postDataJSON() as Record<string, unknown>);
@@ -143,7 +179,17 @@ for (const vp of VIEWPORTS) {
         await noHorizontalScroll(page);
 
         await page.getByRole('button', { name: 'Use these targets' }).click();
+        // Step 4: pick measurements, or skip.
+        await expect(page.getByRole('heading', { name: 'Track any measurements?' })).toBeVisible();
+        await expect(page.getByText('Step 4 of 4, optional')).toBeVisible();
+        await page.getByRole('button', { name: 'Waist' }).click();
+        await page.getByRole('button', { name: 'Thigh (left and right)' }).click();
+        await page.getByRole('button', { name: 'Track 2 measurements' }).click();
         await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+        expect(state.presets).toEqual([
+          { id: 't-waist', body: { is_active: true } },
+          { id: 't-thigh-l', body: { is_active: true } },
+        ]);
         expect(state.applied[0]).toMatchObject({ ...c.input, plan: e.plan, deficit_kcal: 650 });
       });
     }
@@ -233,6 +279,7 @@ for (const vp of VIEWPORTS) {
       await expect(page.getByTestId('daily-target')).toHaveCount(0);
       await expect(page.getByTestId('pace')).toHaveCount(0);
       await page.getByRole('button', { name: 'Use these targets' }).click();
+      await page.getByRole('button', { name: 'Skip for now' }).click();
       await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
       expect(state.applied[0]).toMatchObject({ plan: 'maintain' });
     });
@@ -267,6 +314,7 @@ for (const vp of VIEWPORTS) {
       await noHorizontalScroll(page);
 
       await page.getByRole('button', { name: 'Use these targets' }).click();
+      await page.getByRole('button', { name: 'Skip for now' }).click();
       await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
       expect(state.applied).toHaveLength(0);
       expect(custom).toHaveLength(1);

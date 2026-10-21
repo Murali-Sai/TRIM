@@ -6,6 +6,7 @@ import { BODY_STATS_KEY, getBodyStats, type BodyStats } from '../../api/setup';
 import { AuthLayout } from '../../components/AuthLayout';
 import { usePageTitle } from '../../usePageTitle';
 import { BodyStatsStep, type BodyStatsValues } from './BodyStatsStep';
+import { PresetsStep } from './PresetsStep';
 import { TargetsStep } from './TargetsStep';
 
 function toValues(s: BodyStats): BodyStatsValues | null {
@@ -21,7 +22,7 @@ function toValues(s: BodyStats): BodyStatsValues | null {
   };
 }
 
-/** Sign-up steps 2 and 3, after the account exists: body stats, then targets. */
+/** Sign-up steps 2 to 4, after the account exists: body stats, targets, then measurements. */
 export function SetupPage() {
   usePageTitle('Set up');
   const me = useMe();
@@ -29,7 +30,9 @@ export function SetupPage() {
   const navigate = useNavigate();
   const [entered, setEntered] = useState<BodyStatsValues | null>(null);
   const [editing, setEditing] = useState(false);
-  const finished = me.data?.setup === 'done' && !entered;
+  // Step 4 comes after the targets are saved, so setup already reads as done by then.
+  const [presets, setPresets] = useState(false);
+  const finished = me.data?.setup === 'done' && !entered && !presets;
   const stats = useQuery({
     queryKey: BODY_STATS_KEY,
     queryFn: getBodyStats,
@@ -44,6 +47,14 @@ export function SetupPage() {
   const saved = stats.data ? toValues(stats.data) : null;
   const values = entered ?? saved;
   const showStats = editing || !values || me.data.setup === 'body_stats';
+
+  if (presets) {
+    return (
+      <AuthLayout wide>
+        <PresetsStep onDone={() => navigate('/', { replace: true })} />
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout wide>
@@ -71,8 +82,8 @@ export function SetupPage() {
           stats={values}
           onEditStats={() => setEditing(true)}
           onApplied={async () => {
+            setPresets(true);
             await queryClient.invalidateQueries({ queryKey: ME_KEY });
-            navigate('/', { replace: true });
           }}
         />
       )}

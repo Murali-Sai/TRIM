@@ -15,6 +15,7 @@ from app.db import anonymous_session, user_session
 from app.deps import ClientIpDep, ServicesDep, SettingsDep
 from app.email.messages import verify_email
 from app.ids import uuid7
+from app.measurements import seed_presets
 from app.models import AuditLog, AuthToken, User, UserProfile
 from app.security import ratelimit
 from app.security.cookies import SESSION_COOKIE, clear_session_cookie, cookie_name, set_csrf_cookie
@@ -147,6 +148,8 @@ def signup(
                     ),
                 ]
             )
+            # Each account gets its own copy, so renaming one never touches another's.
+            seed_presets(s, user_id, body.unit_system)
     except IntegrityError:
         # Lost a race with another sign-up for the same email.
         return CheckEmailOut()

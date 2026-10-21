@@ -41,6 +41,8 @@ class Ctx:
     a_water_ids: list[str]  # A's water adds
     a_staple_ids: list[str]  # A's staples
     a_pair_ids: list[str]  # A's never pairs
+    a_measurement_type_ids: list[str]  # A's metrics (the presets and any of its own)
+    a_measurement_ids: list[str]  # A's readings
 
 
 @dataclass(frozen=True)
@@ -391,6 +393,52 @@ ENDPOINTS: list[Endpoint] = [
         "/api/pair-preferences/{pair_id}",
         requires_session=True,
         path_params=lambda c: {"pair_id": c.a_pair_ids[0]},
+    ),
+    # A has the presets and a waist reading (tests.helpers.seed_food_rows).
+    Endpoint("GET", "/api/measurement-types", requires_session=True),
+    Endpoint(
+        "POST",
+        "/api/measurement-types",
+        requires_session=True,
+        body=lambda c: {"name": "B metric", "unit": "cm"},
+    ),
+    Endpoint(
+        "PUT",
+        "/api/measurement-types/order",
+        requires_session=True,
+        body=lambda c: {"ids": c.a_measurement_type_ids},
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/measurement-types/{type_id}",
+        requires_session=True,
+        body=lambda c: {"name": "Renamed by B", "archived": True},
+        path_params=lambda c: {"type_id": c.a_measurement_type_ids[0]},
+    ),
+    Endpoint(
+        "GET",
+        "/api/measurements",
+        requires_session=True,
+        params=lambda c: {"date_from": "2026-10-01"},
+    ),
+    Endpoint(
+        "POST",
+        "/api/measurements",
+        requires_session=True,
+        body=lambda c: {"items": [{"type_id": c.a_measurement_type_ids[0], "value": 80}]},
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/measurements/{entry_id}",
+        requires_session=True,
+        body=lambda c: {"value": 70},
+        path_params=lambda c: {"entry_id": c.a_measurement_ids[0]},
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/measurements/{entry_id}",
+        requires_session=True,
+        path_params=lambda c: {"entry_id": c.a_measurement_ids[0]},
     ),
     # A tracks water and has one 250 ml add on 17 Oct (tests.helpers.seed_food_rows).
     Endpoint("GET", "/api/me/settings", requires_session=True),

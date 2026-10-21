@@ -7,8 +7,9 @@ never changes during a week. All three complete is a Perfect week.
 """
 
 import hashlib
+from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Literal
 
 GoalKind = Literal["log_food", "protein", "calories", "weigh_in", "water", "measurement"]
@@ -109,14 +110,20 @@ BADGES: tuple[Badge, ...] = (
     Badge("entries_100", "100 entries", "Log 100 foods."),
     Badge("entries_1000", "1,000 entries", "Log 1,000 foods."),
     Badge("perfect_weeks_10", "10 Perfect weeks", "Complete all three weekly goals 10 times."),
-    # These two arrive with diet phases and measurements (Milestone 4).
+    # The phase badge arrives with diet phases (task 4.5).
     Badge("first_phase", "First diet phase", "Complete a diet phase."),
     Badge("measurements_4", "4 weeks of measurements", "Log a body measurement 4 weeks in a row."),
 )
 
 
 def earned_badges(
-    *, longest_days: int, longest_weeks: int, saved_meals: int, entries: int, perfect_weeks: int
+    *,
+    longest_days: int,
+    longest_weeks: int,
+    saved_meals: int,
+    entries: int,
+    perfect_weeks: int,
+    measurement_weeks: int = 0,
 ) -> set[str]:
     got: set[str] = set()
     for n in (7, 30, 100, 365):
@@ -132,4 +139,17 @@ def earned_badges(
             got.add(f"entries_{n}")
     if perfect_weeks >= 10:
         got.add("perfect_weeks_10")
+    if measurement_weeks >= 4:
+        got.add("measurements_4")
     return got
+
+
+def longest_week_run(mondays: Iterable[date]) -> int:
+    """The most weeks in a row (by their Mondays) that each have something logged."""
+    best = run = 0
+    prev: date | None = None
+    for monday in sorted(set(mondays)):
+        run = run + 1 if prev is not None and monday - prev == timedelta(weeks=1) else 1
+        best = max(best, run)
+        prev = monday
+    return best

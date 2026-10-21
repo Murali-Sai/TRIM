@@ -583,6 +583,58 @@ class Staple(Timestamps, Base):
     sort_order: Mapped[int] = mapped_column(Integer, server_default="0")
 
 
+MEASURE_UNITS = ("cm", "in", "%", "kg", "lb", "text")
+SIDES = ("left", "right")
+
+
+class MeasurementType(Timestamps, Base):
+    """One of the user's own metrics (task 4.1). Presets are copied into every account at
+    sign-up, so renaming or archiving one never touches anyone else's. Lengths are stored in
+    cm and masses in kg whatever the unit: "in" and "lb" only choose how the metric is shown.
+    A left and right pair share pair_id."""
+
+    __tablename__ = "measurement_types"
+    __table_args__ = (
+        CheckConstraint(_in("unit", MEASURE_UNITS), name="unit"),
+        CheckConstraint(f"side IS NULL OR {_in('side', SIDES)}", name="side"),
+        CheckConstraint("precision BETWEEN 0 AND 3", name="precision_range"),
+        CheckConstraint("(side IS NULL) = (pair_id IS NULL)", name="pair_has_side"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    name: Mapped[str] = mapped_column(Text)
+    unit: Mapped[str] = mapped_column(Text)
+    precision: Mapped[int] = mapped_column(SmallInteger, server_default="1")
+    side: Mapped[str | None] = mapped_column(Text)
+    pair_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    is_preset: Mapped[bool] = mapped_column(Boolean, server_default=false())
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default=true())
+    sort_order: Mapped[int] = mapped_column(Integer, server_default="0")
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class MeasurementEntry(Timestamps, Base):
+    """One reading: a number in the type's stored unit (cm, kg or %), or text."""
+
+    __tablename__ = "measurement_entries"
+    __table_args__ = (
+        CheckConstraint("(value IS NULL) <> (value_text IS NULL)", name="one_value"),
+        CheckConstraint("value IS NULL OR value > 0", name="value_positive"),
+        Index("ix_measurement_entries_type_measured", "type_id", "measured_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    type_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("measurement_types.id", ondelete="CASCADE")
+    )
+    value: Mapped[Decimal | None] = mapped_column(Numeric(8, 3))
+    value_text: Mapped[str | None] = mapped_column(Text)
+    measured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(Text)
+
+
 class PairPreference(Timestamps, Base):
     """Two staples the user does not want together ("Don't suggest these together"); never on
     one suggestion (task 3.23). Stored with staple_a_id < staple_b_id, once per pair."""
@@ -685,6 +737,8 @@ RLS_TABLES: dict[str, str] = {
     "push_subscriptions": "user_id",
     "staples": "user_id",
     "pair_preferences": "user_id",
+    "measurement_types": "user_id",
+    "measurement_entries": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column

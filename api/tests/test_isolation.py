@@ -114,6 +114,8 @@ def test_ctx_carries_only_ids() -> None:
         "a_water_ids",
         "a_staple_ids",
         "a_pair_ids",
+        "a_measurement_type_ids",
+        "a_measurement_ids",
     }
 
 

@@ -60,12 +60,12 @@ def _tracks(s: Session, user_id: Any, week_end: date) -> g.Tracks:
             "AND effective_from <= :e) AS has_target, "
             "coalesce((SELECT track_water FROM user_settings WHERE user_id = :u), false) AS water, "
             "EXISTS (SELECT 1 FROM weight_entries WHERE user_id = :u AND deleted_at IS NULL) "
-            "AS weighed"
+            "AS weighed, EXISTS (SELECT 1 FROM measurement_types WHERE user_id = :u "
+            "AND deleted_at IS NULL AND archived_at IS NULL AND is_active) AS measures"
         ),
         {"u": user_id, "e": week_end},
     ).one()
-    # Measurements arrive in Milestone 4; until then nobody tracks them.
-    return g.Tracks(row.has_target, row.water, row.weighed, has_measurements=False)
+    return g.Tracks(row.has_target, row.water, row.weighed, has_measurements=row.measures)
 
 
 def week_data(s: Session, user_id: Any, tz: str, monday: date) -> g.WeekData:
@@ -100,7 +100,9 @@ def week_data(s: Session, user_id: Any, tz: str, monday: date) -> g.WeekData:
             "SELECT (SELECT count(*) FROM weight_entries WHERE user_id = :u AND deleted_at IS NULL "
             "AND (measured_at AT TIME ZONE :tz)::date BETWEEN :a AND :b) AS weigh_ins, "
             "(SELECT count(DISTINCT logged_on) FROM water_logs WHERE user_id = :u "
-            "AND deleted_at IS NULL AND logged_on BETWEEN :a AND :b) AS water_days"
+            "AND deleted_at IS NULL AND logged_on BETWEEN :a AND :b) AS water_days, "
+            "(SELECT count(*) FROM measurement_entries WHERE user_id = :u AND deleted_at IS NULL "
+            "AND (measured_at AT TIME ZONE :tz)::date BETWEEN :a AND :b) AS measurements"
         ),
         {"u": user_id, "tz": tz, "a": monday, "b": sunday},
     ).one()
@@ -110,7 +112,7 @@ def week_data(s: Session, user_id: Any, tz: str, monday: date) -> g.WeekData:
         calorie_days=calorie_days,
         weigh_ins=int(counts.weigh_ins),
         water_days=int(counts.water_days),
-        measurements=0,
+        measurements=int(counts.measurements),
     )
 
 
@@ -176,7 +178,7 @@ def perfect_weeks(s: Session, user_id: Any) -> int:
 
 
 def award_badges(
-    s: Session, user_id: Any, now: datetime, longest_days: int, longest_weeks: int
+    s: Session, user_id: Any, tz: str, now: datetime, longest_days: int, longest_weeks: int
 ) -> None:
     counts = s.execute(
         text(
@@ -191,6 +193,15 @@ def award_badges(
         saved_meals=int(counts.meals),
         entries=int(counts.entries),
         perfect_weeks=perfect_weeks(s, user_id),
+        measurement_weeks=g.longest_week_run(
+            s.execute(
+                text(
+                    "SELECT DISTINCT date_trunc('week', measured_at AT TIME ZONE :tz)::date "
+                    "FROM measurement_entries WHERE user_id = :u AND deleted_at IS NULL"
+                ),
+                {"u": user_id, "tz": tz},
+            ).scalars()
+        ),
     )
     for badge in sorted(earned):
         s.execute(
@@ -207,7 +218,7 @@ def refresh(s: Session, user_id: Any, now: datetime) -> tuple[str, date]:
     today = local_date(now, tz)
     streak, weeks, _ = evaluate_streaks(s, user_id, tz, today)
     monday = refresh_goals(s, user_id, tz, today, now)
-    award_badges(s, user_id, now, streak.longest, weeks.longest)
+    award_badges(s, user_id, tz, now, streak.longest, weeks.longest)
     return tz, monday
 
 
