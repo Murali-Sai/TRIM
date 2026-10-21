@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ME, stubExternal } from './fixtures';
 
-// Task 4.3: quick-log, per-metric charts with left and right, the overlay, small multiples
-// and the change table. AC (90.0 to 87.3 is -3.0%) is unit tested in lib/measureSeries.test.ts
-// and tests/test_measure_math.py.
+// Tasks 4.3 and 4.4: quick-log, per-metric charts with left and right, the overlay, small
+// multiples and the change table. AC 4.3 (90.0 to 87.3 is -3.0%) is unit tested in
+// lib/measureSeries.test.ts and tests/test_measure_math.py; AC 4.4 is the last test here:
+// create a metric and chart it, at 375 and 1280 px.
 
 const NOW = new Date('2026-10-17T23:07:00Z');
 
@@ -235,6 +236,29 @@ for (const vp of [
         'Waist down 2.7 cm since 20 Sep',
       );
       await expect(page.getByTestId('card-measurements').getByTestId('change-row')).toHaveCount(3);
+    });
+
+    test('AC 4.4: create a metric and chart it', async ({ page }) => {
+      const state = { types: [] as Type[], entries: [] as Entry[] };
+      await open(page, '/charts/measurements', state);
+      await expect(page.getByTestId('measure-empty')).toContainText(
+        'Switch on a measurement to chart it.',
+      );
+      await page.getByRole('link', { name: 'Manage metrics' }).click();
+      const add = page.getByTestId('add-metric');
+      await add.getByLabel('Name').fill('Calf');
+      await add.getByRole('button', { name: 'Add metric' }).click();
+      await expect(page.getByTestId('metric-row')).toContainText('Calf');
+      // Two readings, a week apart.
+      state.entries.push(entry('new', '2026-10-06', 38));
+      await page.getByRole('link', { name: 'Body', exact: true }).first().click();
+      await page.getByLabel('Calf (cm)').fill('37.6');
+      await page.getByRole('button', { name: 'Save measurements' }).click();
+      await expect(page.getByText('Saved 1 measurement.')).toBeVisible();
+      await page.getByRole('link', { name: 'See charts' }).click();
+      await expect(page.getByTestId('metric-headline')).toHaveText('Calf down 0.4 cm since 6 Oct');
+      await expect(page.getByTestId('measure-chart')).toBeVisible();
+      await noSideScroll(page);
     });
   });
 }

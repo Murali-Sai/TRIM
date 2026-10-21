@@ -55,7 +55,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 - [x] **4.1 Types and entries; presets copied per user at sign-up**. AC: renaming one user's preset does not affect another. Includes sign-up step 4 (pick presets) and the measurement goal and badge. (186a266)
 - [x] **4.2 Manage metrics UI (create, rename, reorder, enable, archive)**. AC: archived history still exports. Archived readings are kept and listed by the API (tests/test_measurements.py); the export itself is task 5.1, whose tests include an archived metric. (da9ab9c)
 - [x] **4.3 Quick-log, per-metric chart, L/R pairs, overlay, small multiples, baseline table**. AC: indexed change test (90.0 to 87.3 gives -3.0%). Outliers use the weight rule (2.0 or 3%), as SPEC sets none for measurements; zoom and pinch stay on the weight chart for now. (93a2ed8)
-- [ ] **4.4 E2E: create metric and chart it on phone and desktop viewports**. AC: Playwright passes.
+- [x] **4.4 E2E: create metric and chart it on phone and desktop viewports**. AC: Playwright passes. (e2e/measurements.spec.ts, 2c3860e)
 - [ ] **4.5 Diet phases**: create, edit, delete, no overlaps, chart tints with toggle, phase summaries, optional explicit "Also update targets". AC: overlapping phase rejected; targets unchanged unless the button is pressed.
 
 ## Milestone 5: Check-ins, data download, hardening, deploy
