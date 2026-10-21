@@ -47,7 +47,7 @@ export function TargetsStep({ stats, onEditStats, onApplied }: Props) {
   if (adjusting) {
     return (
       <div>
-        <p className="text-sm text-text-secondary">Step 3 of 3</p>
+        <p className="text-sm text-text-secondary">Step 3 of 4</p>
         <h2 className="mt-1 text-2xl font-bold">Adjust your targets</h2>
         <p className="mt-2 mb-4 text-text-secondary">
           Change calories or any macro. Carbs fill the rest of your calories unless you change them
@@ -73,7 +73,7 @@ export function TargetsStep({ stats, onEditStats, onApplied }: Props) {
 
   return (
     <div>
-      <p className="text-sm text-text-secondary">Step 3 of 3</p>
+      <p className="text-sm text-text-secondary">Step 3 of 4</p>
       <h2 className="mt-1 text-2xl font-bold">Your targets</h2>
 
       <PlanChoice

@@ -126,6 +126,29 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
             ),
             {"u": user_id, "a": first, "b": second},
         ).scalar_one()
+        # Sign-up copied the presets; A has a waist reading.
+        waist = conn.execute(
+            text(
+                "SELECT id FROM measurement_types WHERE user_id = :u AND name = 'Waist' "
+                "AND side IS NULL"
+            ),
+            {"u": user_id},
+        ).scalar()
+        if waist is None:
+            waist = conn.execute(
+                text(
+                    "INSERT INTO measurement_types (id, user_id, name, unit) "
+                    "VALUES (gen_random_uuid(), :u, 'Waist', 'cm') RETURNING id"
+                ),
+                {"u": user_id},
+            ).scalar_one()
+        measurement_id = conn.execute(
+            text(
+                "INSERT INTO measurement_entries (id, user_id, type_id, value, measured_at) "
+                "VALUES (gen_random_uuid(), :u, :t, 90, '2026-10-17T12:00:00Z') RETURNING id"
+            ),
+            {"u": user_id, "t": waist},
+        ).scalar_one()
         conn.execute(
             text("INSERT INTO user_settings (user_id, track_water) VALUES (:u, true)"),
             {"u": user_id},
@@ -179,4 +202,6 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
         "water_id": water_id,
         "staple_id": staple_id,
         "pair_id": pair_id,
+        "measurement_type_id": waist,
+        "measurement_id": measurement_id,
     }

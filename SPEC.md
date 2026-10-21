@@ -234,7 +234,7 @@ erDiagram
 | saved_meals | id, user_id, name (unique per user), note, is_favourite, use_count, last_used_at, archived_at |
 | saved_meal_items | id, user_id, saved_meal_id, food_id, grams, quantity, unit_label, sort_order |
 | weight_entries | id, user_id, measured_at, kg, note |
-| measurement_types | id, user_id, name, unit (cm, in, %, kg, lb, text), precision, side, pair_id, is_preset, is_active, sort_order, archived_at |
+| measurement_types | id, user_id, name, unit (cm, in, %, kg, lb, text), precision, side, pair_id, is_preset, is_active, sort_order, archived_at; values are stored in cm, kg or %, and the unit only chooses the display (in shows cm, lb shows kg). Presets copied to each account, switched off until picked: Waist, Hips, Chest, Neck, Upper arm (left and right), Thigh (left and right), Body fat (%) |
 | measurement_entries | id, user_id, type_id, value, value_text, measured_at, note |
 | targets | id, user_id, effective_from, kcal, protein_g, carbs_g, fat_g, fiber_g, water_ml (null = not tracked), source (calculator, custom), calc_inputs JSON (age, sex, weight_kg, height_cm, activity_level, bmi, plan: maintain or lose, deficit_kcal, rule_set: standard or high_bmi, floor_applied), bmr, tdee, tolerance_pct (default 5) |
 | annotations | id, user_id, on_date, label, scope |
@@ -650,7 +650,7 @@ GitHub Actions: on PR run lint, typecheck, unit, isolation, Playwright and Light
 2. Default units for new users: metric or imperial?
 3. Which domain name?
 4. Should logged foods snapshot nutrients (current plan) or follow later edits?
-5. Any preset measurements to add?
+5. Any preset measurements to add? (Current list: waist, hips, chest, neck, upper arm and thigh as left and right pairs, body fat %.)
 6. BMI thresholds for the suggestions: 25 for "lose" and 30 for "a lot to lose" (current), or a different rule?
 7. Calorie floor of 1,500 kcal (male) and 1,200 kcal (female): keep, change, or remove?
 

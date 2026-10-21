@@ -103,3 +103,18 @@ def test_every_badge_rewards_logging_and_says_how_to_earn_it() -> None:
         for word in ("deficit", "lose", "less", "fast"):
             assert word not in b.how.lower()
             assert word not in b.name.lower()
+
+
+def test_measurement_badge_needs_4_weeks_in_a_row() -> None:
+    from datetime import date
+
+    from app.goals import longest_week_run
+
+    m = date(2026, 9, 7)
+    weeks = [m, date(2026, 9, 14), date(2026, 9, 21), date(2026, 10, 5), date(2026, 10, 12)]
+    assert longest_week_run(weeks) == 3
+    assert longest_week_run([*weeks, date(2026, 9, 28)]) == 6
+    assert longest_week_run([]) == 0
+    base = {"longest_days": 0, "longest_weeks": 0, "saved_meals": 0, "entries": 0}
+    assert "measurements_4" not in earned_badges(**base, perfect_weeks=0, measurement_weeks=3)
+    assert "measurements_4" in earned_badges(**base, perfect_weeks=0, measurement_weeks=4)
