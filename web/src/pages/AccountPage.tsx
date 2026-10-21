@@ -8,6 +8,7 @@ import { useLogout } from '../useLogout';
 import { usePageTitle } from '../usePageTitle';
 import { DeleteSection } from './account/DeleteSection';
 import { DevicesSection } from './account/DevicesSection';
+import { ImportSection } from './account/ImportSection';
 import { PasswordSection } from './account/PasswordSection';
 import { ProfileSection } from './account/ProfileSection';
 import { secondaryButton, Section } from './account/Section';
@@ -125,6 +126,7 @@ export function AccountPage() {
         <div className="flex flex-col gap-4 lg:gap-6">
           <PasswordSection />
           <DownloadSection />
+          <ImportSection />
           <DeleteSection />
           <div>
             <button

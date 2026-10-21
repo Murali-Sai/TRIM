@@ -89,7 +89,8 @@ def seed(owner_engine: Engine, email: str) -> None:
         )
         q(
             "INSERT INTO user_badges (id, user_id, badge, earned_at) VALUES "
-            "(gen_random_uuid(), :u, 'streak_7', '2026-10-10T15:00:00Z')"
+            "(gen_random_uuid(), :u, 'streak_7', '2026-10-10T15:00:00Z') "
+            "ON CONFLICT (user_id, badge) DO UPDATE SET earned_at = EXCLUDED.earned_at"
         )
 
 

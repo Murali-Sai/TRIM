@@ -60,7 +60,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 
 ## Milestone 5: Check-ins, data download, hardening, deploy
 - [x] **5.1 Download my data**: format (xlsx, csv zip, json), date range, dataset picker; streamed; formula-injection escaping; audit row; 1 per minute limit. AC: seeded account export opened with openpyxl matches expected cells, types and units; a food named "=SUM(A1)" exports as text. The Weekly check-ins sheet is header-only until task 5.3. (b5f2909)
-- [ ] **5.2 JSON import**. AC: export then import into an empty account gives identical counts and checksums.
+- [x] **5.2 JSON import**. AC: export then import into an empty account gives identical counts and checksums. Checksums replace ids with what they point at; daily totals, check-ins and streak events are worked out again rather than imported. (9f14752)
 - [ ] **5.3 Weekly check-ins**: scheduler job, generation in user timezone, in-app list and Progress card, optional email queued at 90 a day. AC: check-ins generate correctly for users in UTC-5, UTC+0 and UTC+9, including a DST change week; under-4-days message shown.
 - [ ] **5.4 Security headers (HSTS, CSP), dependency scanning**. AC: securityheaders-style check passes in CI.
 - [ ] **5.5 Deploy pipeline (Pages, Cloud Run, Neon, secrets)**. AC: main deploys automatically; secret grep passes.

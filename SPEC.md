@@ -597,6 +597,13 @@ Available anytime from Account, and from a download icon on the Progress and His
 - Any signed-in account can export, including one past the email-confirmation deadline; its "Confirm your email" screen offers a one-tap Excel download.
 - The Weekly check-ins sheet has its header only until check-ins exist (task 5.3).
 
+**Import (`/import`).** Account, "Import from a TRIM file", takes the JSON export.
+- It goes into an empty account only: no food, weigh-ins, measurements, water, meals, custom foods, staples or phases yet. Otherwise the answer is 409 and nothing changes.
+- The file's targets and metrics replace the ones sign-up created. Profile and settings take the file's values; the email stays.
+- Every row gets a new id and references are remapped, so a file can be imported next to the account it came from. A log of a shared food this server lacks keeps its nutrients and loses the link; a staple whose food is missing is skipped.
+- Daily totals, weekly check-ins and streak events are not imported: they are worked out again. Badges keep their dates.
+- It is all or nothing: one row the database refuses (two phases that overlap, say) means nothing is written. Files up to 32 MB.
+
 ### Testing
 - **Unit (Vitest, pytest):** TDEE and macro rules with all worked examples, BMI boundaries (24.9, 25.0, 29.9, 30.0), deficit chips, calorie floor, imperial conversion, carbs clamp at 0, input ranges; all trend math with the worked numbers, unit conversion, timezone day boundaries.
 - **Auth (pytest):** password hashing, token expiry and single use, lockout, session revocation, CSRF rejection.

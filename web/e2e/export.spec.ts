@@ -125,6 +125,40 @@ for (const vp of [
       );
     });
 
+    test('Account imports a TRIM file and says what came in', async ({ page }) => {
+      await open(page, '/account');
+      const sent: string[] = [];
+      let status = 200;
+      await page.route('**/api/import', async (r) => {
+        sent.push(r.request().postData() ?? '');
+        if (status !== 200) {
+          return r.fulfill({
+            status,
+            json: { detail: 'Import works into an empty account, and this one already has data.' },
+          });
+        }
+        return r.fulfill({ json: { imported: { profile: 1, food_log: 1200, weight: 30 } } });
+      });
+      const file = {
+        name: 'trim-export-2026-10-17.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from('{"format": "trim-export", "version": 1, "datasets": {}}'),
+      };
+      await page.getByLabel('TRIM JSON file').setInputFiles(file);
+      await expect(page.getByText('Imported 1,200 food entries and 30 weigh-ins.')).toBeVisible();
+      expect(JSON.parse(sent[0] ?? '{}')).toEqual({
+        format: 'trim-export',
+        version: 1,
+        datasets: {},
+      });
+      status = 409;
+      await page.getByLabel('TRIM JSON file').setInputFiles(file);
+      await expect(page.getByRole('alert')).toHaveText(
+        'Import works into an empty account, and this one already has data.',
+      );
+      await noSideScroll(page);
+    });
+
     test('Progress has a download button', async ({ page }) => {
       await open(page, '/charts');
       await page.getByRole('link', { name: 'Download my data' }).click();

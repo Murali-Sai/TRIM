@@ -7,6 +7,7 @@ from app.routers import (
     export,
     foods,
     goals,
+    imports,
     logs,
     me,
     meals,
@@ -45,6 +46,7 @@ api.include_router(weights.router)
 api.include_router(measurements.router)
 api.include_router(phases.router)
 api.include_router(export.router)
+api.include_router(imports.router)
 api.include_router(tracking.router)
 api.include_router(streaks.router)
 api.include_router(goals.router)
