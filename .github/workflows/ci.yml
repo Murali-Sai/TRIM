@@ -77,6 +77,52 @@ jobs:
           path: web/test-results
           retention-days: 14
 
+  # No credential in the repository or in the built site (task 5.5).
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 api/tools/secret_grep.py
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci && npm run build
+        working-directory: web
+      - run: python3 api/tools/secret_grep.py web/dist --bundle
+
+  # The image Cloud Run runs builds, migrates a fresh database and answers /api/health.
+  image:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: trim
+          POSTGRES_PASSWORD: trim
+          POSTGRES_DB: trim
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U trim"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -t trim-api api
+      - run: psql -h 127.0.0.1 -p 5433 -U trim -d trim -f db/init/01-roles.sql
+        env:
+          PGPASSWORD: trim
+      - run: |
+          docker run --rm --network host \
+            -e TRIM_MIGRATION_DATABASE_URL=postgresql+psycopg://trim:trim@127.0.0.1:5433/trim \
+            trim-api alembic upgrade head
+      - run: |
+          docker run -d --name api --network host -e PORT=8091 trim-api
+          curl -fsS --retry 10 --retry-delay 1 --retry-connrefused http://127.0.0.1:8091/api/health
+
   # Known vulnerabilities in what ships (task 5.4): fails on high or critical npm advisories in
   # the web app's runtime dependencies and on any advisory in the API's locked dependencies.
   audit:

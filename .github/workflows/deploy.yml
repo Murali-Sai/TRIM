@@ -1,0 +1,139 @@
+# Deploy (task 5.5): after CI passes on main, ship the API to Cloud Run (migrating Neon first)
+# and then the site and its proxy to Cloudflare Pages, then check the live site.
+#
+# One-time setup is in docs/DEPLOY.md, section 7: repository variables, the two GitHub
+# secrets, Workload Identity Federation for Google Cloud, and the API's secrets in Secret
+# Manager. No key or token lives in this repository.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# One deploy at a time, in order; a newer one waits rather than cancelling a half-done one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  SERVICE: ${{ vars.CLOUD_RUN_SERVICE || 'trim-api' }}
+
+jobs:
+  api:
+    # Only a green CI run for a push to main (or a manual run) deploys, and only once the
+    # accounts are set up (docs/DEPLOY.md, section 7); until then the workflow skips.
+    if: >-
+      vars.GCP_PROJECT_ID != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      IMAGE: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPO || 'trim' }}/api
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SHA }}
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build and push the image
+        run: |
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker build -t "$IMAGE:$SHA" api
+          docker push "$IMAGE:$SHA"
+      - uses: astral-sh/setup-uv@v6
+      - name: Migrate the database
+        working-directory: api
+        run: |
+          url="$(gcloud secrets versions access latest --secret=trim-migration-database-url)"
+          echo "::add-mask::$url"
+          uv sync --frozen --no-dev
+          TRIM_MIGRATION_DATABASE_URL="$url" uv run --no-sync alembic upgrade head
+      - uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE }}:${{ env.SHA }}
+          flags: >-
+            --allow-unauthenticated --port=8080 --min-instances=0 --max-instances=2
+            --cpu=1 --memory=512Mi --concurrency=40
+          env_vars: |
+            TRIM_ENV=prod
+            TRIM_COOKIE_SECURE=true
+            TRIM_APP_BASE_URL=${{ vars.APP_URL }}
+            TRIM_EMAIL_FROM=${{ vars.EMAIL_FROM }}
+            TRIM_OFF_USER_AGENT=${{ vars.OFF_USER_AGENT }}
+            TRIM_VAPID_PUBLIC_KEY=${{ vars.VAPID_PUBLIC_KEY }}
+            TRIM_VAPID_SUBJECT=${{ vars.VAPID_SUBJECT }}
+          secrets: |
+            TRIM_DATABASE_URL=trim-database-url:latest
+            TRIM_MIGRATION_DATABASE_URL=trim-migration-database-url:latest
+            TRIM_PROXY_SECRET=trim-proxy-secret:latest
+            TRIM_IP_HASH_PEPPER=trim-ip-hash-pepper:latest
+            TRIM_TURNSTILE_SECRET=trim-turnstile-secret:latest
+            TRIM_RESEND_API_KEY=trim-resend-api-key:latest
+            TRIM_FDC_API_KEY=trim-fdc-api-key:latest
+            TRIM_VAPID_PRIVATE_KEY=trim-vapid-private-key:latest
+            TRIM_JOB_TOKEN=trim-job-token:latest
+
+  web:
+    # After the API, so the new site never calls an API that is not there yet.
+    needs: api
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SHA }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+        env:
+          # Public by design: Turnstile site keys are meant to be in the page.
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+      - name: Secret grep on the built site
+        run: python3 ../api/tools/secret_grep.py dist --bundle
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          command: pages deploy dist --project-name=${{ vars.CF_PAGES_PROJECT || 'trim' }} --branch=main --commit-hash=${{ env.SHA }}
+
+  smoke:
+    needs: web
+    runs-on: ubuntu-latest
+    steps:
+      - name: The live site answers, through the proxy, with its security headers
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 5 --retry-delay 10 "$APP_URL/api/health" | grep -q '"ok"'
+          for path in / /api/health; do
+            headers="$(curl -fsSI "$APP_URL$path" | tr 'A-Z' 'a-z')"
+            for h in strict-transport-security content-security-policy x-frame-options \
+                     x-content-type-options referrer-policy permissions-policy; do
+              grep -q "^$h:" <<<"$headers" || { echo "$path is missing $h"; exit 1; }
+            done
+          done
