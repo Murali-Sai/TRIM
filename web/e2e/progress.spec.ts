@@ -80,3 +80,14 @@ test.describe('cards open their full charts', () => {
     await expect(page.getByTestId('card-weight')).toContainText('Dashed line: goal 172.0 lb');
   });
 });
+
+test('the measurements card names what changed most', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openDashboard(page, { metric: true });
+  await expect(page.getByTestId('card-measurements-headline')).toHaveText(
+    'Waist down 2.7 cm since 3 Oct',
+  );
+  const rows = page.getByTestId('card-measurements').getByTestId('change-row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText('down 0.6%');
+});

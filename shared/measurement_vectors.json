@@ -1,0 +1,36 @@
+{
+  "about": "Indexed change for measurements (SPEC page 3, Algorithms): 100 x (v / v_base - 1), shown to one decimal. Both web/src/lib/measureSeries.ts and api/app/measure_math.py pass these.",
+  "indexed_change": [
+    { "value": 87.3, "base": 90.0, "pct": -3.0, "note": "SPEC worked example: waist 90.0 to 87.3 cm" },
+    { "value": 90.0, "base": 90.0, "pct": 0.0 },
+    { "value": 99.0, "base": 90.0, "pct": 10.0 },
+    { "value": 18.0, "base": 20.0, "pct": -10.0, "note": "body fat 20% to 18%" },
+    { "value": 33.25, "base": 33.0, "pct": 0.8 }
+  ],
+  "change_since": [
+    {
+      "readings": [
+        { "day": "2026-09-01", "at": "2026-09-01T12:00:00Z", "value": 90.0 },
+        { "day": "2026-09-15", "at": "2026-09-15T12:00:00Z", "value": 88.6 },
+        { "day": "2026-10-13", "at": "2026-10-13T12:00:00Z", "value": 87.3 }
+      ],
+      "from": null,
+      "start": { "day": "2026-09-01", "value": 90.0 },
+      "latest": { "day": "2026-10-13", "value": 87.3 },
+      "change": -2.7,
+      "pct": -3.0
+    },
+    {
+      "readings": [
+        { "day": "2026-09-01", "at": "2026-09-01T12:00:00Z", "value": 90.0 },
+        { "day": "2026-09-15", "at": "2026-09-15T12:00:00Z", "value": 88.6 },
+        { "day": "2026-10-13", "at": "2026-10-13T12:00:00Z", "value": 87.3 }
+      ],
+      "from": "2026-09-10",
+      "start": { "day": "2026-09-15", "value": 88.6 },
+      "latest": { "day": "2026-10-13", "value": 87.3 },
+      "change": -1.3,
+      "pct": -1.5
+    }
+  ]
+}

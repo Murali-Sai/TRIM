@@ -33,6 +33,13 @@
   --color-fiber: #cc79a7;
   /* The streak flame, a warm shade outside the nutrient colors. */
   --color-streak: #ff8a3d;
+  /* Measurement lines, one per metric (Okabe-Ito). The light theme drops the two pale ones. */
+  --color-series-1: #56b4e9;
+  --color-series-2: #e69f00;
+  --color-series-3: #009e73;
+  --color-series-4: #cc79a7;
+  --color-series-5: #f0e442;
+  --color-series-6: #d55e00;
 
   --tabbar-height: 64px;
 }
@@ -53,6 +60,12 @@
   --color-fat-text: #8c6100;
   --color-carbs-text: #007857;
   --color-streak: #c2410c;
+  --color-series-1: #0072b2;
+  --color-series-2: #d55e00;
+  --color-series-3: #009e73;
+  --color-series-4: #cc79a7;
+  --color-series-5: #8c6100;
+  --color-series-6: #55555c;
 }
 
 @media (prefers-color-scheme: light) {
@@ -72,6 +85,12 @@
     --color-fat-text: #8c6100;
     --color-carbs-text: #007857;
     --color-streak: #c2410c;
+    --color-series-1: #0072b2;
+    --color-series-2: #d55e00;
+    --color-series-3: #009e73;
+    --color-series-4: #cc79a7;
+    --color-series-5: #8c6100;
+    --color-series-6: #55555c;
   }
 }
 

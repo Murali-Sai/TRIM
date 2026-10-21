@@ -22,6 +22,7 @@ import { trendFor, trendSentence, unitLabel } from '../body/weightFormat';
 import { useDaySeries } from '../charts/useDaySeries';
 import { TargetStrip } from '../today/TargetStrip';
 import { DashCard } from './DashCard';
+import { MeasurementsCard } from './MeasurementsCard';
 import { StreakCard } from './StreakCard';
 
 export function ProgressPage() {
@@ -328,16 +329,7 @@ function Progress({ timeZone, units }: { timeZone: string; units: UnitSystem }) 
           </>
         )}
         <WeightCard today={today} units={units} />
-        <DashCard
-          title="Body measurements"
-          headline="Measurements will show what has changed"
-          testId="card-measurements"
-        >
-          <p className="text-sm text-text-secondary">
-            Waist, hips and other measurements arrive in a later update, with the change since you
-            started.
-          </p>
-        </DashCard>
+        <MeasurementsCard timeZone={timeZone} />
         <StreakCard />
         <DashCard
           title="This week's check-in"

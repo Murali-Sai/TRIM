@@ -5,6 +5,7 @@ import { AccountPage } from './pages/AccountPage';
 import { BadgesPage } from './pages/BadgesPage';
 import { StaplesPage } from './pages/StaplesPage';
 import { MetricsPage } from './pages/body/MetricsPage';
+import { MeasurementsPage } from './pages/measure/MeasurementsPage';
 import { BodyPage } from './pages/BodyPage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { ForgotPage } from './pages/ForgotPage';
@@ -56,6 +57,7 @@ export function App() {
             </Loading>
           }
         />
+        <Route path="charts/measurements" element={<MeasurementsPage />} />
         <Route path="targets" element={<TargetsPage />} />
         <Route path="targets/calculator" element={<CalculatorPage />} />
         <Route path="account" element={<AccountPage />} />
