@@ -9,6 +9,8 @@ export interface TrackingSettings {
   gamification: boolean;
   /** Local "HH:MM" for the streak reminder, or null when off. */
   streak_reminder: string | null;
+  /** The weekly check-in by email too (off by default). */
+  checkin_email?: boolean;
 }
 
 export const SETTINGS_KEY = ['settings'] as const;

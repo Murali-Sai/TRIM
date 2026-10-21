@@ -496,6 +496,8 @@ class UserSettings(Timestamps, Base):
     water_unit: Mapped[str] = mapped_column(Text, server_default="ml")
     # Streaks and badges (SPEC: off switch). Off hides them everywhere; data keeps being kept.
     gamification: Mapped[bool] = mapped_column(Boolean, server_default=true())
+    # Weekly check-in by email (off by default).
+    checkin_email: Mapped[bool] = mapped_column(Boolean, server_default=false())
     # Streak reminder at this local time ("20:00"), or None for off (SPEC: opt-in).
     streak_reminder: Mapped[str | None] = mapped_column(Text)
     # The local day the last reminder went out: at most one a day.
@@ -678,6 +680,24 @@ class Export(Timestamps, Base):
     row_count: Mapped[int] = mapped_column(Integer)
 
 
+class WeeklyCheckin(Timestamps, Base):
+    """The recap of one local Monday to Sunday week (task 5.3). `stats` holds the numbers; the
+    sentences are written when read, in the user's units at that time."""
+
+    __tablename__ = "weekly_checkins"
+    __table_args__ = (
+        CheckConstraint("extract(isodow FROM week_start) = 1", name="monday"),
+        Index("uq_weekly_checkins_user_week", "user_id", "week_start", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = _user_fk()
+    week_start: Mapped[date] = mapped_column(Date)
+    stats: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    emailed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class PairPreference(Timestamps, Base):
     """Two staples the user does not want together ("Don't suggest these together"); never on
     one suggestion (task 3.23). Stored with staple_a_id < staple_b_id, once per pair."""
@@ -784,6 +804,7 @@ RLS_TABLES: dict[str, str] = {
     "measurement_entries": "user_id",
     "diet_phases": "user_id",
     "exports": "user_id",
+    "weekly_checkins": "user_id",
 }
 
 # Every table holding rows a user owns: the RLS tables plus custom foods, whose owner column

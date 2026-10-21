@@ -82,6 +82,7 @@ def test_settings_default_and_change(client: CsrfClient) -> None:
         "water_unit": "ml",
         "gamification": True,
         "streak_reminder": None,
+        "checkin_email": False,
     }
     res = client.patch("/api/me/settings", json={"track_water": True, "water_unit": "fl_oz"})
     on = {
@@ -90,6 +91,7 @@ def test_settings_default_and_change(client: CsrfClient) -> None:
         "water_unit": "fl_oz",
         "gamification": True,
         "streak_reminder": None,
+        "checkin_email": False,
     }
     assert res.json() == on
     res = client.patch("/api/me/settings", json={"track_fiber": False, "gamification": False})

@@ -71,6 +71,12 @@ export function TrackingSection() {
             </>
           ) : null}
           <Switch
+            label="Email my weekly check-in"
+            hint="A short recap of last week, sent on Monday morning. It is also always in the app."
+            checked={s.checkin_email ?? false}
+            onChange={(on) => save.mutate({ checkin_email: on })}
+          />
+          <Switch
             label="Track fiber"
             hint="Fiber against a target of 14 g per 1,000 kcal, unless you set your own."
             checked={s.track_fiber}

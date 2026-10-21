@@ -35,6 +35,8 @@ class SettingsOut(BaseModel):
     gamification: bool
     # Local time for the streak reminder ("20:00"), or None when off.
     streak_reminder: str | None
+    # The weekly check-in by email too (off by default).
+    checkin_email: bool = False
 
 
 class SettingsPatch(BaseModel):
@@ -44,6 +46,7 @@ class SettingsPatch(BaseModel):
     gamification: bool | None = None
     # Send null to turn the reminder off.
     streak_reminder: Annotated[str, Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")] | None = None
+    checkin_email: bool | None = None
 
 
 DEFAULTS = SettingsOut(
@@ -58,8 +61,8 @@ DEFAULTS = SettingsOut(
 def _settings(s: Any, user_id: Any) -> SettingsOut:
     row = s.execute(
         text(
-            "SELECT track_water, track_fiber, water_unit, gamification, streak_reminder "
-            "FROM user_settings "
+            "SELECT track_water, track_fiber, water_unit, gamification, streak_reminder, "
+            "checkin_email FROM user_settings "
             "WHERE user_id = :u"
         ),
         {"u": user_id},
@@ -72,6 +75,7 @@ def _settings(s: Any, user_id: Any) -> SettingsOut:
         water_unit=row.water_unit,
         gamification=row.gamification,
         streak_reminder=row.streak_reminder,
+        checkin_email=row.checkin_email,
     )
 
 
@@ -91,9 +95,11 @@ def patch_settings(body: SettingsPatch, user: ActiveUserDep) -> SettingsOut:
         s.execute(
             text(
                 "INSERT INTO user_settings (user_id, track_water, track_fiber, water_unit, "
-                "gamification, streak_reminder) VALUES (:u, :w, :f, :unit, :g, :r) "
+                "gamification, streak_reminder, checkin_email) "
+                "VALUES (:u, :w, :f, :unit, :g, :r, :c) "
                 "ON CONFLICT (user_id) DO UPDATE SET track_water = :w, track_fiber = :f, "
-                "water_unit = :unit, gamification = :g, streak_reminder = :r, updated_at = now()"
+                "water_unit = :unit, gamification = :g, streak_reminder = :r, "
+                "checkin_email = :c, updated_at = now()"
             ),
             {
                 "u": user.user_id,
@@ -102,6 +108,7 @@ def patch_settings(body: SettingsPatch, user: ActiveUserDep) -> SettingsOut:
                 "unit": merged.water_unit,
                 "g": merged.gamification,
                 "r": merged.streak_reminder,
+                "c": merged.checkin_email,
             },
         )
         return merged

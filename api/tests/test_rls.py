@@ -38,6 +38,7 @@ from app.models import (
     UserSettings,
     UserStreak,
     WaterLog,
+    WeeklyCheckin,
     WeeklyGoal,
     WeightEntry,
 )
@@ -158,6 +159,7 @@ def seed_user(label: str) -> Seeded:
             )
         )
         s.add(Export(user_id=user_id, format="xlsx", datasets=["weight"], row_count=0))
+        s.add(WeeklyCheckin(user_id=user_id, week_start=date(2026, 10, 12), stats={}))
         s.add(UserSettings(user_id=user_id, track_water=True))
         s.add(UserStreak(user_id=user_id, current_days=3, longest_days=3))
         s.add(StreakEvent(user_id=user_id, on_date=date(2026, 10, 17), kind="counted"))

@@ -557,13 +557,61 @@ def _phases(ctx: Ctx, today: date) -> Sheet:
     )
 
 
+def _checkin_rows(ctx: Ctx) -> list[Any]:
+    return _rows(
+        ctx,
+        "SELECT * FROM weekly_checkins WHERE user_id = :u AND deleted_at IS NULL "
+        "AND week_start + 6 >= :a AND week_start <= :b ORDER BY week_start",
+        a=ctx.lo,
+        b=ctx.hi,
+    )
+
+
 def _checkins(ctx: Ctx) -> Sheet:
-    # Weekly check-ins arrive with task 5.3; until then the sheet has its header only.
+    rows = []
+    for r in _checkin_rows(ctx):
+        st = r.stats
+        w = st.get("weight") or {}
+        m = st.get("measurement") or {}
+        rows.append(
+            [
+                r.week_start,
+                st.get("days_logged"),
+                st.get("avg_kcal"),
+                st.get("avg_target_kcal"),
+                st.get("days_on_target"),
+                st.get("avg_protein_g"),
+                st.get("avg_target_protein_g"),
+                ctx.weight(w.get("start_kg")),
+                ctx.weight(w.get("end_kg")),
+                ctx.weight(w.get("change_kg")),
+                m.get("name"),
+                ctx.water(st.get("water_ml")),
+                st.get("fiber_g"),
+                (st.get("phase") or {}).get("name"),
+            ]
+        )
+    wu = ctx.weight_unit
     return Sheet(
         "checkins",
         DATASETS["checkins"],
-        ["Week start", "Days logged", "Avg kcal", "Days on target"],
-        [],
+        [
+            "Week start",
+            "Days logged",
+            "Avg kcal",
+            "Target kcal",
+            "Days on target",
+            "Avg protein (g)",
+            "Target protein (g)",
+            f"Trend start ({wu})",
+            f"Trend end ({wu})",
+            f"Trend change ({wu})",
+            "Fastest-changing measurement",
+            f"Avg water ({ctx.water_unit})",
+            "Avg fiber (g)",
+            "Phase",
+        ],
+        rows,
     )
 
 
@@ -794,7 +842,7 @@ def _canonical(ctx: Ctx, key: str, today: date) -> Any:
     if key == "phases":
         return [_plain(r) for r in _phase_rows(ctx)]
     if key == "checkins":
-        return []
+        return [_plain(r) for r in _checkin_rows(ctx)]
     if key == "streaks":
         events, badges = _streak_rows(ctx)
         return {"events": [_plain(e) for e in events], "badges": [_plain(b) for b in badges]}

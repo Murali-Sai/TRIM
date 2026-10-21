@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Any
 
@@ -48,10 +49,29 @@ def log_in(client: TestClient, email: str, password: str = PASSWORD, **extra: An
     return client.post("/api/auth/login", json={"email": email, "password": password, **extra})
 
 
+CHECKIN_STATS = {
+    "week_start": "2026-10-12",
+    "week_end": "2026-10-18",
+    "days_logged": 1,
+    "avg_kcal": 375,
+    "avg_target_kcal": None,
+    "days_on_target": 0,
+    "avg_protein_g": 15,
+    "avg_target_protein_g": None,
+    "weight": None,
+    "measurement": None,
+    "water_ml": 250,
+    "fiber_g": None,
+    "phase": None,
+    "projection": None,
+    "games": None,
+}
+
+
 def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
     """A custom food with a serving unit, one food log, a favourite, a saved meal, two staples
-    and a never pair, a waist reading, a diet phase (1 to 28 Sep 2026), an export audit row,
-    settings and a water add for `user_id`, written as the owner.
+    and a never pair, a waist reading, a diet phase (1 to 28 Sep 2026), an export audit row, a
+    check-in, settings and a water add for `user_id`, written as the owner.
 
     Stands in until the food logging API exists (tasks 3.2 to 3.5), so account deletion and
     the isolation harness already cover these tables.
@@ -163,6 +183,13 @@ def seed_food_rows(owner_engine: Engine, user_id: Any) -> dict[str, Any]:
                 "VALUES (gen_random_uuid(), :u, 'xlsx', ARRAY['weight'], 0, '2026-01-01')"
             ),
             {"u": user_id},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO weekly_checkins (id, user_id, week_start, stats) VALUES "
+                "(gen_random_uuid(), :u, '2026-10-12', CAST(:st AS jsonb))"
+            ),
+            {"u": user_id, "st": json.dumps(CHECKIN_STATS)},
         )
         conn.execute(
             text("INSERT INTO user_settings (user_id, track_water) VALUES (:u, true)"),
