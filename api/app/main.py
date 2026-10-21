@@ -13,6 +13,7 @@ from app.routers import (
     password,
     push,
     setup,
+    staples,
     streaks,
     tracking,
     weights,
@@ -43,6 +44,7 @@ api.include_router(push.router)
 api.include_router(foods.router)
 api.include_router(my_foods.router)
 api.include_router(meals.router)
+api.include_router(staples.router)
 api.include_router(logs.router)
 
 

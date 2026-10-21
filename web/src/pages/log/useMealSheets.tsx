@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ApiError } from '../../api/client';
 import { QUICK_FOODS_KEY, type QuickFood } from '../../api/foods';
 import { LOGS_KEY, type LogEntry } from '../../api/logs';
+import { STAPLES_KEY } from '../../api/staples';
 import {
   createMeal,
   deleteMeal,
@@ -44,7 +45,12 @@ export function useMealSheets({ timeZone, wall, now, lastUsed, recents, onLogged
   const [prompt, setPrompt] = useState<{ meal: Meal; items: MealItemInput[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshMeals = () => queryClient.invalidateQueries({ queryKey: MEALS_KEY });
+  // A staple shows its meal's name and totals, so it refreshes with the meals.
+  const refreshMeals = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: MEALS_KEY }),
+      queryClient.invalidateQueries({ queryKey: STAPLES_KEY }),
+    ]);
 
   const log = useMutation({
     mutationFn: ({ meal, choice }: { meal: Meal; choice: MealLogChoice }) =>

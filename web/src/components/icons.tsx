@@ -114,3 +114,33 @@ export function SnowflakeIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function ArrowUpIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 19V5M6 11l6-6 6 6" />
+    </Icon>
+  );
+}
+
+export function ArrowDownIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5v14M6 13l6 6 6-6" />
+    </Icon>
+  );
+}
+
+/** Six dots: drag this row to reorder. */
+export function GripIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      {[8, 12, 16].map((y) => (
+        <g key={y} fill="currentColor" stroke="none">
+          <circle cx="9" cy={y} r="1.3" />
+          <circle cx="15" cy={y} r="1.3" />
+        </g>
+      ))}
+    </Icon>
+  );
+}
