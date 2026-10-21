@@ -4,6 +4,7 @@ import { AppShell } from './components/AppShell';
 import { AccountPage } from './pages/AccountPage';
 import { BadgesPage } from './pages/BadgesPage';
 import { StaplesPage } from './pages/StaplesPage';
+import { MetricsPage } from './pages/body/MetricsPage';
 import { BodyPage } from './pages/BodyPage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { ForgotPage } from './pages/ForgotPage';
@@ -37,6 +38,7 @@ export function App() {
         <Route index element={<TodayPage />} />
         <Route path="log" element={<LogPage />} />
         <Route path="body" element={<BodyPage />} />
+        <Route path="body/metrics" element={<MetricsPage />} />
         <Route path="charts" element={<ProgressPage />} />
         <Route
           path="charts/calories"
