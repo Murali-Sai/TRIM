@@ -52,7 +52,7 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done. A task is checked only when i
 - [x] **3.23 Pairing in suggestions**: staple food groups (auto-guessed, editable), context chip, forbidden pairs, good-pair bonus, personal history override, thumbs-down `never` pairs, pairing label, lock and Shuffle. AC: SPEC worked example returns the three dinner combinations with fixture scores; locked items always appear; Shuffle never repeats a set. Groups are guessed from food names, since foods carry no USDA category yet; until the real pairing table from 3.22 is loaded, generic scores are 0 and only personal history and never pairs apply. (ce7b2ca)
 
 ## Milestone 4: Custom measurements and diet phases
-- [ ] **4.1 Types and entries; presets copied per user at sign-up**. AC: renaming one user's preset does not affect another.
+- [x] **4.1 Types and entries; presets copied per user at sign-up**. AC: renaming one user's preset does not affect another. Includes sign-up step 4 (pick presets) and the measurement goal and badge. (186a266)
 - [ ] **4.2 Manage metrics UI (create, rename, reorder, enable, archive)**. AC: archived history still exports.
 - [ ] **4.3 Quick-log, per-metric chart, L/R pairs, overlay, small multiples, baseline table**. AC: indexed change test (90.0 to 87.3 gives -3.0%).
 - [ ] **4.4 E2E: create metric and chart it on phone and desktop viewports**. AC: Playwright passes.
