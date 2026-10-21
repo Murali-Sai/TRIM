@@ -2,6 +2,7 @@ import { lazy, Suspense, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useMe } from '../../api/auth';
 import { RangeChips } from '../../components/chart/ChartFrame';
+import { PhasesToggle } from '../../components/chart/PhasesToggle';
 import { chartLabel, measurementHeadline } from '../../lib/chart/headlines';
 import { readStored, writeStored } from '../../lib/chart/storage';
 import { changeSince, overlayLine } from '../../lib/measureSeries';
@@ -146,6 +147,7 @@ function Measurements({ timeZone }: { timeZone: string }) {
                 Compare
               </button>
             </div>
+            <PhasesToggle />
           </div>
 
           {view === 'each' ? (

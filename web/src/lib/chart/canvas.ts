@@ -4,6 +4,7 @@
  * calls them from its draw hook.
  */
 import uPlot from 'uplot';
+import { BAND_ALPHA, type PhaseBand } from '../phases';
 import { ON_TARGET_BAND } from './headlines';
 
 export function cssVar(name: string): string {
@@ -107,4 +108,44 @@ export function placeTooltip(u: uPlot, tip: HTMLElement, text: string | null, x:
   const half = tip.offsetWidth / 2;
   const maxLeft = u.over.clientWidth - tip.offsetWidth;
   tip.style.left = `${Math.max(0, Math.min(maxLeft, x - half)) + u.over.offsetLeft}px`;
+}
+
+/** Diet phases as light neutral tints behind the data, each named at the top edge (SPEC page
+ * 4, Phases on every time chart). Call from the drawClear hook so the series draw on top. */
+export function drawPhaseBands(u: uPlot, bands: readonly PhaseBand[]): void {
+  // The names in view, for tests and debugging (the tints are canvas pixels).
+  const drawn: string[] = [];
+  u.root.dataset.phases = '';
+  if (bands.length === 0) return;
+  const { ctx } = u;
+  const { left, top, width, height } = u.bbox;
+  const dpr = uPlot.pxRatio;
+  const tint = cssVar('--color-text-secondary');
+  const text = cssVar('--color-text-secondary');
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(left, top, width, height);
+  ctx.clip();
+  ctx.font = canvasFont(11);
+  ctx.textBaseline = 'top';
+  for (const b of bands) {
+    const x0 = Math.max(left, u.valToPos(b.from, 'x', true));
+    const x1 = Math.min(left + width, u.valToPos(b.to, 'x', true));
+    if (x1 <= x0) continue;
+    drawn.push(b.name);
+    ctx.globalAlpha = BAND_ALPHA[b.kind];
+    ctx.fillStyle = tint;
+    ctx.fillRect(x0, top, x1 - x0, height);
+    // A thin edge where a phase starts, so two phases side by side stay apart.
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(x0, top, dpr, height);
+    ctx.globalAlpha = 1;
+    const w = ctx.measureText(b.name).width;
+    if (w + 8 * dpr <= x1 - x0) {
+      ctx.fillStyle = text;
+      ctx.fillText(b.name, x0 + 4 * dpr, top + 3 * dpr);
+    }
+  }
+  ctx.restore();
+  u.root.dataset.phases = drawn.join(',');
 }

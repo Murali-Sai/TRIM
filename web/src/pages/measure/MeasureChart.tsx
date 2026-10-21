@@ -3,8 +3,15 @@ import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import type { Metric } from '../../api/measurements';
 import { ChartHost, ChartTooltip } from '../../components/chart/ChartFrame';
+import { usePhaseBands } from '../../components/chart/usePhaseBands';
 import { useThemeVersion } from '../../components/chart/useThemeVersion';
-import { canvasFont, cssVar, drawDirectLabel, placeTooltip } from '../../lib/chart/canvas';
+import {
+  canvasFont,
+  cssVar,
+  drawDirectLabel,
+  drawPhaseBands,
+  placeTooltip,
+} from '../../lib/chart/canvas';
 import { nearestIndex } from '../../lib/chart/nearest';
 import { alignSides, type OverlayPoint } from '../../lib/measureSeries';
 import { formatReading, toDisplay } from '../../lib/measureUnits';
@@ -61,6 +68,7 @@ export function MeasureChart({
   const box = useRef<HTMLDivElement>(null);
   const tip = useRef<HTMLDivElement>(null);
   const themeVersion = useThemeVersion();
+  const { bands: phases } = usePhaseBands('zoned');
   const first = metric.types[0];
   const unit = first?.unit ?? 'cm';
   const precision = first?.precision ?? 1;
@@ -169,7 +177,11 @@ export function MeasureChart({
         },
         axes: axes(font, muted, grid, unit === '%' ? '%' : unit, fmt),
         series,
-        hooks: { draw: [drawEnds], setCursor: [showTip] },
+        hooks: {
+          drawClear: [(u) => drawPhaseBands(u, phases)],
+          draw: [drawEnds],
+          setCursor: [showTip],
+        },
       },
       [data.xs, ...values] as uPlot.AlignedData,
       el,
@@ -181,7 +193,7 @@ export function MeasureChart({
       ro.disconnect();
       u.destroy();
     };
-  }, [data, window, unit, precision, color, timeZone, height, themeVersion]);
+  }, [data, window, unit, precision, color, timeZone, height, themeVersion, phases]);
 
   return (
     <div className="relative">
@@ -214,6 +226,7 @@ export function OverlayChart({
 }) {
   const box = useRef<HTMLDivElement>(null);
   const themeVersion = useThemeVersion();
+  const { bands: phases } = usePhaseBands('zoned');
   const data = useMemo(() => {
     const xs = [
       ...new Set(lines.flatMap((l) => l.points.map((p) => Math.round(Date.parse(p.at) / 1000)))),
@@ -304,7 +317,10 @@ export function OverlayChart({
             points: { show: true, size: 5, width: 0, fill: colors[k] ?? text },
           })),
         ],
-        hooks: { draw: [drawStartAndEnds] },
+        hooks: {
+          drawClear: [(u) => drawPhaseBands(u, phases)],
+          draw: [drawStartAndEnds],
+        },
       },
       [data.xs, ...data.ys] as uPlot.AlignedData,
       el,
@@ -316,7 +332,7 @@ export function OverlayChart({
       ro.disconnect();
       u.destroy();
     };
-  }, [data, lines, window, themeVersion]);
+  }, [data, lines, window, themeVersion, phases]);
 
   return <ChartHost ref={box} label={label} testId="overlay-chart" />;
 }

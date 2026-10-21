@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
-import { canvasFont, cssVar, drawDirectLabel } from '../../lib/chart/canvas';
+import { canvasFont, cssVar, drawDirectLabel, drawPhaseBands } from '../../lib/chart/canvas';
 import { ON_TARGET_BAND, shortDate } from '../../lib/chart/headlines';
 import { formatNumber } from '../../lib/units';
 import { ChartHost } from './ChartFrame';
+import { usePhaseBands } from './usePhaseBands';
 import { useThemeVersion } from './useThemeVersion';
 
 export interface DailyBarsProps {
@@ -53,6 +54,7 @@ export function DailyBars({
   const box = useRef<HTMLDivElement>(null);
   const tip = useRef<HTMLParagraphElement>(null);
   const themeVersion = useThemeVersion();
+  const { bands: phases } = usePhaseBands('utc-days');
 
   useEffect(() => {
     const el = box.current;
@@ -212,6 +214,7 @@ export function DailyBars({
         ],
         series,
         hooks: {
+          drawClear: [(u) => drawPhaseBands(u, phases)],
           draw: [
             drawTargets,
             // The axis floor, for tests: calorie and macro charts start at zero.
@@ -238,7 +241,19 @@ export function DailyBars({
       resize.disconnect();
       u.destroy();
     };
-  }, [dates, values, targets, average, averageLabel, color, unit, tooltip, size, themeVersion]);
+  }, [
+    dates,
+    values,
+    targets,
+    average,
+    averageLabel,
+    color,
+    unit,
+    tooltip,
+    size,
+    themeVersion,
+    phases,
+  ]);
 
   return (
     <>

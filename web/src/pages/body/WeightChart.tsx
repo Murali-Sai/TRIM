@@ -3,8 +3,15 @@ import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import type { UnitSystem } from '../../api/auth';
 import { ChartFrame, ChartHost, ChartTooltip } from '../../components/chart/ChartFrame';
+import { usePhaseBands } from '../../components/chart/usePhaseBands';
 import { useThemeVersion } from '../../components/chart/useThemeVersion';
-import { canvasFont, cssVar, drawDirectLabel, placeTooltip } from '../../lib/chart/canvas';
+import {
+  canvasFont,
+  cssVar,
+  drawDirectLabel,
+  drawPhaseBands,
+  placeTooltip,
+} from '../../lib/chart/canvas';
 import { nearestIndex } from '../../lib/chart/nearest';
 import { rangeLabel } from '../../lib/chart/headlines';
 import { readStored, writeStored } from '../../lib/chart/storage';
@@ -77,6 +84,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
   const [zoomed, setZoomed] = useState(false);
   const [noteOpen, setNoteOpen] = useState(() => readStored(NOTE_KEY) !== 'yes');
   const themeVersion = useThemeVersion();
+  const { bands: phases } = usePhaseBands('zoned');
 
   const convert = useMemo(() => (units === 'imperial' ? kgToLb : (kg: number) => kg), [units]);
   const { data, buildMs } = useMemo(() => {
@@ -260,6 +268,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
       ],
       bands: [{ series: [5, 6], fill: `${weight}38` }],
       hooks: {
+        drawClear: [(u) => drawPhaseBands(u, phases)],
         draw: [
           drawLabels,
           () => {
@@ -357,7 +366,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
       u.destroy();
       plot.current = null;
     };
-  }, [data, buildMs, goal, projectionEnd, range, units, unit, timeZone, themeVersion]);
+  }, [data, buildMs, goal, projectionEnd, range, units, unit, timeZone, themeVersion, phases]);
 
   const shown = rangeWindow(range, Date.now() / 1000);
   const visible = points.filter((p) => {
@@ -393,6 +402,7 @@ export function WeightChart({ points, units, timeZone, goalKg, headline, project
         </div>
       ) : null}
       <ChartFrame
+        phases
         range={{
           value: range,
           options: RANGES,

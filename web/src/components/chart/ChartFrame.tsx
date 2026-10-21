@@ -2,6 +2,7 @@ import { forwardRef, useState, type ReactNode } from 'react';
 import { rangeLabel } from '../../lib/chart/headlines';
 import type { RangeKey } from '../../lib/weightChart';
 import { secondaryButton } from '../../pages/account/Section';
+import { PhasesToggle } from './PhasesToggle';
 
 export interface TableSpec {
   /** Read by screen readers; usually the chart's aria-label. */
@@ -106,17 +107,28 @@ interface FrameProps {
   controls?: ReactNode;
   /** A short key under the chart, in words ("Bars are days, the line is your target"). */
   note?: ReactNode;
+  /** A time chart: show the Phases toggle (when the user has phases). */
+  phases?: boolean;
 }
 
 /** Controls, the chart or its table, and a note: the same frame for every chart. */
-export function ChartFrame({ children, table, tooLittle, range, controls, note }: FrameProps) {
+export function ChartFrame({
+  children,
+  table,
+  tooLittle,
+  range,
+  controls,
+  note,
+  phases = false,
+}: FrameProps) {
   const [asTable, setAsTable] = useState(false);
   if (tooLittle) return <TooLittleData message={tooLittle} />;
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
         {range ? <RangeChips {...range} /> : null}
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap justify-end gap-2">
+          {phases ? <PhasesToggle /> : null}
           {controls}
           <button
             type="button"

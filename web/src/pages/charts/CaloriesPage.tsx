@@ -114,6 +114,7 @@ function Calories({ timeZone }: { timeZone: string }) {
         <div className="mt-3">
           {v ? (
             <ChartFrame
+              phases
               range={{ value: range, options: RANGES, onChange: setRange }}
               tooLittle={avg === null ? tooLittleData('days', 1) : null}
               note={

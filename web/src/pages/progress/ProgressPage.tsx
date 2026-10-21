@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router';
 import { useMe, type UnitSystem } from '../../api/auth';
 import { listLogs, LOGS_KEY } from '../../api/logs';
 import { BODY_STATS_KEY, getBodyStats } from '../../api/setup';
@@ -310,7 +311,12 @@ function Progress({ timeZone, units }: { timeZone: string; units: UnitSystem }) 
   const { series, today } = useDaySeries('1W', timeZone);
   return (
     <section>
-      <h2 className="text-2xl font-bold">Progress</h2>
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="flex-1 text-2xl font-bold">Progress</h2>
+        <Link to="/phases" className="tap text-sm font-semibold text-accent underline">
+          Diet phases
+        </Link>
+      </div>
       {/* Phone: one column. Desktop: a three-column grid. */}
       <div
         className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
