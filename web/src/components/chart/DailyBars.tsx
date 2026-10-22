@@ -3,6 +3,7 @@ import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import { canvasFont, cssVar, drawDirectLabel, drawPhaseBands } from '../../lib/chart/canvas';
 import { ON_TARGET_BAND, shortDate } from '../../lib/chart/headlines';
+import { barTicks } from '../../lib/chart/ticks';
 import { formatNumber } from '../../lib/units';
 import { ChartHost } from './ChartFrame';
 import { usePhaseBands } from './usePhaseBands';
@@ -197,6 +198,8 @@ export function DailyBars({
             font,
             grid: { show: false },
             ticks: { stroke: grid, width: 1 },
+            // Ticks on the bars themselves, so no date shows twice.
+            splits: (u) => barTicks(xs, u.bbox.width / uPlot.pxRatio),
             // "25 Oct", with no year row.
             values: (_u, vals) =>
               vals.map((v) => shortDate(new Date(v * 1000).toISOString().slice(0, 10))),
