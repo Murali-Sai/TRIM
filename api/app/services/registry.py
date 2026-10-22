@@ -6,7 +6,7 @@ import httpx
 
 from app.config import Settings
 from app.services.breach import BreachChecker, NoBreachCheck, PwnedPasswords
-from app.services.email import EmailSender, OutboxSender, ResendSender
+from app.services.email import EmailSender, OutboxSender, ResendSender, SmtpSender
 from app.services.fooddata import FdcClient, FoodSource, NoFoodSource, OffClient
 from app.services.push import NoPush, PushSender, WebPushSender
 from app.services.turnstile import HumanCheck, Turnstile
@@ -39,6 +39,14 @@ def build_services(settings: Settings) -> Services:
     if settings.resend_api_key is not None:
         email = ResendSender(
             client, settings.resend_api_key.get_secret_value(), settings.email_from
+        )
+    elif settings.smtp_password is not None and settings.smtp_user is not None:
+        email = SmtpSender(
+            settings.smtp_host,
+            settings.smtp_port,
+            settings.smtp_user,
+            settings.smtp_password.get_secret_value(),
+            settings.email_from,
         )
     else:
         email = OutboxSender(settings.outbox_dir)

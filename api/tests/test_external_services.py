@@ -3,13 +3,17 @@ MockTransport). No live calls."""
 
 import hashlib
 import json
+import smtplib
+from email.message import Message
+from typing import ClassVar
 
 import httpx
+import pytest
 
 from app.email.layout import render_email
 from app.security.passwords import hash_password, needs_rehash, verify_password
 from app.services.breach import PwnedPasswords
-from app.services.email import EmailSendError, ResendSender
+from app.services.email import EmailSendError, ResendSender, SmtpSender
 from app.services.turnstile import Turnstile
 
 
@@ -110,6 +114,58 @@ def test_resend_error_does_not_include_message() -> None:
         assert "422" in str(exc)
     else:
         raise AssertionError("expected EmailSendError")
+
+
+class FakeSmtp:
+    """Stands in for smtplib.SMTP_SSL: records the login and the message."""
+
+    sent: ClassVar[list[tuple[str, int, tuple[str, str], Message]]] = []
+    fail: ClassVar[Exception | None] = None
+
+    def __init__(self, host: str, port: int, **_: object) -> None:
+        self.host, self.port = host, port
+
+    def __enter__(self) -> "FakeSmtp":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        return None
+
+    def login(self, user: str, password: str) -> None:
+        if FakeSmtp.fail is not None:
+            raise FakeSmtp.fail
+        self.auth = (user, password)
+
+    def send_message(self, msg: Message) -> None:
+        FakeSmtp.sent.append((self.host, self.port, self.auth, msg))
+
+
+def test_smtp_sends_text_and_html(monkeypatch: pytest.MonkeyPatch) -> None:
+    FakeSmtp.sent, FakeSmtp.fail = [], None
+    monkeypatch.setattr(smtplib, "SMTP_SSL", FakeSmtp)
+    sender = SmtpSender("smtp.gmail.com", 465, "me@gmail.com", "app-pass", "TRIM <me@gmail.com>")
+    sender.send("to@example.com", render_email("Subject", ["Body"]))
+    [(host, port, auth, msg)] = FakeSmtp.sent
+    assert (host, port, auth) == ("smtp.gmail.com", 465, ("me@gmail.com", "app-pass"))
+    assert msg["To"] == "to@example.com"
+    assert msg["From"] == "TRIM <me@gmail.com>"
+    assert msg["Subject"] == "Subject"
+    assert msg["Message-ID"].endswith("@gmail.com>")
+    types = [part.get_content_type() for part in msg.walk()]
+    assert "text/plain" in types and "text/html" in types
+
+
+def test_smtp_error_does_not_include_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    FakeSmtp.sent = []
+    FakeSmtp.fail = smtplib.SMTPAuthenticationError(535, b"bad credentials")
+    monkeypatch.setattr(smtplib, "SMTP_SSL", FakeSmtp)
+    sender = SmtpSender("smtp.gmail.com", 465, "me@gmail.com", "app-pass", "me@gmail.com")
+    with pytest.raises(EmailSendError) as info:
+        sender.send("to@example.com", render_email("S", ["secret link token-abc"]))
+    assert "token-abc" not in str(info.value)
+    assert "app-pass" not in str(info.value)
+    assert "535" in str(info.value)
+    FakeSmtp.fail = None
 
 
 def test_password_hashing_round_trip() -> None:

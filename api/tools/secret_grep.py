@@ -45,7 +45,7 @@ PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 # Server-only settings: their names in the built site would mean a server value was bundled.
 SERVER_ONLY = re.compile(
     r"TRIM_(DATABASE_URL|MIGRATION_DATABASE_URL|PROXY_SECRET|IP_HASH_PEPPER|TURNSTILE_SECRET|"
-    r"RESEND_API_KEY|FDC_API_KEY|VAPID_PRIVATE_KEY|JOB_TOKEN)|PROXY_SECRET"
+    r"RESEND_API_KEY|SMTP_PASSWORD|FDC_API_KEY|VAPID_PRIVATE_KEY|JOB_TOKEN)|PROXY_SECRET"
 )
 SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".pdf", ".xpt"}
 SKIP_FILES = {"uv.lock", "package-lock.json"}

@@ -94,6 +94,24 @@ def test_prod_requires_a_long_proxy_secret() -> None:
     assert Settings(**base, proxy_secret=SECRET).proxy_secret is not None  # type: ignore[arg-type]
 
 
+def test_prod_accepts_smtp_instead_of_resend() -> None:
+    base = {
+        "env": "prod",
+        "turnstile_secret": "real-turnstile-secret",
+        "ip_hash_pepper": "real-pepper",
+        "cookie_secure": True,
+        "proxy_secret": SECRET,
+        "fdc_api_key": "real-fdc-key",
+        "off_user_agent": "TRIM/1.0 (ops@example.com)",
+    }
+    with pytest.raises(ValidationError, match="TRIM_SMTP_PASSWORD"):
+        Settings(**base)  # type: ignore[arg-type]
+    with pytest.raises(ValidationError, match="TRIM_SMTP_PASSWORD"):
+        Settings(**base, smtp_password="app-pass")  # type: ignore[arg-type]
+    ok = Settings(**base, smtp_user="me@gmail.com", smtp_password="app-pass")  # type: ignore[arg-type]
+    assert ok.resend_api_key is None
+
+
 def test_prod_requires_food_search_config() -> None:
     base = {
         "env": "prod",
