@@ -92,7 +92,7 @@ jobs:
         working-directory: web
       - run: python3 api/tools/secret_grep.py web/dist --bundle
 
-  # The image Cloud Run runs builds, migrates a fresh database and answers /api/health.
+  # The image Render runs builds, migrates a fresh database and answers /api/health.
   image:
     runs-on: ubuntu-latest
     services:

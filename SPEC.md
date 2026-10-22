@@ -141,7 +141,7 @@ Chosen 20 Oct 2026 with the UI/UX Pro Max skill (`.claude/skills/ui-ux-pro-max`)
 **Decision: React 19 + TypeScript + Vite + Tailwind CSS + TanStack Query on the frontend, FastAPI (Python 3.12) + SQLAlchemy 2 + Alembic + Postgres on the backend.** No SEO need behind a login, so SSR adds little. The site is also installable as a PWA (manifest, icons, `viewport-fit=cover`) so it can sit on an iPhone home screen, but it is first a normal website.
 
 ### One origin (fixes the v0.1 cookie bug)
-Safari blocks cookies sent to a different site. The app is served at `https://app.<domain>` from Cloudflare Pages, and a **Pages Function proxies `/api/*` to Cloud Run**, so the browser only ever talks to one origin and the session cookie is first-party. This needs a custom domain (about $10 to $12 per year), which is also needed for sending verification email.
+Safari blocks cookies sent to a different site. The app is served at `https://<project>.pages.dev` from Cloudflare Pages, and a **Pages Function proxies `/api/*` to the API on Render**, so the browser only ever talks to one origin and the session cookie is first-party. No custom domain is needed (owner decision, 22 Oct 2026: run at $0); one can be added later without code changes.
 
 ### Responsive layout
 | Breakpoint | Navigation | Today page | Charts |
@@ -164,7 +164,7 @@ Rules: mobile-first CSS; `@media (pointer: coarse)` raises targets to 44 px; num
 - **Passwords:** Argon2id via `argon2-cffi` with the OWASP minimum m=19456 KiB (19 MiB), t=2, p=1 **[V]**; never logged or returned.
 - **Sessions:** random 256-bit token in an HttpOnly, Secure, SameSite=Lax cookie; only its SHA-256 hash is stored. 30-day sliding expiry with "Keep me signed in", otherwise a browser-session cookie that the server also ends after 24 hours without activity. In production the cookies use the `__Host-` prefix. All sessions revoked on password change.
 - **CSRF:** SameSite=Lax plus a required `X-CSRF-Token` header (double-submit) on all writes.
-- **Email:** verification and reset links (single-use, 1-hour expiry, hashed tokens) sent through Resend: free plan 3,000 emails per month, 100 per day, 1 domain **[V]**. Unverified users can log for 7 days, then must verify.
+- **Email:** verification and reset links (single-use, 1-hour expiry, hashed tokens) sent over SMTP from a Gmail account with an app password: free, about 500 recipients a day, no domain needed **[?]**. Resend (free plan 3,000 emails per month, 100 per day, needs a verified domain **[V]**) stays supported for when a domain is added. Unverified users can log for 7 days, then must verify.
 - **Login protection:** 5 failed attempts per account and IP per 15 minutes, then a 15-minute lock; generic error messages so emails cannot be probed. The account and the IP are counted separately (either one reaching 5 locks), so one account guessed from many IPs and many accounts tried from one IP are both stopped. Unknown emails lock the same way. Counters live under keyed hashes, never plain emails or IPs. Sign-ups are limited to 10 per IP per hour.
 - **v1.1:** Sign in with Google (OAuth, linked by verified email).
 
@@ -180,13 +180,13 @@ flowchart LR
     UI[React UI] --> QC[TanStack Query cache]
     QC --> IDB[(IndexedDB, per user)]
   end
-  UI -->|https app domain /api| PF[Pages Function proxy]
-  PF --> API[FastAPI on Cloud Run]
+  UI -->|https pages.dev /api| PF[Pages Function proxy]
+  PF --> API[FastAPI on Render]
   API --> PG[(Neon Postgres with RLS)]
   API --> LK[Food search]
   LK --> FDC[USDA FoodData Central]
   LK --> OFF[Open Food Facts]
-  API --> EM[Resend email]
+  API --> EM[Gmail SMTP email]
 ```
 The server is the source of truth. TanStack Query gives instant screens and optimistic writes. On trusted devices ("Keep me signed in"), recent data is cached in IndexedDB under a database named per user ID; logout and account switch delete it, so shared computers keep nothing. Full offline logging (outbox plus last-write-wins sync, as in v0.1) is deferred to a later update, together with the travel timezone prompt.
 
@@ -326,11 +326,11 @@ Example, with 300 kcal, 40 P, 25 C, 8 F left: chicken breast 120 g (198 kcal, 37
 - **Off switch.** Settings, "Streaks and badges": off hides the flame, goals, badges and reminders everywhere. Data keeps being computed, so turning it back on restores the history.
 - **Wording.** No guilt or shame: no "You failed", no sad mascots, no countdown pressure beyond the single reminder.
 
-**Weekly check-in.** Generated for each user for the previous Monday to Sunday in their timezone. Contents, as plain sentences: average calories vs target and days on target; average protein vs target; weight trend start, end and change; fastest-changing measurement; average water and fiber if tracked; days logged; current phase and day number; goal-date projection; current streak, weekly goals completed and badges earned that week (if gamification is on). Weeks with fewer than 4 logged days say "Only 3 days logged, so averages may be off." No advice or recommendations. A Cloud Scheduler job **[?, free-tier job count]** calls `/internal/checkins` hourly and generates any check-in whose local Monday 06:00 has passed. Email is off by default; when on, emails are queued at 90 a day to stay under Resend's 100-a-day free limit, so delivery can slip by a day once more than 90 users opt in.
+**Weekly check-in.** Generated for each user for the previous Monday to Sunday in their timezone. Contents, as plain sentences: average calories vs target and days on target; average protein vs target; weight trend start, end and change; fastest-changing measurement; average water and fiber if tracked; days logged; current phase and day number; goal-date projection; current streak, weekly goals completed and badges earned that week (if gamification is on). Weeks with fewer than 4 logged days say "Only 3 days logged, so averages may be off." No advice or recommendations. The hourly GitHub Actions job calls `/internal/checkins` and generates any check-in whose local Monday 06:00 has passed. Email is off by default; when on, emails are queued at 90 a day to stay under the free email limits (Resend's 100 a day if used), so delivery can slip by a day once more than 90 users opt in.
 - A week's check-in is due from its following Monday 06:00 local time, and each job run makes only the latest due week. A missed run catches up on the next one, but older weeks are not backfilled. A week that ended before the account was created gets none.
 - The numbers are stored with the check-in; the sentences are written when it is read, in the units the user has then. The streak is the one stored when the check-in is made. Weekly goals count only if that week had goals set.
 - Emails go only to confirmed addresses. The 90 a day are counted per UTC day across all users. A send that fails stops the run, and the rest wait for the next hour.
-- `/internal/checkins` uses the same `X-Job-Token` as the hourly job, which runs check-ins too, so one Cloud Scheduler job covers both.
+- `/internal/checkins` uses the same `X-Job-Token` as the hourly job, which runs check-ins too, so one hourly job covers both.
 - The Progress card shows the latest check-in's headline and first three sentences. Showing it there does not mark it read; opening it does.
 
 ### Energy, TDEE and macro rules
@@ -615,7 +615,7 @@ Available anytime from Account, and from a download icon on the Progress and His
 - **Isolation suite:** for every endpoint, user B requesting, editing or deleting user A's IDs gets 404; an RLS test queries the database directly with the wrong `app.user_id` and gets zero rows.
 - **Integration:** food search waterfall with recorded fixtures; export of a seeded account opened with `openpyxl` and checked cell by cell (types, timezone, units, formula-injection escaping); check-in generation across timezones and DST changes.
 - **Pairing build:** `build_pairing.py` on a small fixture of survey records gives hand-checked lift values; pairs under 30 plates score 0.
-- **Suggestions (unit):** the worked example returns exactly the three numbers-only combinations without pairing and the three dinner combinations with the fixture pairing scores, in that order; forbidden pairs never appear unless personal history allows them; a `never` pair is always excluded; locked items always appear; Shuffle never repeats a set; the 5% kcal cap is never exceeded; 1-item and 5-item limits; a met macro has budget 0; excluded staples never appear; 20 staples solve in under 300 ms on Cloud Run.
+- **Suggestions (unit):** the worked example returns exactly the three numbers-only combinations without pairing and the three dinner combinations with the fixture pairing scores, in that order; forbidden pairs never appear unless personal history allows them; a `never` pair is always excluded; locked items always appear; Shuffle never repeats a set; the 5% kcal cap is never exceeded; 1-item and 5-item limits; a met macro has budget 0; excluded staples never appear; 20 staples solve in under 300 ms on the production API.
 - **Streaks (unit):** the 13-day example above, repair window edges (23:59 vs 00:00), freeze cap at 2, weekly weigh-in counting, goal selection limited to tracked features, timezone change mid-streak, DST weeks; a day over target still counts.
 - **Planning features (unit):** fit-score examples above, projection example and its hide rules, fiber default, phase overlap rejection.
 - **E2E (Playwright, Chromium and WebKit, phone and desktop viewports):** sign up to first log, password reset, custom metric to chart, export.
@@ -629,26 +629,29 @@ Privacy: no third-party trackers, and no user data sent to any AI provider. Secu
 
 ## Page 5: Free deployment, delivery and roadmap
 
-### Near-zero-cost plan
+### Zero-cost plan
+The owner's rule (22 Oct 2026): no money spent on cloud or APIs, and no card on file anywhere, so a free limit can stop a service but never bill.
+
 | Layer | Choice | Limits and idle behavior |
 |---|---|---|
-| Domain | Any registrar | About $10 to $12 per year, the only fixed cost |
-| Frontend + proxy | Cloudflare Pages + Pages Functions | Free static hosting; Functions request quota **[?]** |
-| API | Cloud Run, us-central1, min instances 0 | 2M requests, 180,000 vCPU-s, 360,000 GiB-s per month; billing account required **[V]**; 1 to 3 s cold start |
-| Database | Neon Free | 0.5 GB and 100 CU-hours per project; suspends after 5 min idle **[V]** |
-| Email | Resend Free | 3,000 per month, 100 per day, 1 domain **[V]** |
+| Domain | None: Cloudflare's free `<project>.pages.dev` | $0; a custom domain can be added later |
+| Frontend + proxy | Cloudflare Pages + Pages Functions | Free static hosting; 100,000 Function requests a day **[?]** |
+| API | Render free web service (Docker, `render.yaml`), Ohio | 750 instance hours a month, 512 MB, no card **[?]**; sleeps after 15 min idle, about 30 to 60 s to wake **[?]** |
+| Database | Neon Free, AWS US East 2 | 0.5 GB and 100 CU-hours per project; suspends after 5 min idle **[V]** |
+| Email | Gmail SMTP with an app password | About 500 recipients a day **[?]**; sent from the owner's Gmail address |
 | Bot protection | Cloudflare Turnstile | Free plan: unlimited verifications, 20 widgets **[V]** |
 | Push reminders | Web Push with VAPID keys | Free, no third-party service |
-| Scheduler | Google Cloud Scheduler, 1 hourly job (check-ins, streak evaluation, reminders) | Free tier covers a few jobs per billing account **[?]** |
+| Scheduler | GitHub Actions schedule, 1 hourly job (check-ins, streak evaluation, reminders) | Free on a public repository; runs may start a few minutes late; paused after 60 days without a commit **[?]** |
+| Backups | GitHub Actions artifacts, age-encrypted | Kept 30 days; downloadable by any signed-in GitHub user but unreadable without the keys |
 
-**Capacity:** about 6 MB per active user per year, so 0.5 GB holds roughly 40 active users for 2 years. Upgrade path: Neon Launch at usage pricing ($0.35 per GB-month storage **[V]**). Warm-up: the frontend pings `/api/health` on page load to hide cold starts.
+**Capacity:** about 6 MB per active user per year, so 0.5 GB holds roughly 40 active users for 2 years. Upgrade path: Neon Launch at usage pricing ($0.35 per GB-month storage **[V]**). Warm-up: the frontend pings `/api/health` on page load so the API's wake-up overlaps with the page.
 
 **Self-hosted alternative:** Docker Compose (Caddy, FastAPI, Postgres 16) on a home server or an Oracle Cloud Always Free Arm VM behind a Cloudflare Tunnel. Oracle may reclaim idle Always Free instances **[?]**.
 
-**Running cost:** the domain (about $1 a month) is the only fixed cost; there are no per-use AI charges. Sign-ups are open or invite-code only (decision below).
+**Running cost:** $0; there are no per-use AI charges. Sign-ups are open or invite-code only (decision below).
 
 ### CI/CD and operations
-GitHub Actions: on PR run lint, typecheck, unit, isolation, Playwright and Lighthouse; on main deploy Pages, build and push the API image, run Alembic migrations, deploy Cloud Run. Secrets (FDC key, Resend key, session pepper, database URL) live in GitHub secrets and Google Secret Manager; a CI grep blocks secrets in the client bundle. Nightly `pg_dump`, encrypted with age, kept 30 days; monthly restore drill. Account deletion removes all rows within 24 hours and from backups as they age out (30 days), stated in the privacy policy.
+GitHub Actions: on PR run lint, typecheck, unit, isolation, Playwright and Lighthouse; on main run Alembic migrations, deploy the API on Render through its deploy hook, then deploy Pages. Secrets (FDC key, email password, session pepper, database URL) live in Render's environment settings and GitHub secrets; a CI grep blocks secrets in the client bundle. Nightly `pg_dump`, encrypted with age, kept 30 days as a workflow artifact; a restore drill after every backup. Account deletion removes all rows within 24 hours and from backups as they age out (30 days), stated in the privacy policy.
 
 ### Risks
 | Risk | Mitigation |
@@ -673,7 +676,7 @@ GitHub Actions: on PR run lint, typecheck, unit, isolation, Playwright and Light
 ### Open questions
 1. Open sign-up for anyone, or invite codes while it is small?
 2. Default units for new users: metric or imperial?
-3. Which domain name?
+3. Which domain name? (Deferred: `pages.dev` for now, 22 Oct 2026.)
 4. Should logged foods snapshot nutrients (current plan) or follow later edits?
 5. Any preset measurements to add? (Current list: waist, hips, chest, neck, upper arm and thigh as left and right pairs, body fat %.)
 6. BMI thresholds for the suggestions: 25 for "lose" and 30 for "a lot to lose" (current), or a different rule?

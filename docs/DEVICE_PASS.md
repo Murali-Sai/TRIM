@@ -1,6 +1,6 @@
 # Device pass (task 5.8)
 
-Run this on the live site (`https://app.<domain>`, after docs/DEPLOY.md) on each of:
+Run this on the live site (the `pages.dev` app URL, after docs/DEPLOY.md) on each of:
 
 | Device | Browser |
 |---|---|

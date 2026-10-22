@@ -1,11 +1,13 @@
 # Nightly encrypted backup and restore drill (task 5.6).
 #
 # 1. backup: dump Neon with ops/backup.sh, encrypted with age to BACKUP_AGE_RECIPIENTS (your
-#    offline key and the drill key), and upload it to the private bucket.
+#    offline key and the drill key), and keep it as a workflow artifact for 30 days (free).
+#    The repository is public, so anyone signed in to GitHub can download the file; without
+#    one of the two age keys it cannot be read.
 # 2. drill: download that same file, decrypt it with the drill key, restore it into a
 #    throwaway Postgres and check it against its manifest (ops/restore-drill.sh).
 # A failure emails the repository's admins (GitHub does this for scheduled runs). Setup:
-# docs/DEPLOY.md, section 8. Until BACKUP_BUCKET is set, both jobs skip.
+# docs/DEPLOY.md, "Backups". Until BACKUP_AGE_RECIPIENTS is set, both jobs skip.
 name: Backup
 
 on:
@@ -15,7 +17,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: backup
@@ -23,11 +24,9 @@ concurrency:
 
 jobs:
   backup:
-    if: vars.BACKUP_BUCKET != ''
+    if: vars.BACKUP_AGE_RECIPIENTS != ''
     runs-on: ubuntu-latest
     environment: production
-    outputs:
-      object: ${{ steps.upload.outputs.object }}
     steps:
       - uses: actions/checkout@v5
       - name: Install age and the PostgreSQL 17 client (it can dump 16 and 17 servers)
@@ -36,29 +35,23 @@ jobs:
           sudo apt-get install -yq age postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -yq postgresql-client-17
-      - uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_BACKUP_SA }}
-      - uses: google-github-actions/setup-gcloud@v2
       - name: Back up
         env:
           AGE_RECIPIENTS: ${{ vars.BACKUP_AGE_RECIPIENTS }}
           PG_DUMP: /usr/lib/postgresql/17/bin/pg_dump
           PSQL: /usr/lib/postgresql/17/bin/psql
+          URL: ${{ secrets.MIGRATION_DATABASE_URL }}
         run: |
-          url="$(gcloud secrets versions access latest --secret=trim-migration-database-url)"
-          echo "::add-mask::$url"
           # The tools take a plain postgresql:// URL, without SQLAlchemy's driver suffix.
-          SOURCE_URL="${url/postgresql+psycopg:/postgresql:}" ops/backup.sh "$RUNNER_TEMP/out" \
+          SOURCE_URL="${URL/postgresql+psycopg:/postgresql:}" ops/backup.sh "$RUNNER_TEMP/out" \
             > "$RUNNER_TEMP/path"
-      - id: upload
-        name: Upload
-        run: |
-          file="$(cat "$RUNNER_TEMP/path")"
-          object="gs://${{ vars.BACKUP_BUCKET }}/daily/$(basename "$file")"
-          gcloud storage cp "$file" "$object"
-          echo "object=$object" >> "$GITHUB_OUTPUT"
+          mv "$(cat "$RUNNER_TEMP/path")" "$RUNNER_TEMP/backup.tar.age"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trim-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/backup.tar.age
+          retention-days: 30
+          if-no-files-found: error
 
   drill:
     needs: backup
@@ -86,14 +79,12 @@ jobs:
           sudo apt-get install -yq age postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -yq postgresql-client-17
-      - uses: google-github-actions/auth@v2
+      - uses: actions/download-artifact@v4
         with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_BACKUP_SA }}
-      - uses: google-github-actions/setup-gcloud@v2
+          name: trim-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}
       - name: Restore into a scratch database and compare
         env:
-          OBJECT: ${{ needs.backup.outputs.object }}
           DRILL_KEY: ${{ secrets.BACKUP_DRILL_IDENTITY }}
           TARGET_URL: postgresql://trim:trim@127.0.0.1:5433/drill
           PG_RESTORE: /usr/lib/postgresql/17/bin/pg_restore
@@ -101,6 +92,5 @@ jobs:
         run: |
           umask 077
           printf '%s\n' "$DRILL_KEY" > "$RUNNER_TEMP/drill.key"
-          gcloud storage cp "$OBJECT" "$RUNNER_TEMP/backup.tar.age"
           AGE_IDENTITY="$RUNNER_TEMP/drill.key" ops/restore-drill.sh "$RUNNER_TEMP/backup.tar.age"
           rm -f "$RUNNER_TEMP/drill.key"

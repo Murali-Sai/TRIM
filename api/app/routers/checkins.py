@@ -1,7 +1,8 @@
 """Weekly check-ins (task 5.3): the user's list and each week, plus the hourly job's part.
 
 The job (POST /api/internal/checkins, and the hourly job) makes the check-ins that are due and
-sends the opted-in emails, at most 90 a day across everyone to stay under Resend's free 100.
+sends the opted-in emails, at most 90 a day across everyone to stay well under the free email
+quotas.
 """
 
 import hmac
@@ -194,7 +195,7 @@ def run_job(services: Any) -> CheckinJobOut:
 def checkins_job(
     services: ServicesDep, x_job_token: Annotated[str | None, Header()] = None
 ) -> CheckinJobOut:
-    """For Cloud Scheduler, with X-Job-Token (the hourly job runs this too)."""
+    """For the hourly scheduler, with X-Job-Token (the hourly job runs this too)."""
     expected = services.job_token
     if not expected or not x_job_token or not hmac.compare_digest(x_job_token, expected):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not allowed")

@@ -52,7 +52,8 @@ class Settings(BaseSettings):
     vapid_public_key: str | None = None
     vapid_private_key: SecretStr | None = None
     vapid_subject: str = "mailto:admin@localhost"
-    # The hourly job (Cloud Scheduler) sends this in X-Job-Token. Unset: the job is refused.
+    # The hourly job (.github/workflows/hourly.yml) sends this in X-Job-Token. Unset: the job
+    # is refused.
     job_token: SecretStr | None = None
     # Where free-tier usage alerts go (task 5.7). Unset: they are only logged.
     alert_email: str | None = None

@@ -14,7 +14,7 @@ import './index.css';
 
 const queryClient = new QueryClient();
 
-// Wake the API early so a Cloud Run cold start overlaps with page load.
+// Wake the API early so its cold start (it sleeps when idle) overlaps with page load.
 fetchHealth().catch(() => undefined);
 
 const root = document.getElementById('root');

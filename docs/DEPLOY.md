@@ -1,108 +1,199 @@
-# Deploying TRIM
+# Deploying TRIM for $0
 
-TRIM is a website. The browser loads it from one domain, `https://app.<your-domain>`, and every
-`/api/*` request goes to the same domain. A Cloudflare Pages Function forwards those to the
-FastAPI service on Google Cloud Run. Because the browser never talks to a second site, the
-session cookie is first-party, which Safari requires (SPEC page 2, "One origin").
+Every service below has a free plan that needs no card, so nothing can ever be charged. When
+a free limit is reached the service stops or slows down; it never bills.
+
+| Piece | Service | Free plan |
+|---|---|---|
+| Website and `/api` proxy | Cloudflare Pages, at `https://<project>.pages.dev` | Static files free; 100,000 Function requests a day |
+| API | Render free web service (Docker, `render.yaml`) | 750 hours a month, 512 MB, sleeps after 15 minutes idle |
+| Database | Neon Free | 0.5 GB |
+| Email | Gmail over SMTP with an app password | About 500 recipients a day |
+| Sign-up check | Cloudflare Turnstile | Unlimited |
+| Food data | USDA FoodData Central (data.gov key), Open Food Facts | 1,000 requests an hour; no key |
+| Hourly job and nightly backups | GitHub Actions (`hourly.yml`, `backup.yml`) | Unlimited minutes on a public repository |
+
+The browser only talks to the `pages.dev` site. A Cloudflare Pages Function forwards every
+`/api/*` request to the API on Render, so the session cookie is first-party, which Safari
+requires (SPEC page 2, "One origin").
 
 ```
-Browser ──> https://app.<domain>/            Cloudflare Pages (static files from web/dist)
-        └─> https://app.<domain>/api/*        Pages Function web/functions/api/[[path]].ts
-                                                └─> https://<service>.run.app/api/*  (Cloud Run)
+Browser ──> https://<project>.pages.dev/         Cloudflare Pages (static files from web/dist)
+        └─> https://<project>.pages.dev/api/*     Pages Function web/functions/api/[[path]].ts
+                                                    └─> https://trim-api.onrender.com/api/*
 ```
 
-Task 1.8 is built and tested locally. What is left needs your accounts: the steps below, then
-the Safari check at the end.
+**Cold starts.** The free API sleeps after 15 minutes without a request. The next visit wakes
+it, which takes about 30 to 60 seconds; the site pings `/api/health` as soon as it loads so
+the wait overlaps with the page. The hourly job wakes it once an hour too.
 
-## 1. Shared secret
+Do the steps in order. Keep a note open for the values you collect; each is marked
+**(save)**. None of them go in the repository.
 
-The Pages Function adds `X-Trim-Proxy-Secret` to every request. With `TRIM_PROXY_SECRET` set, the
-API refuses any `/api` request without it, so nobody can call Cloud Run directly to skip the
-proxy or fake `X-Forwarded-For` (the login lockout counts per IP). Generate one value and use it
-in both places:
+## 1. Neon (database)
 
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(48))"
-```
+1. Sign up at neon.com and create a project in **AWS US East 2 (Ohio)**, next to Render's Ohio
+   region.
+2. In the SQL editor, as the owner role, create the API's roles (pick your own password):
 
-## 2. Cloud Run (API)
+   ```sql
+   CREATE ROLE trim_app NOLOGIN NOBYPASSRLS;
+   CREATE ROLE trim_api LOGIN NOBYPASSRLS PASSWORD '<password>' IN ROLE trim_app;
+   ```
 
-Deploy the API image to Cloud Run in `us-central1` with minimum instances 0 and
-unauthenticated invocations allowed (the shared secret does the gatekeeping). Set these
-environment variables, keeping the secret ones in Secret Manager:
+3. From **Connect**, copy two connection strings and change `postgresql://` at the start of each
+   to `postgresql+psycopg://`:
+   - the **pooled** one (host with `-pooler`) with user `trim_api` and your password: the
+     **app URL (save)**;
+   - the **direct** one for the owner role: the **owner URL (save)**.
 
-| Variable | Value |
-|---|---|
-| `TRIM_ENV` | `prod` (the API refuses to start in prod with any dev default left) |
-| `TRIM_DATABASE_URL` | Neon connection string for the app login role (member of `trim_app`, no BYPASSRLS) |
-| `TRIM_MIGRATION_DATABASE_URL` | Neon connection string for the schema owner (used only by Alembic) |
-| `TRIM_APP_BASE_URL` | `https://app.<domain>` |
-| `TRIM_COOKIE_SECURE` | `true` (cookies get the `__Host-` prefix) |
-| `TRIM_PROXY_SECRET` | the value from step 1 (32+ characters) |
-| `TRIM_IP_HASH_PEPPER` | another random value |
-| `TRIM_TURNSTILE_SECRET` | from the Turnstile widget |
-| `TRIM_RESEND_API_KEY` | from Resend, with your domain verified |
-| `TRIM_EMAIL_FROM` | for example `TRIM <no-reply@<domain>>` |
-| `TRIM_FDC_API_KEY` | a free data.gov key for USDA FoodData Central (1,000 requests an hour); server only |
-| `TRIM_OFF_USER_AGENT` | names the app and a contact, for example `TRIM/1.0 (you@<domain>)`, as Open Food Facts asks |
-| `TRIM_VAPID_PUBLIC_KEY`, `TRIM_VAPID_PRIVATE_KEY` | Web Push keys for streak reminders (see step 5); without them reminders stay off |
-| `TRIM_VAPID_SUBJECT` | a contact for push services, for example `mailto:you@<domain>` |
-| `TRIM_JOB_TOKEN` | a long random value the hourly job sends; without it the job is refused |
+## 2. Gmail (email)
 
-On Neon, create the roles once (the Docker database does this in `db/init/01-roles.sql`):
-`trim_app` NOLOGIN NOBYPASSRLS, and a login role that is a member of it. Then run
-`uv run alembic upgrade head` with the owner URL.
+1. On the Google account that will send TRIM's emails, turn on 2-Step Verification.
+2. At myaccount.google.com/apppasswords, create an app password named `TRIM`. Copy the 16
+   letters without spaces: the **app password (save)**.
 
-## 3. Cloudflare Pages (website and proxy)
+Emails come from this Gmail address.
 
-GitHub Actions uploads each build (section 7), so create the Pages project as **Direct
-Upload**, named `trim` (or set `CF_PAGES_PROJECT`), not connected to Git. In its settings:
+## 3. Keys you make yourself
 
-| Setting | Value |
-|---|---|
-| Variable `API_ORIGIN` (Functions) | the Cloud Run URL, for example `https://trim-api-xyz-uc.a.run.app` |
-| Secret `PROXY_SECRET` (Functions) | the value from step 1 |
+1. A data.gov API key, free, from api.data.gov/signup: the **FDC key (save)**.
+2. Web Push keys for streak reminders. In any terminal with OpenSSL (macOS, Linux, or Git Bash
+   on Windows):
+
+   ```bash
+   key="$(openssl ecparam -name prime256v1 -genkey -noout)"
+   b64url() { base64 | tr '+/' '-_' | tr -d '=\n'; }
+   echo "public  $(openssl ec -pubout -outform DER <<<"$key" 2>/dev/null | tail -c 65 | b64url)"
+   echo "private $(openssl ec -outform DER <<<"$key" 2>/dev/null | tail -c +8 | head -c 32 | b64url)"
+   ```
+
+   The **VAPID public key (save)** and **VAPID private key (save)**. Keep the same pair for
+   good: changing it drops every browser's reminder subscription.
+3. Two backup keys, with [age](https://age-encryption.org) installed:
+   `age-keygen -o owner.key` and `age-keygen -o drill.key`.
+   - Keep `owner.key` offline, in your password manager: it is the one you restore with.
+   - The whole of `drill.key` is the **drill identity (save)**.
+   - `age-keygen -y owner.key` and `age-keygen -y drill.key` print the two public keys; both,
+     with a space between them, are the **backup recipients (save)**.
+
+## 4. Cloudflare (website, proxy, Turnstile)
+
+1. Sign up at cloudflare.com. Under **Workers & Pages**, create a Pages project with **Direct
+   Upload**, named `trim`, and upload any small folder to finish creating it. Its address,
+   such as `https://trim-abc.pages.dev`, is the **app URL (save)**.
+2. Under **Turnstile**, add a widget for that `pages.dev` hostname, mode Managed: the **site
+   key (save)** and **secret key (save)**.
+3. Under **My Profile, API Tokens**, create a custom token with only **Account, Cloudflare
+   Pages, Edit**: the **Cloudflare token (save)**. The **account ID (save)** is on the Workers
+   & Pages overview.
+
+## 5. Render (API)
+
+1. Sign up at render.com with GitHub, and allow it to read `Murali-Sai/TRIM`.
+2. **New, Blueprint**, pick the repository. Render reads `render.yaml` and asks for:
+
+   | Variable | Value |
+   |---|---|
+   | `TRIM_APP_BASE_URL` | the app URL from step 4 |
+   | `TRIM_DATABASE_URL` | the Neon app URL (pooled, `trim_api`) |
+   | `TRIM_SMTP_USER` | the Gmail address |
+   | `TRIM_SMTP_PASSWORD` | the app password |
+   | `TRIM_EMAIL_FROM` | `TRIM <you@gmail.com>`, with the same address |
+   | `TRIM_TURNSTILE_SECRET` | the Turnstile secret key |
+   | `TRIM_FDC_API_KEY` | the data.gov key |
+   | `TRIM_OFF_USER_AGENT` | `TRIM/1.0 (you@gmail.com)`, as Open Food Facts asks |
+   | `TRIM_VAPID_PUBLIC_KEY`, `TRIM_VAPID_PRIVATE_KEY` | the two Web Push keys |
+   | `TRIM_VAPID_SUBJECT` | `mailto:you@gmail.com` |
+   | `TRIM_ALERT_EMAIL` | where free-tier usage alerts go (see "Usage alerts") |
+
+   Render generates `TRIM_PROXY_SECRET`, `TRIM_IP_HASH_PEPPER` and `TRIM_JOB_TOKEN` itself.
+3. When the service exists, copy from its page:
+   - its address, such as `https://trim-api.onrender.com`: the **Render URL (save)**;
+   - under **Environment**, the values of `TRIM_PROXY_SECRET` (**proxy secret (save)**) and
+     `TRIM_JOB_TOKEN` (**job token (save)**);
+   - under **Settings, Deploy Hook**, the **deploy hook (save)**.
+
+The first build starts on its own. It answers 403 on `/api/health` without the proxy secret,
+which is correct: only the Pages Function may call it.
+
+## 6. Connect the Pages Function to Render
+
+In the Cloudflare Pages project, **Settings, Variables and Secrets**, for Production:
+
+| Type | Name | Value |
+|---|---|---|
+| Text | `API_ORIGIN` | the Render URL |
+| Secret | `PROXY_SECRET` | the proxy secret |
 
 `web/public/_routes.json` limits the Function to `/api/*`; everything else is served as static
-files, and unknown paths fall back to `index.html` for the app's own routes. `web/public/_headers`
-sets the security headers (task 5.4). Add the custom domain `app.<domain>` to the project.
+files, and unknown paths fall back to `index.html`. `web/public/_headers` sets the security
+headers (task 5.4).
 
-## 4. The Safari check (task 1.8 acceptance)
+## 7. GitHub settings, then the first deploy
 
-On an iPhone in Safari and on a Mac in Safari, at `https://app.<domain>`:
+In the repository, **Settings, Secrets and variables, Actions**:
+
+| Kind | Name | Value |
+|---|---|---|
+| Variable | `APP_URL` | the app URL |
+| Variable | `RENDER_API_URL` | the Render URL |
+| Variable | `TURNSTILE_SITE_KEY` | the Turnstile site key |
+| Variable | `CF_PAGES_PROJECT` | `trim` (the Pages project name) |
+| Variable | `BACKUP_AGE_RECIPIENTS` | the backup recipients |
+| Secret | `MIGRATION_DATABASE_URL` | the Neon owner URL (direct) |
+| Secret | `RENDER_DEPLOY_HOOK` | the deploy hook |
+| Secret | `PROXY_SECRET` | the proxy secret |
+| Secret | `JOB_TOKEN` | the job token |
+| Secret | `CLOUDFLARE_API_TOKEN` | the Cloudflare token |
+| Secret | `CLOUDFLARE_ACCOUNT_ID` | the account ID |
+| Secret | `BACKUP_DRILL_IDENTITY` | the drill identity |
+
+Then, in the **Actions** tab, run **Deploy**. It runs three jobs:
+
+1. **api:** runs `alembic upgrade head` on Neon, calls the Render deploy hook for this commit,
+   and waits until `/api/health` names that commit.
+2. **web:** builds `web/`, runs the secret grep on the bundle, and uploads `dist` (with the
+   Pages Function) to Cloudflare Pages.
+3. **smoke:** `/api/health` answers through the proxy, and the page and the API both send the
+   six security headers.
+
+From then on every green CI run on `main` deploys on its own. Optionally, add required
+reviewers to the `production` environment so each deploy waits for a click.
+
+Finally, run **Hourly** and **Backup** once from the Actions tab and check they pass.
+
+**Secret grep.** `api/tools/secret_grep.py` fails CI if any tracked file holds a private key, a
+cloud or service key, a long value assigned to a secret-looking name, or an `.env` file. On
+the built site, it also fails on the name of any server-only setting. A documented test value
+can be allowed with a `secret-grep: allow` comment on its line.
+
+## 8. The Safari check (task 1.8 acceptance)
+
+On an iPhone in Safari and on a Mac in Safari, at the app URL:
 
 1. Sign up, open the verification link, and log in with "Keep me signed in".
 2. Reload: you stay signed in (the session cookie was stored).
 3. Close Safari completely, reopen the site: still signed in.
 4. Log out, then log in without "Keep me signed in"; quit Safari and reopen: signed out.
 5. In Safari's Web Inspector, Storage, Cookies: `__Host-trim_session` is HttpOnly, Secure,
-   SameSite Lax and set by `app.<domain>`; `__Host-trim_csrf` is not HttpOnly.
+   SameSite Lax and set by the `pages.dev` host; `__Host-trim_csrf` is not HttpOnly.
 
 When all five pass on both devices, mark 1.8 `[x]` in TASKS.md.
 
-## 5. Streak reminders (task 3.18)
+## 9. Streak reminders (task 3.18)
 
-1. Make a VAPID key pair once, from `api/`:
+The keys are set in step 5 and `.github/workflows/hourly.yml` calls
+`POST /api/internal/jobs/hourly` with `X-Job-Token` every hour, through the Pages proxy.
+GitHub may start a scheduled run a few minutes late, and pauses schedules in a public
+repository after 60 days without a commit; re-enable **Hourly** in the Actions tab if so.
 
-   ```
-   uv run python -c "from py_vapid import Vapid01 as V; v=V(); v.generate_keys(); \
-   import base64; from cryptography.hazmat.primitives import serialization as s; \
-   print('public', base64.urlsafe_b64encode(v.public_key.public_bytes(s.Encoding.X962, \
-   s.PublicFormat.UncompressedPoint)).rstrip(b'=').decode()); \
-   print('private', base64.urlsafe_b64encode(v.private_key.private_numbers().private_value \
-   .to_bytes(32, 'big')).rstrip(b'=').decode())"
-   ```
+Check on desktop Chrome, and on an iPhone with TRIM added to the Home Screen (iOS 16.4 or
+later): turn on Streak reminder in Account for the coming hour, leave today unlogged, and wait
+for the reminder; log something, and check no second reminder arrives that day. When both
+pass, mark 3.18 `[x]` in TASKS.md.
 
-   Set them as `TRIM_VAPID_PUBLIC_KEY` and `TRIM_VAPID_PRIVATE_KEY` on Cloud Run (the private key as
-   a secret). Keep the same pair for good: changing it drops every browser's subscription.
-2. Create one Cloud Scheduler job, every hour: `POST https://app.<domain>/api/internal/jobs/hourly`
-   with header `X-Job-Token: <TRIM_JOB_TOKEN>` (it goes through the Pages proxy like any /api call).
-3. Check on desktop Chrome, and on an iPhone with TRIM added to the Home Screen (iOS 16.4 or later):
-   turn on Streak reminder in Account at a time a few minutes ahead, leave today unlogged, and
-   wait for the reminder; log something, and check no second reminder arrives that day. When both
-   pass, mark 3.18 `[x]` in TASKS.md.
-
-## 6. Food pairing table (task 3.22)
+## 10. Food pairing table (task 3.22)
 
 Suggestions use pairing scores built from What We Eat in America. Until the table is loaded
 every pair scores 0, so suggestions match the numbers only.
@@ -117,128 +208,50 @@ every pair scores 0, so suggestions match the numbers only.
    CSV files.
 4. Load: `TRIM_OWNER_URL=... uv run python tools/load_pairing.py data/pairing_scores.csv`.
 
-## 7. Automatic deploys (task 5.5)
-
-`.github/workflows/deploy.yml` runs when CI passes on `main` (or by hand from the Actions tab):
-
-1. **API:** builds `api/Dockerfile`, pushes it to Artifact Registry, runs
-   `alembic upgrade head` against Neon, then deploys the image to Cloud Run with the settings from
-   step 2. Secrets come from Secret Manager by name; plain settings come from repository
-   variables.
-2. **Site:** builds `web/`, runs the secret grep on the bundle, and uploads `dist` (with the
-   Pages Function) to Cloudflare Pages.
-3. **Smoke check:** `/api/health` answers through the proxy, and the page and the API both send
-   the six security headers.
-
-One-time setup:
-
-1. **Neon.** Create the project and the roles from step 2. Use the pooled connection string
-   (host with `-pooler`) for the app login, and the direct one for the owner.
-2. **Google Cloud.** In the project:
-   - Create an Artifact Registry Docker repository `trim` in `us-central1`.
-   - Create a runtime service account for Cloud Run with **Secret Manager Secret Accessor**.
-   - Create a deploy service account, `trim-deploy`, with these roles: **Cloud Run Admin**,
-     **Artifact Registry Writer**, **Secret Manager Secret Accessor** (it reads the migration
-     URL) and **Service Account User** on the runtime account.
-   - Set up Workload Identity Federation for GitHub: a pool and an OIDC provider for
-     `https://token.actions.githubusercontent.com`, with the attribute condition
-     `assertion.repository == "Murali-Sai/TRIM" && assertion.ref == "refs/heads/main"`. Let
-     that principal impersonate `trim-deploy` (**Workload Identity User**). No JSON key is ever
-     created.
-3. **Secret Manager.** Create one secret for each sensitive setting:
-   - `trim-database-url`
-   - `trim-migration-database-url`
-   - `trim-proxy-secret`
-   - `trim-ip-hash-pepper`
-   - `trim-turnstile-secret`
-   - `trim-resend-api-key`
-   - `trim-fdc-api-key`
-   - `trim-vapid-private-key`
-   - `trim-job-token`
-4. **GitHub**, in Settings, Secrets and variables, Actions:
-   - Variables:
-     - `GCP_PROJECT_ID`, `GCP_REGION` (`us-central1`)
-     - `GCP_WIF_PROVIDER` (`projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>`)
-     - `GCP_DEPLOY_SA` (the `trim-deploy` email), `CLOUD_RUN_SERVICE` (`trim-api`), `ARTIFACT_REPO` (`trim`)
-     - `APP_URL` (`https://app.<domain>`), `EMAIL_FROM`, `OFF_USER_AGENT`
-     - `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`
-     - `TURNSTILE_SITE_KEY`, `CF_PAGES_PROJECT`
-   - Secrets: `CLOUDFLARE_API_TOKEN` (a token with **Cloudflare Pages: Edit** only) and
-     `CLOUDFLARE_ACCOUNT_ID`.
-   - Optionally, add required reviewers to the `production` environment so each deploy waits
-     for a click.
-5. Push to `main`, or run **Deploy** from the Actions tab, and watch the three jobs.
-
-**Secret grep.** `api/tools/secret_grep.py` fails CI if any tracked file holds a private key, a
-cloud or service key, a long value assigned to a secret-looking name, or an `.env` file. On
-the built site, it also fails on the name of any server-only setting. A documented test value
-can be allowed with a `secret-grep: allow` comment on its line.
-
-## 8. Nightly backups and the restore drill (task 5.6)
+## 11. Backups and the restore drill (task 5.6)
 
 `.github/workflows/backup.yml` runs every night at 07:17 UTC (and by hand). It has two steps:
 
 1. **Backup.** `ops/backup.sh` dumps Neon (`pg_dump`, custom format, no owners) together with a
    manifest: schema version, exact row counts and the tables with RLS on. It encrypts both with
-   [age](https://age-encryption.org) and uploads the file to a private bucket.
+   age to the two backup recipients and keeps the file as a workflow artifact for 30 days.
 2. **Drill.** The same file is downloaded and decrypted with the drill key. `ops/restore-drill.sh`
    then restores it into an empty Postgres and fails unless the schema version, every table's
    row count and RLS all match the manifest.
 
-GitHub emails the repository's admins when a scheduled run fails.
-
-One-time setup:
-
-1. Make two age keys with `age-keygen -o owner.key` and `age-keygen -o drill.key`.
-   - Keep `owner.key` offline, in your password manager: it is the one you restore with.
-   - Put the whole of `drill.key` in the GitHub secret `BACKUP_DRILL_IDENTITY`.
-   - Set the variable `BACKUP_AGE_RECIPIENTS` to both public keys, space separated (from
-     `age-keygen -y owner.key` and `age-keygen -y drill.key`).
-2. Create a private Cloud Storage bucket in `us-central1` with uniform access and a lifecycle
-   rule that deletes objects after 30 days. Set its name as the variable `BACKUP_BUCKET`.
-3. Create a service account `trim-backup`, then give it access to only what it needs:
-   - On that bucket: **Storage Object Creator** and **Storage Object Viewer**.
-   - On `trim-migration-database-url`: **Secret Manager Secret Accessor**.
-   - Let the GitHub principal from section 7 impersonate it (**Workload Identity User**).
-   - Set the variable `GCP_BACKUP_SA` to its email.
-4. Run **Backup** from the Actions tab once and check both jobs pass.
+The repository is public, so anyone signed in to GitHub can download a backup artifact. It is
+encrypted, and cannot be read without `owner.key` or `drill.key`. GitHub emails the
+repository's admins when a scheduled run fails.
 
 To restore for real:
 
-1. Download a file with `gcloud storage cp gs://<bucket>/daily/<file> .`.
+1. Download the file from the latest **Backup** run's artifacts in the Actions tab, and unzip it.
 2. Restore it into an empty database, such as a new Neon branch:
-   `TARGET_URL=postgresql://<owner>@<host>/<db> AGE_IDENTITY=owner.key ops/restore-drill.sh <file>`.
+   `TARGET_URL=postgresql://<owner>@<host>/<db> AGE_IDENTITY=owner.key ops/restore-drill.sh backup.tar.age`.
    It creates the roles, restores and checks the result.
-3. Point `trim-database-url` and `trim-migration-database-url` at that database.
+3. Point `TRIM_DATABASE_URL` on Render and the `MIGRATION_DATABASE_URL` secret at that database.
 
 The same drill runs in the API tests (`tests/test_backup_drill.py`) against the test database.
 
-## 9. Usage alerts at 70% of each free tier (task 5.7)
+## 12. Usage alerts (task 5.7)
 
-**From the API.** Set `TRIM_ALERT_EMAIL` on Cloud Run as a plain variable (repository variable
-`ALERT_EMAIL`). The hourly job emails it once per period when one of these reaches 70%. Without
-an address the alert is only logged.
+Set `TRIM_ALERT_EMAIL` on Render. The hourly job emails it once per period when one of these
+reaches 70%. Without an address the alert is only logged.
 
 | Limit | Free tier | Alert at |
 |---|---|---|
-| Resend emails today | 100 | 70 |
-| Resend emails this month | 3,000 | 2,100 |
+| Emails today | 100 (Resend's limit; Gmail allows about 500) | 70 |
+| Emails this month | 3,000 | 2,100 |
 | FoodData Central requests this hour | 1,000 | 700 |
 | Neon database size | 0.5 GB | 358 MB |
 
-The counts live in `usage_counters` (per hour, kept 40 days); each alert sent is in `usage_alerts`.
-
-**From the clouds.** Run `ops/alerts.sh` once with `PROJECT`, `BILLING_ACCOUNT` and
-`ALERT_EMAIL` set. It sets up alert policies for Cloud Run requests and CPU and for backup
-storage, each at 70%, plus a $1 budget that warns on any spend.
-
-**By hand**, in the dashboards:
-- Neon: under Billing, turn on the usage email for compute hours.
-- Cloudflare: under Notifications, add **Usage Based Billing** for Workers. The free plan allows
-  100,000 Function requests a day; check Pages, Functions, Metrics after launch.
+The counts live in `usage_counters` (per hour, kept 40 days); each alert sent is in
+`usage_alerts`. Render, Cloudflare and GitHub have no card on file, so they stop at their
+free limits rather than charge; their dashboards show usage.
 
 ## Local development
 
 No proxy is needed locally: the Vite dev server forwards `/api` to `http://127.0.0.1:8000`, so
-the page and the API already share one origin. The proxy's own tests run with the web tests
-(`web/edge/proxy.test.ts`), including a real HTTP server standing in for Cloud Run.
+the page and the API already share one origin. Without email settings, emails are written to
+`api/.outbox`. The proxy's own tests run with the web tests (`web/edge/proxy.test.ts`),
+including a real HTTP server standing in for the API host.
