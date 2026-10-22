@@ -14,7 +14,8 @@ services:
     rootDir: api
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    healthCheckPath: /api/health
+    # Outside /api: Render's checker cannot send the proxy secret, so /api/health answers 403.
+    healthCheckPath: /healthz
     autoDeploy: false
     envVars:
       - key: TRIM_ENV

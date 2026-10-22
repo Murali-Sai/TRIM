@@ -126,3 +126,11 @@ def test_prod_requires_food_search_config() -> None:
         Settings(**base)  # type: ignore[arg-type]
     with pytest.raises(ValidationError, match="TRIM_OFF_USER_AGENT"):
         Settings(**{**base, "fdc_api_key": "k", "off_user_agent": DEV_OFF_USER_AGENT})  # type: ignore[arg-type]
+
+
+def test_host_health_check_needs_no_secret(
+    client: CsrfClient, settings_env: pytest.MonkeyPatch
+) -> None:
+    configure(settings_env, proxy_secret=SECRET)
+    assert client.get("/healthz").json() == {"status": "ok"}
+    assert client.get("/api/health").status_code == 403
