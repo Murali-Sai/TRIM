@@ -78,6 +78,13 @@ def create_app(services: Services | None = None) -> FastAPI:
     # Outermost, so even the proxy guard's refusals carry them.
     install_security_headers(app)
     app.include_router(api)
+
+    @app.get("/healthz", include_in_schema=False)
+    def healthz() -> dict[str, str]:
+        """Liveness for the host's own health check (render.yaml). Outside /api, so it needs no
+        proxy secret; it touches no data."""
+        return {"status": "ok"}
+
     return app
 
 
