@@ -134,7 +134,7 @@ jobs:
           node-version: 22
       - run: npm audit --omit=dev --audit-level=high
         working-directory: web
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - run: uv export --frozen --no-dev --no-hashes --no-emit-project -o "$RUNNER_TEMP/requirements.txt"
         working-directory: api
       - run: uvx pip-audit -r "$RUNNER_TEMP/requirements.txt" --no-deps --disable-pip
@@ -162,7 +162,7 @@ jobs:
       TRIM_TEST_OWNER_URL: postgresql+psycopg://trim:trim@127.0.0.1:5433/postgres
     steps:
       - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: api/uv.lock
