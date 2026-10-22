@@ -1,7 +1,7 @@
 """Only the same-origin proxy may call the API in production.
 
 The Cloudflare Pages Function adds a shared secret header (web/edge/proxy.ts). With
-TRIM_PROXY_SECRET set, any /api request without it is refused, so nobody can reach Cloud Run
+TRIM_PROXY_SECRET set, any /api request without it is refused, so nobody can reach the API host
 directly to skip the proxy or forge X-Forwarded-For (which the login lockout relies on).
 """
 

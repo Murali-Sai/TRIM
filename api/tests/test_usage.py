@@ -56,7 +56,7 @@ def test_ac_an_alert_fires_at_70_percent_once(client: CsrfClient, fakes: Fakes) 
     usage.record("email", day + timedelta(hours=2))  # 70 of 100 today
     assert "resend_day" in check(fakes, day + timedelta(hours=3))
     subjects = alerts_sent(fakes)
-    assert subjects.count("TRIM usage alert: Resend emails today at 70%") == 1
+    assert subjects.count("TRIM usage alert: Emails today at 70%") == 1
     # Once a day, however often it runs; the alert email itself is counted too (71 now).
     assert "resend_day" not in check(fakes, day + timedelta(hours=4))
     assert len(alerts_sent(fakes)) == 1

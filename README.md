@@ -30,7 +30,7 @@ cd web && npm install && npm run dev
 The Vite dev server proxies `/api` to the API on port 8000, so the app and API share one origin, as in production.
 
 ## Deploying
-See [docs/DEPLOY.md](docs/DEPLOY.md): Cloudflare Pages serves the site and proxies `/api/*` to Cloud Run on the same domain.
+See [docs/DEPLOY.md](docs/DEPLOY.md): Cloudflare Pages serves the site and proxies `/api/*` to the API on Render, on the same site.
 
 ## Checks
 - Web: `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm test`, `npm run build`

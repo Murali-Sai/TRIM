@@ -1,0 +1,57 @@
+# Render Blueprint for the API (docs/DEPLOY.md). Free plan: no card needed. The service
+# sleeps after 15 minutes idle and wakes on the next request (about 30 to 60 s); the site
+# pings /api/health on load to start that early.
+#
+# Deploys come from .github/workflows/deploy.yml, which migrates the database first and then
+# calls the deploy hook, so autoDeploy is off. Values marked sync: false are asked for once,
+# when the Blueprint is created in the Render dashboard; none are stored here.
+services:
+  - type: web
+    name: trim-api
+    runtime: docker
+    plan: free
+    region: ohio
+    rootDir: api
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: TRIM_ENV
+        value: prod
+      - key: TRIM_COOKIE_SECURE
+        value: 'true'
+      - key: TRIM_SMTP_HOST
+        value: smtp.gmail.com
+      - key: TRIM_SMTP_PORT
+        value: '465'
+      - key: TRIM_PROXY_SECRET
+        generateValue: true
+      - key: TRIM_IP_HASH_PEPPER
+        generateValue: true
+      - key: TRIM_JOB_TOKEN
+        generateValue: true
+      - key: TRIM_APP_BASE_URL
+        sync: false
+      - key: TRIM_DATABASE_URL
+        sync: false
+      - key: TRIM_SMTP_USER
+        sync: false
+      - key: TRIM_SMTP_PASSWORD
+        sync: false
+      - key: TRIM_EMAIL_FROM
+        sync: false
+      - key: TRIM_TURNSTILE_SECRET
+        sync: false
+      - key: TRIM_FDC_API_KEY
+        sync: false
+      - key: TRIM_OFF_USER_AGENT
+        sync: false
+      - key: TRIM_VAPID_PUBLIC_KEY
+        sync: false
+      - key: TRIM_VAPID_PRIVATE_KEY
+        sync: false
+      - key: TRIM_VAPID_SUBJECT
+        sync: false
+      - key: TRIM_ALERT_EMAIL
+        sync: false

@@ -1,10 +1,10 @@
 """Free-tier usage alerts (task 5.7): warn at 70% of each limit the app can measure itself.
 
-Counted here, per UTC hour: emails sent through Resend (100 a day and 3,000 a month free) and
-FoodData Central requests (1,000 an hour per key). Measured live: the database size against
-Neon's free 0.5 GB. The hourly job checks them and emails TRIM_ALERT_EMAIL once per limit per
-period. Cloud Run, Pages and Cloud Storage usage is watched by the clouds themselves
-(ops/alerts.sh).
+Counted here, per UTC hour: emails sent (alerting against Resend's free 100 a day and 3,000 a
+month, well inside Gmail's 500 a day) and FoodData Central requests (1,000 an hour per key).
+Measured live: the database size against Neon's free 0.5 GB. The hourly job checks them and
+emails TRIM_ALERT_EMAIL once per limit per period. Render and Cloudflare stop at their free
+limits rather than charge, since no card is on file.
 """
 
 import logging
@@ -37,8 +37,8 @@ class Limit:
 
 
 LIMITS: tuple[Limit, ...] = (
-    Limit("resend_day", "Resend emails today", 100, "emails", "day", "email"),
-    Limit("resend_month", "Resend emails this month", 3000, "emails", "month", "email"),
+    Limit("resend_day", "Emails today", 100, "emails", "day", "email"),
+    Limit("resend_month", "Emails this month", 3000, "emails", "month", "email"),
     Limit("fdc_hour", "FoodData Central requests this hour", 1000, "requests", "hour", "fdc"),
     Limit("neon_storage", "Neon database size", 512, "MB", "now", None),
 )
@@ -79,7 +79,7 @@ def record(metric: str, at: datetime, n: int = 1) -> None:
 
 
 def send_email(services: Any, to: str, email: RenderedEmail) -> None:
-    """Send through the email service and count it against Resend's limits."""
+    """Send through the email service and count it against the email limits."""
     services.email.send(to, email)
     record("email", services.clock())
 

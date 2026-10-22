@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, FastAPI
 
 from app.config import get_settings
@@ -35,8 +37,12 @@ api = APIRouter(prefix="/api")
 
 @api.get("/health")
 def health() -> dict[str, str]:
-    """Public liveness check; the frontend also pings it on load to wake Cloud Run."""
-    return {"status": "ok"}
+    """Public liveness check; the frontend also pings it on load to wake the API from sleep.
+
+    On Render it also names the running commit, so a deploy can wait for the new version.
+    """
+    commit = os.environ.get("RENDER_GIT_COMMIT")
+    return {"status": "ok", "commit": commit} if commit else {"status": "ok"}
 
 
 api.include_router(auth.router)

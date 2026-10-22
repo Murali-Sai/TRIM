@@ -136,7 +136,7 @@ def send_reminders(services: Any) -> int:
 def hourly_job(
     services: ServicesDep, x_job_token: Annotated[str | None, Header()] = None
 ) -> JobOut:
-    """Cloud Scheduler calls this every hour with X-Job-Token. Streaks themselves are
+    """The Hourly workflow calls this every hour with X-Job-Token. Streaks themselves are
     evaluated lazily; this sends the due reminders, makes the due weekly check-ins and checks
     free-tier usage."""
     expected = services.job_token

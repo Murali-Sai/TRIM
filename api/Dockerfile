@@ -1,6 +1,6 @@
-# The API image for Cloud Run (task 5.5). Cloud Run sets PORT; the app reads TRIM_* settings
-# from the environment (secrets come from Secret Manager, never from the image).
-# Google's Docker Hub mirror: no pull limits from Cloud Build or GitHub runners.
+# The API image, run on Render (task 5.5; render.yaml). Render sets PORT; the app reads TRIM_*
+# settings from the environment (secrets are set in Render, never in the image).
+# Google's Docker Hub mirror: no pull limits on GitHub runners.
 FROM mirror.gcr.io/library/python:3.12-slim-bookworm AS build
 RUN pip install --no-cache-dir "uv>=0.8,<0.9"
 WORKDIR /app

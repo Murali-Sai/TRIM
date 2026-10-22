@@ -47,6 +47,6 @@ def usage_alert_email(name: str, value: float, limit: float, unit: str) -> Rende
         [
             f"{name}: {round(value):,} of {round(limit):,} {unit} ({pct}%).",
             "This is the free-tier warning at 70%. Nothing has stopped yet. Check the provider's "
-            "dashboard, and the steps in docs/DEPLOY.md, section 9.",
+            "dashboard, and the steps in docs/DEPLOY.md, step 12.",
         ],
     )

@@ -1,13 +1,13 @@
 /**
  * Same-origin proxy (SPEC page 2, "One origin"): the browser only talks to the app's own
- * domain, and this forwards /api/* to the FastAPI service on Cloud Run. The session cookie
+ * domain, and this forwards /api/* to the FastAPI service on Render. The session cookie
  * is therefore first-party, which Safari requires.
  *
  * Kept free of Cloudflare-specific types so it runs and is tested under Node too.
  */
 
 export interface ProxyEnv {
-  /** Cloud Run service origin, for example https://trim-api-abc123-uc.a.run.app */
+  /** API service origin, for example https://trim-api.onrender.com */
   API_ORIGIN: string;
   /** Shared secret the API checks, so nobody can bypass this proxy or fake client IPs. */
   PROXY_SECRET: string;

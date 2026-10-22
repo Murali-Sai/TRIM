@@ -1,9 +1,9 @@
-# Deploy (task 5.5): after CI passes on main, ship the API to Cloud Run (migrating Neon first)
-# and then the site and its proxy to Cloudflare Pages, then check the live site.
+# Deploy (task 5.5): after CI passes on main, migrate Neon, deploy the API on Render, then
+# ship the site and its proxy to Cloudflare Pages, then check the live site. Everything here
+# runs on free plans with no card on file.
 #
-# One-time setup is in docs/DEPLOY.md, section 7: repository variables, the two GitHub
-# secrets, Workload Identity Federation for Google Cloud, and the API's secrets in Secret
-# Manager. No key or token lives in this repository.
+# One-time setup is in docs/DEPLOY.md: the repository variables and secrets below. No key or
+# token lives in this repository. Until APP_URL is set, the workflow skips.
 name: Deploy
 
 on:
@@ -15,7 +15,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 # One deploy at a time, in order; a newer one waits rather than cancelling a half-done one.
 concurrency:
@@ -24,71 +23,47 @@ concurrency:
 
 env:
   SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
-  SERVICE: ${{ vars.CLOUD_RUN_SERVICE || 'trim-api' }}
 
 jobs:
   api:
     # Only a green CI run for a push to main (or a manual run) deploys, and only once the
-    # accounts are set up (docs/DEPLOY.md, section 7); until then the workflow skips.
+    # accounts are set up (docs/DEPLOY.md); until then the workflow skips.
     if: >-
-      vars.GCP_PROJECT_ID != '' &&
+      vars.APP_URL != '' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
     environment: production
-    env:
-      IMAGE: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPO || 'trim' }}/api
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ env.SHA }}
-      - uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOY_SA }}
-      - uses: google-github-actions/setup-gcloud@v2
-      - name: Build and push the image
-        run: |
-          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
-          docker build -t "$IMAGE:$SHA" api
-          docker push "$IMAGE:$SHA"
       - uses: astral-sh/setup-uv@v6
       - name: Migrate the database
         working-directory: api
+        env:
+          TRIM_MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
         run: |
-          url="$(gcloud secrets versions access latest --secret=trim-migration-database-url)"
-          echo "::add-mask::$url"
           uv sync --frozen --no-dev
-          TRIM_MIGRATION_DATABASE_URL="$url" uv run --no-sync alembic upgrade head
-      - uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.SERVICE }}
-          region: ${{ env.REGION }}
-          image: ${{ env.IMAGE }}:${{ env.SHA }}
-          flags: >-
-            --allow-unauthenticated --port=8080 --min-instances=0 --max-instances=2
-            --cpu=1 --memory=512Mi --concurrency=40
-          env_vars: |
-            TRIM_ENV=prod
-            TRIM_COOKIE_SECURE=true
-            TRIM_APP_BASE_URL=${{ vars.APP_URL }}
-            TRIM_EMAIL_FROM=${{ vars.EMAIL_FROM }}
-            TRIM_OFF_USER_AGENT=${{ vars.OFF_USER_AGENT }}
-            TRIM_VAPID_PUBLIC_KEY=${{ vars.VAPID_PUBLIC_KEY }}
-            TRIM_VAPID_SUBJECT=${{ vars.VAPID_SUBJECT }}
-            TRIM_ALERT_EMAIL=${{ vars.ALERT_EMAIL }}
-          secrets: |
-            TRIM_DATABASE_URL=trim-database-url:latest
-            TRIM_MIGRATION_DATABASE_URL=trim-migration-database-url:latest
-            TRIM_PROXY_SECRET=trim-proxy-secret:latest
-            TRIM_IP_HASH_PEPPER=trim-ip-hash-pepper:latest
-            TRIM_TURNSTILE_SECRET=trim-turnstile-secret:latest
-            TRIM_RESEND_API_KEY=trim-resend-api-key:latest
-            TRIM_FDC_API_KEY=trim-fdc-api-key:latest
-            TRIM_VAPID_PRIVATE_KEY=trim-vapid-private-key:latest
-            TRIM_JOB_TOKEN=trim-job-token:latest
+          uv run --no-sync alembic upgrade head
+      - name: Deploy this commit on Render and wait for it to answer
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          API_URL: ${{ vars.RENDER_API_URL }}
+          PROXY_SECRET: ${{ secrets.PROXY_SECRET }}
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST "$HOOK&ref=$SHA" > /dev/null
+          # The build takes a few minutes on the free plan; health names the running commit.
+          for _ in $(seq 1 60); do
+            commit="$(curl -fsS --max-time 90 -H "X-Trim-Proxy-Secret: $PROXY_SECRET" \
+              "$API_URL/api/health" | jq -r '.commit // ""' || true)"
+            if [ "$commit" = "$SHA" ]; then echo "Render runs $SHA"; exit 0; fi
+            sleep 20
+          done
+          echo "Render did not start $SHA within 20 minutes; see its dashboard" >&2
+          exit 1
 
   web:
     # After the API, so the new site never calls an API that is not there yet.

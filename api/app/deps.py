@@ -15,7 +15,7 @@ def client_ip(request: Request) -> str | None:
     """The caller's IP, for rate limits and audit hashes.
 
     X-Forwarded-For is trusted only when the request came through our proxy (it sets the first
-    hop from Cloudflare's CF-Connecting-IP; Cloud Run may append more) or in local development.
+    hop from Cloudflare's CF-Connecting-IP; the host may append more) or in local development.
     Anyone else could put any address there.
     """
     settings = get_settings()
