@@ -32,8 +32,14 @@ class Settings(BaseSettings):
     turnstile_secret: SecretStr = SecretStr(TURNSTILE_TEST_SECRET)
     breach_check_enabled: bool = True
 
-    # No Resend key means emails are written to outbox_dir instead of being sent.
+    # Email goes through Resend when its key is set, else SMTP when a password is set (for
+    # example Gmail with an app password, which needs no domain and costs nothing), else it
+    # is written to outbox_dir instead of being sent.
     resend_api_key: SecretStr | None = None
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 465
+    smtp_user: str | None = None
+    smtp_password: SecretStr | None = None
     email_from: str = "TRIM <no-reply@localhost>"
     outbox_dir: str = ".outbox"
 
@@ -58,8 +64,13 @@ class Settings(BaseSettings):
                 raise ValueError("TRIM_TURNSTILE_SECRET must be a real secret in prod")
             if self.ip_hash_pepper.get_secret_value() == "dev-only-pepper":
                 raise ValueError("TRIM_IP_HASH_PEPPER must be set in prod")
-            if self.resend_api_key is None:
-                raise ValueError("TRIM_RESEND_API_KEY must be set in prod")
+            if self.resend_api_key is None and (
+                self.smtp_password is None or self.smtp_user is None
+            ):
+                raise ValueError(
+                    "TRIM_RESEND_API_KEY, or TRIM_SMTP_USER and TRIM_SMTP_PASSWORD, must be set"
+                    " in prod"
+                )
             if not self.cookie_secure:
                 raise ValueError("TRIM_COOKIE_SECURE must be true in prod")
             if self.proxy_secret is None or len(self.proxy_secret.get_secret_value()) < 32:
