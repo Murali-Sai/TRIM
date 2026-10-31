@@ -1,0 +1,32 @@
+feature,area,priority,original,clone,notes
+Onboarding with an initial TDEE estimate from demographics,onboarding,must,yes,yes,TRIM: built (1.6b and 1.6c; Mifflin-St Jeor)
+Goal type lose or maintain,goals,must,yes,yes,TRIM: built (plan choice and deficit chips)
+Goal type gain (bulk),goals,should,yes,no,TRIM: SPEC plan is maintain or lose only; diet phases (4.5) label a bulk but do not set targets for it
+Target weight with calorie preview and goal ETA,goals,must,yes,partial,TRIM: goal weight and projected date built (2.3 and 2.4); no rate picker at setup
+Adaptive expenditure estimate from intake and weight trend,coaching,must,yes,no,TRIM: excluded by SPEC (non-goal: no adaptive TDEE)
+Weekly check-in that adjusts calorie and macro targets,coaching,must,yes,no,TRIM: excluded by SPEC (no automatic target change); TRIM check-ins (5.3) are display only
+Program styles (coached / collaborative / manual),coaching,should,yes,partial,TRIM: manual only (targets editor 3.3); coached needs adaptive expenditure
+Food search over a large database,food logging,must,yes,partial,TRIM: FDC and OFF waterfall API built (3.2); search UI arrives with 3.5 and 3.7
+Timeline food log with timestamps,food logging,must,yes,partial,TRIM: time-based logging built (3.4); Today timeline planned (3.5)
+Quick add calories and macros,food logging,must,yes,no,TRIM: planned (3.7)
+Custom foods,food logging,must,yes,partial,TRIM: schema built (3.1); UI planned (3.7)
+Recents and favourites,food logging,should,yes,no,TRIM: planned (3.7)
+Recipes or saved meals,food logging,should,yes,no,TRIM: saved meals planned (3.7b); not per-serving recipes
+Move and copy foods and whole days,food logging,should,yes,no,TRIM: planned (3.6)
+Log to future days,food logging,could,yes,no,TRIM: SPEC covers backdating only
+Barcode scanning,food logging,must,yes,no,TRIM: excluded by SPEC (non-goal: no barcode scanning)
+Nutrition label scanning,food logging,should,yes,no,TRIM: excluded by SPEC (camera and AI)
+AI photo or text food logging,food logging,should,yes,no,TRIM: excluded by SPEC (no AI in this version)
+Micronutrient tracking,nutrition,should,yes,partial,TRIM: fiber sugar and sodium stored (3.1); full micronutrients not in SPEC
+Trend weight smoothed from scale weights,weight,must,yes,yes,TRIM: built (2.1 and 2.2)
+Weight trend chart,weight,must,yes,yes,TRIM: built (2.3)
+Finish a goal on scale or trend weight,weight,could,yes,no,TRIM: not in SPEC
+Dashboard with today's targets left and progress,dashboard,must,yes,no,TRIM: planned (3.5 Today and 3.10 Progress)
+Energy balance widget (intake vs expenditure),dashboard,should,yes,no,TRIM: needs the excluded expenditure estimate
+Habit streaks that reward consistency,habits,should,yes,no,TRIM: planned (3.15 to 3.17)
+Nutrition charts and yearly insights,insights,should,yes,no,TRIM: planned (3.8 and 3.9)
+Period tracking insight,insights,could,yes,no,TRIM: not in SPEC
+Data export,data,should,yes,no,TRIM: planned (5.1; xlsx csv and json)
+Apple Health and Health Connect sync,integrations,should,yes,skip,needs a native app; TRIM is a website by decision
+Apple Watch app,platforms,could,yes,skip,native hardware app; TRIM is a website by decision
+Their curated food database,food logging,must,yes,skip,data they own; TRIM uses USDA FDC and Open Food Facts instead
