@@ -79,7 +79,7 @@ jobs:
           sudo apt-get install -yq age postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -yq postgresql-client-17
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: trim-backup-${{ github.run_id }}
           path: ${{ runner.temp }}
