@@ -46,7 +46,7 @@ jobs:
           SOURCE_URL="${URL/postgresql+psycopg:/postgresql:}" ops/backup.sh "$RUNNER_TEMP/out" \
             > "$RUNNER_TEMP/path"
           mv "$(cat "$RUNNER_TEMP/path")" "$RUNNER_TEMP/backup.tar.age"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: trim-backup-${{ github.run_id }}
           path: ${{ runner.temp }}/backup.tar.age
